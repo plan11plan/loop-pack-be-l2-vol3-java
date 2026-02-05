@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.loopers.domain.UserModel;
+import com.loopers.infrastructure.PasswordEncoder;
 import com.loopers.infrastructure.UserJpaRepository;
 import com.loopers.interfaces.api.user.UserV1Dto;
 import com.loopers.utils.DatabaseCleanUp;
@@ -27,16 +29,19 @@ class UserV1ApiE2ETest {
 
     private final TestRestTemplate testRestTemplate;
     private final UserJpaRepository userJpaRepository;
+    private final PasswordEncoder passwordEncoder;
     private final DatabaseCleanUp databaseCleanUp;
 
     @Autowired
     public UserV1ApiE2ETest(
         TestRestTemplate testRestTemplate,
         UserJpaRepository userJpaRepository,
+        PasswordEncoder passwordEncoder,
         DatabaseCleanUp databaseCleanUp
     ) {
         this.testRestTemplate = testRestTemplate;
         this.userJpaRepository = userJpaRepository;
+        this.passwordEncoder = passwordEncoder;
         this.databaseCleanUp = databaseCleanUp;
     }
 
@@ -75,6 +80,61 @@ class UserV1ApiE2ETest {
                 () -> assertThat(response.getBody().data().birthDate()).isEqualTo("19900101"),
                 () -> assertThat(response.getBody().data().email()).isEqualTo("test@example.com"),
                 () -> assertThat(userJpaRepository.count()).isEqualTo(1)
+            );
+        }
+
+        @DisplayName("비밀번호가 암호화되어 DB에 저장된다")
+        @Test
+        void shouldEncryptPasswordWhenSignup() {
+            // arrange
+            String rawPassword = "Test1234!";
+            UserV1Dto.SignupRequest request = new UserV1Dto.SignupRequest(
+                "testuser1",
+                rawPassword,
+                "홍길동",
+                "19900101",
+                "test@example.com"
+            );
+
+            // act
+            ParameterizedTypeReference<ApiResponse<UserV1Dto.SignupResponse>> responseType = new ParameterizedTypeReference<>() {};
+            ResponseEntity<ApiResponse<UserV1Dto.SignupResponse>> response =
+                testRestTemplate.exchange(ENDPOINT_SIGNUP, HttpMethod.POST, new HttpEntity<>(request), responseType);
+
+            // assert
+            UserModel savedUser = userJpaRepository.findById(response.getBody().data().id()).orElseThrow();
+            String savedPassword = savedUser.getPassword().getValue();
+
+            assertAll(
+                () -> assertTrue(response.getStatusCode().is2xxSuccessful()),
+                () -> assertThat(savedPassword).isNotEqualTo(rawPassword), // 평문과 다름
+                () -> assertThat(savedPassword).startsWith("$2a$"), // BCrypt 포맷
+                () -> assertThat(passwordEncoder.matches(rawPassword, savedPassword)).isTrue() // 평문과 매칭됨
+            );
+        }
+
+        @DisplayName("응답에는 비밀번호가 포함되지 않는다")
+        @Test
+        void shouldNotReturnPasswordInResponse() {
+            // arrange
+            UserV1Dto.SignupRequest request = new UserV1Dto.SignupRequest(
+                "testuser1",
+                "Test1234!",
+                "홍길동",
+                "19900101",
+                "test@example.com"
+            );
+
+            // act
+            ParameterizedTypeReference<ApiResponse<UserV1Dto.SignupResponse>> responseType = new ParameterizedTypeReference<>() {};
+            ResponseEntity<ApiResponse<UserV1Dto.SignupResponse>> response =
+                testRestTemplate.exchange(ENDPOINT_SIGNUP, HttpMethod.POST, new HttpEntity<>(request), responseType);
+
+            // assert
+            assertAll(
+                () -> assertTrue(response.getStatusCode().is2xxSuccessful()),
+                () -> assertThat(response.getBody().data()).isNotNull()
+                // SignupResponse에는 password 필드가 없음
             );
         }
 

@@ -22,6 +22,14 @@ public class Password {
         this.value = value;
     }
 
+    private Password(String value, boolean skipValidation) {
+        this.value = value;
+    }
+
+    public static Password fromEncoded(String encodedValue) {
+        return new Password(encodedValue, true);
+    }
+
     private void validate(String value) {
         if (value == null || !PASSWORD_PATTERN.matcher(value).matches()) {
             throw new CoreException(ErrorType.BAD_REQUEST, "비밀번호는 8~16자의 영문 대소문자, 숫자, 특수문자 조합이어야 합니다.");

@@ -1,5 +1,6 @@
 package com.loopers.domain;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
@@ -27,6 +28,42 @@ class PasswordTest {
         void createPassword_whenInvalidFormat() {
             assertThatThrownBy(() -> new Password("invalid"))
                     .isInstanceOf(CoreException.class);
+        }
+    }
+
+    @DisplayName("fromEncoded 정적 팩토리 메서드는")
+    @Nested
+    class FromEncoded {
+
+        @DisplayName("검증을 건너뛰고 암호화된 비밀번호를 저장한다")
+        @Test
+        void fromEncoded_should_skip_validation() {
+            String encodedPassword = "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy";
+
+            Password password = Password.fromEncoded(encodedPassword);
+
+            assertThat(password.getValue()).isEqualTo(encodedPassword);
+        }
+
+        @DisplayName("BCrypt 포맷의 암호화된 비밀번호를 저장할 수 있다")
+        @Test
+        void fromEncoded_should_accept_bcrypt_format() {
+            String bcryptPassword = "$2a$10$AbCdEfGhIjKlMnOpQrStUvWxYz0123456789AbCdEfGhIjKlMnOpQr";
+
+            Password password = Password.fromEncoded(bcryptPassword);
+
+            assertThat(password.getValue()).startsWith("$2a$");
+            assertThat(password.getValue()).isEqualTo(bcryptPassword);
+        }
+
+        @DisplayName("비밀번호 형식 검증을 거치지 않는다")
+        @Test
+        void fromEncoded_should_not_validate_password_format() {
+            String invalidFormatButEncoded = "$2a$10$short";
+
+            Password password = Password.fromEncoded(invalidFormatButEncoded);
+
+            assertThat(password.getValue()).isEqualTo(invalidFormatButEncoded);
         }
     }
 

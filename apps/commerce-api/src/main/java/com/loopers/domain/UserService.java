@@ -1,5 +1,6 @@
 package com.loopers.domain;
 
+import com.loopers.infrastructure.PasswordEncoder;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import jakarta.transaction.Transactional;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class UserService {
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Transactional
     public UserModel signup(LoginId loginId, Password password, Name name, BirthDate birthDate, Email email) {
@@ -18,7 +20,12 @@ public class UserService {
             throw new CoreException(ErrorType.BAD_REQUEST,"이미 존재하는 아이디입니다.");
         }
 
-        UserModel userModel = new UserModel(loginId,password,name,birthDate,email);
+        password.validateNotContainBirthday(birthDate);
+
+        String encodedPasswordValue = passwordEncoder.encode(password.getValue());
+        Password encryptedPassword = Password.fromEncoded(encodedPasswordValue);
+
+        UserModel userModel = new UserModel(loginId,encryptedPassword,name,birthDate,email);
 
         return userRepository.save(userModel);
     }

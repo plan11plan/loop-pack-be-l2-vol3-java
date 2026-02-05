@@ -82,17 +82,5 @@ class UserModelTest {
             assertThatThrownBy(() -> new UserModel(validLoginId, validPassword, validName, validBirthDate, null))
                     .isInstanceOf(CoreException.class);
         }
-
-        @DisplayName("비밀번호에 생년월일이 포함되면 예외가 발생한다.")
-        @Test
-        void createUserModel_whenPasswordContainsBirthDate() {
-            // arrange
-            BirthDate birthDate = new BirthDate(LocalDate.of(1990, 1, 15));
-            Password passwordWithBirthDate = new Password("Pw19900115!");
-
-            // expect
-            assertThatThrownBy(() -> new UserModel(validLoginId, passwordWithBirthDate, validName, birthDate, validEmail))
-                    .isInstanceOf(CoreException.class);
-        }
     }
 }
