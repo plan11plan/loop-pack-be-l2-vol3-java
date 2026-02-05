@@ -22,4 +22,9 @@ public class UserService {
 
         return userRepository.save(userModel);
     }
+
+    public UserModel getMyInfo(LoginId loginId) {
+        return userRepository.find(loginId)
+            .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "사용자를 찾을 수 없습니다."));
+    }
 }
