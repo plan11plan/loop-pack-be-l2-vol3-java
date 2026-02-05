@@ -68,4 +68,25 @@ public class UserV1Dto {
             );
         }
     }
+
+    public record ChangePasswordRequest(
+        @NotBlank(message = "현재 비밀번호는 필수 입력값입니다.")
+        String currentPassword,
+
+        @NotBlank(message = "새 비밀번호는 필수 입력값입니다.")
+        @Pattern(
+            regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[~!@#$%^&*()_+=-])[A-Za-z\\d~!@#$%^&*()_+=-]{8,16}$",
+            message = "비밀번호는 8~16자의 영문 대소문자, 숫자, 특수문자 조합이어야 합니다."
+        )
+        String newPassword
+    ) {
+    }
+
+    public record ChangePasswordResponse(
+        String message
+    ) {
+        public static ChangePasswordResponse success() {
+            return new ChangePasswordResponse("비밀번호가 성공적으로 변경되었습니다.");
+        }
+    }
 }

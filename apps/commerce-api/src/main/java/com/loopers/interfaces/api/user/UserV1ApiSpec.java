@@ -28,4 +28,17 @@ public interface UserV1ApiSpec {
         @Parameter(description = "비밀번호", required = true)
         String password
     );
+
+    @Operation(
+        summary = "비밀번호 변경",
+        description = "인증된 사용자의 비밀번호를 변경합니다. 헤더에 X-Loopers-LoginId와 X-Loopers-LoginPw를 포함해야 합니다."
+    )
+    ApiResponse<UserV1Dto.ChangePasswordResponse> changePassword(
+        @Parameter(description = "로그인 ID", required = true)
+        String loginId,
+        @Parameter(description = "현재 비밀번호", required = true)
+        String currentPassword,
+        @RequestBody(description = "비밀번호 변경 요청 정보")
+        UserV1Dto.ChangePasswordRequest request
+    );
 }

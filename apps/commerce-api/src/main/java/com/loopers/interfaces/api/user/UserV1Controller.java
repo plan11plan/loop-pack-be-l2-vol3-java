@@ -50,4 +50,21 @@ public class UserV1Controller implements UserV1ApiSpec {
 
         return ApiResponse.success(response);
     }
+
+    @PatchMapping("/password")
+    @Override
+    public ApiResponse<UserV1Dto.ChangePasswordResponse> changePassword(
+        @RequestHeader(HEADER_LOGIN_ID) String loginId,
+        @RequestHeader(HEADER_LOGIN_PW) String currentPasswordValue,
+        @Valid @RequestBody UserV1Dto.ChangePasswordRequest request
+    ) {
+        UserModel authenticatedUser = authenticationService.authenticate(loginId, currentPasswordValue);
+
+        Password currentPassword = new Password(request.currentPassword());
+        Password newPassword = new Password(request.newPassword());
+
+        userService.changePassword(authenticatedUser.getLoginId(), currentPassword, newPassword);
+
+        return ApiResponse.success(UserV1Dto.ChangePasswordResponse.success());
+    }
 }
