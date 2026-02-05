@@ -61,4 +61,15 @@ public class UserModel extends BaseEntity {
             throw new CoreException(ErrorType.BAD_REQUEST,fieldName + "은(는) 필수 입력값입니다.");
         }
     }
+
+    public void changePassword(Password currentPassword, Password newPassword) {
+        if (!this.password.equals(currentPassword)) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "현재 비밀번호가 일치하지 않습니다.");
+        }
+
+        newPassword.validateNotSameAs(currentPassword);
+        newPassword.validateNotContainBirthday(this.birthDate);
+
+        this.password = newPassword;
+    }
 }
