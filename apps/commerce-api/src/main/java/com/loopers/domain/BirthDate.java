@@ -1,0 +1,32 @@
+package com.loopers.domain;
+
+import com.loopers.support.error.CoreException;
+import com.loopers.support.error.ErrorType;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+
+public class BirthDate {
+    private final LocalDate birthDate;
+
+    public BirthDate(LocalDate birthDate) {
+        validate(birthDate);
+        this.birthDate = birthDate;
+    }
+
+    private void validate(LocalDate birthDate) {
+        if (birthDate == null) {
+            throw new CoreException(ErrorType.BAD_REQUEST,"생년월일은 필수 입력값입니다.");
+        }
+        if (birthDate.isAfter(LocalDate.now())) {
+            throw new CoreException(ErrorType.BAD_REQUEST,"생년월일은 과거 날짜여야 합니다.");
+        }
+    }
+
+    public String toDateString() {
+        return birthDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+    }
+
+    public LocalDate getDate() {
+        return birthDate;
+    }
+}
