@@ -129,3 +129,25 @@ Content-Type: application/json
   "birthDate": "19950505",
   "email": "test2@example.com"
 }
+
+###############################################
+# 내 정보 조회 API
+###############################################
+
+### 내 정보 조회 - 성공 케이스
+GET {{commerce-api}}/api/v1/users/me
+X-Loopers-LoginId: testuser1
+X-Loopers-LoginPw: Test1234!
+
+### 내 정보 조회 - 존재하지 않는 로그인 ID (실패)
+GET {{commerce-api}}/api/v1/users/me
+X-Loopers-LoginId: nonexistent
+X-Loopers-LoginPw: Test1234!
+
+### 내 정보 조회 - 잘못된 비밀번호 (실패)
+GET {{commerce-api}}/api/v1/users/me
+X-Loopers-LoginId: testuser1
+X-Loopers-LoginPw: Wrong1234!
+
+### 내 정보 조회 - 인증 헤더 누락 (실패)
+GET {{commerce-api}}/api/v1/users/me
