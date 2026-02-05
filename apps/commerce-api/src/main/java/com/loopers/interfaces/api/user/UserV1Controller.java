@@ -4,10 +4,7 @@ import com.loopers.domain.*;
 import com.loopers.interfaces.api.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -18,8 +15,11 @@ import java.time.format.DateTimeFormatter;
 public class UserV1Controller implements UserV1ApiSpec {
 
     private static final DateTimeFormatter BIRTH_DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
+    private static final String HEADER_LOGIN_ID = "X-Loopers-LoginId";
+    private static final String HEADER_LOGIN_PW = "X-Loopers-LoginPw";
 
     private final UserService userService;
+    private final AuthenticationService authenticationService;
 
     @PostMapping("/signup")
     @Override
@@ -34,6 +34,19 @@ public class UserV1Controller implements UserV1ApiSpec {
 
         UserModel userModel = userService.signup(loginId, password, name, birthDate, email);
         UserV1Dto.SignupResponse response = UserV1Dto.SignupResponse.from(userModel);
+
+        return ApiResponse.success(response);
+    }
+
+    @GetMapping("/me")
+    @Override
+    public ApiResponse<UserV1Dto.MyInfoResponse> getMyInfo(
+        @RequestHeader(HEADER_LOGIN_ID) String loginId,
+        @RequestHeader(HEADER_LOGIN_PW) String password
+    ) {
+        UserModel authenticatedUser = authenticationService.authenticate(loginId, password);
+        UserModel userInfo = userService.getMyInfo(authenticatedUser.getLoginId());
+        UserV1Dto.MyInfoResponse response = UserV1Dto.MyInfoResponse.from(userInfo);
 
         return ApiResponse.success(response);
     }

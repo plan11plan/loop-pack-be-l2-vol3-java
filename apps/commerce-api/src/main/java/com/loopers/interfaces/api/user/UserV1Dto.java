@@ -52,4 +52,20 @@ public class UserV1Dto {
             );
         }
     }
+
+    public record MyInfoResponse(
+        String loginId,
+        String name,
+        String birthDate,
+        String email
+    ) {
+        public static MyInfoResponse from(UserModel model) {
+            return new MyInfoResponse(
+                model.getLoginId().getValue(),
+                model.getName().getMaskedName(),
+                model.getBirthDate().toDateString(),
+                model.getEmail().getMail()
+            );
+        }
+    }
 }
