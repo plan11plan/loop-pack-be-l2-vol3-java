@@ -104,4 +104,77 @@ public class UserServiceIntegrationTest {
                 .hasMessageContaining("사용자를 찾을 수 없습니다.");
         }
     }
+
+    @DisplayName("유저가 비밀번호를 변경할 때")
+    @Nested
+    class ChangePassword {
+        @DisplayName("올바른 현재 비밀번호와 새 비밀번호를 주면 비밀번호가 변경된다")
+        @Test
+        void changePassword_whenValidPasswords() {
+            // arrange
+            userService.signup(validLoginId, validPassword, validName, validBirthDate, validEmail);
+            Password newPassword = new Password("NewPass123!@");
+
+            // act
+            userService.changePassword(validLoginId, validPassword, newPassword);
+
+            // assert
+            UserModel updatedUser = userService.getMyInfo(validLoginId);
+            assertThat(updatedUser.getPassword()).isEqualTo(newPassword);
+        }
+
+        @DisplayName("현재 비밀번호가 일치하지 않으면 예외가 발생한다")
+        @Test
+        void changePassword_whenCurrentPasswordNotMatch() {
+            // arrange
+            userService.signup(validLoginId, validPassword, validName, validBirthDate, validEmail);
+            Password wrongPassword = new Password("Wrong123!@#");
+            Password newPassword = new Password("NewPass123!@");
+
+            // act & assert
+            assertThatThrownBy(() -> userService.changePassword(validLoginId, wrongPassword, newPassword))
+                .isInstanceOf(CoreException.class)
+                .hasMessageContaining("현재 비밀번호가 일치하지 않습니다.");
+        }
+
+        @DisplayName("새 비밀번호가 현재 비밀번호와 동일하면 예외가 발생한다")
+        @Test
+        void changePassword_whenNewPasswordSameAsCurrent() {
+            // arrange
+            userService.signup(validLoginId, validPassword, validName, validBirthDate, validEmail);
+            Password samePassword = new Password("Test1234!@#");
+
+            // act & assert
+            assertThatThrownBy(() -> userService.changePassword(validLoginId, validPassword, samePassword))
+                .isInstanceOf(CoreException.class)
+                .hasMessageContaining("현재 사용 중인 비밀번호는 사용할 수 없습니다.");
+        }
+
+        @DisplayName("새 비밀번호에 생년월일이 포함되면 예외가 발생한다")
+        @Test
+        void changePassword_whenNewPasswordContainsBirthDate() {
+            // arrange
+            userService.signup(validLoginId, validPassword, validName, validBirthDate, validEmail);
+            Password newPasswordWithBirthDate = new Password("Pw19900115!");
+
+            // act & assert
+            assertThatThrownBy(() -> userService.changePassword(validLoginId, validPassword, newPasswordWithBirthDate))
+                .isInstanceOf(CoreException.class)
+                .hasMessageContaining("생년월일은 비밀번호 내에 포함될 수 없습니다.");
+        }
+
+        @DisplayName("존재하지 않는 사용자의 비밀번호 변경 시 예외가 발생한다")
+        @Test
+        void changePassword_whenUserNotFound() {
+            // arrange
+            LoginId invalidLoginId = new LoginId("invalid123");
+            Password newPassword = new Password("NewPass123!@");
+
+            // act & assert
+            assertThatThrownBy(() -> userService.changePassword(invalidLoginId, validPassword, newPassword))
+                .isInstanceOf(CoreException.class)
+                .hasFieldOrPropertyWithValue("errorType", ErrorType.NOT_FOUND)
+                .hasMessageContaining("사용자를 찾을 수 없습니다.");
+        }
+    }
 }

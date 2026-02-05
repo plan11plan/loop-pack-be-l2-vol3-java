@@ -444,4 +444,236 @@ class UserV1ApiE2ETest {
             assertTrue(response.getStatusCode().is4xxClientError() || response.getStatusCode().is5xxServerError());
         }
     }
+
+    @DisplayName("PATCH /api/v1/users/password")
+    @Nested
+    class ChangePassword {
+
+        private static final String ENDPOINT_CHANGE_PASSWORD = "/api/v1/users/password";
+        private static final String HEADER_LOGIN_ID = "X-Loopers-LoginId";
+        private static final String HEADER_LOGIN_PW = "X-Loopers-LoginPw";
+
+        @DisplayName("유효한 인증 헤더와 비밀번호로 변경하면, 비밀번호가 변경된다")
+        @Test
+        void changePassword_whenValidRequest() {
+            // arrange
+            UserV1Dto.SignupRequest signupRequest = new UserV1Dto.SignupRequest(
+                "testuser1",
+                "Test1234!",
+                "홍길동",
+                "19900101",
+                "test@example.com"
+            );
+
+            ParameterizedTypeReference<ApiResponse<UserV1Dto.SignupResponse>> signupResponseType = new ParameterizedTypeReference<>() {};
+            testRestTemplate.exchange(ENDPOINT_SIGNUP, HttpMethod.POST, new HttpEntity<>(signupRequest), signupResponseType);
+
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            headers.set(HEADER_LOGIN_ID, "testuser1");
+            headers.set(HEADER_LOGIN_PW, "Test1234!");
+            headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+
+            UserV1Dto.ChangePasswordRequest request = new UserV1Dto.ChangePasswordRequest(
+                "Test1234!",
+                "NewPass123!@"
+            );
+
+            // act
+            ParameterizedTypeReference<ApiResponse<UserV1Dto.ChangePasswordResponse>> responseType = new ParameterizedTypeReference<>() {};
+            ResponseEntity<ApiResponse<UserV1Dto.ChangePasswordResponse>> response =
+                testRestTemplate.exchange(ENDPOINT_CHANGE_PASSWORD, HttpMethod.PATCH, new HttpEntity<>(request, headers), responseType);
+
+            // assert
+            assertAll(
+                () -> assertTrue(response.getStatusCode().is2xxSuccessful()),
+                () -> assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK),
+                () -> assertThat(response.getBody().data().message()).isEqualTo("비밀번호가 성공적으로 변경되었습니다.")
+            );
+        }
+
+        @DisplayName("현재 비밀번호가 일치하지 않으면, 400 BAD_REQUEST 응답을 받는다")
+        @Test
+        void changePassword_whenCurrentPasswordNotMatch() {
+            // arrange
+            UserV1Dto.SignupRequest signupRequest = new UserV1Dto.SignupRequest(
+                "testuser1",
+                "Test1234!",
+                "홍길동",
+                "19900101",
+                "test@example.com"
+            );
+
+            ParameterizedTypeReference<ApiResponse<UserV1Dto.SignupResponse>> signupResponseType = new ParameterizedTypeReference<>() {};
+            testRestTemplate.exchange(ENDPOINT_SIGNUP, HttpMethod.POST, new HttpEntity<>(signupRequest), signupResponseType);
+
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            headers.set(HEADER_LOGIN_ID, "testuser1");
+            headers.set(HEADER_LOGIN_PW, "Test1234!");
+            headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+
+            UserV1Dto.ChangePasswordRequest request = new UserV1Dto.ChangePasswordRequest(
+                "Wrong1234!",
+                "NewPass123!@"
+            );
+
+            // act
+            ParameterizedTypeReference<ApiResponse<UserV1Dto.ChangePasswordResponse>> responseType = new ParameterizedTypeReference<>() {};
+            ResponseEntity<ApiResponse<UserV1Dto.ChangePasswordResponse>> response =
+                testRestTemplate.exchange(ENDPOINT_CHANGE_PASSWORD, HttpMethod.PATCH, new HttpEntity<>(request, headers), responseType);
+
+            // assert
+            assertAll(
+                () -> assertTrue(response.getStatusCode().is4xxClientError()),
+                () -> assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST)
+            );
+        }
+
+        @DisplayName("새 비밀번호가 현재 비밀번호와 동일하면, 400 BAD_REQUEST 응답을 받는다")
+        @Test
+        void changePassword_whenNewPasswordSameAsCurrent() {
+            // arrange
+            UserV1Dto.SignupRequest signupRequest = new UserV1Dto.SignupRequest(
+                "testuser1",
+                "Test1234!",
+                "홍길동",
+                "19900101",
+                "test@example.com"
+            );
+
+            ParameterizedTypeReference<ApiResponse<UserV1Dto.SignupResponse>> signupResponseType = new ParameterizedTypeReference<>() {};
+            testRestTemplate.exchange(ENDPOINT_SIGNUP, HttpMethod.POST, new HttpEntity<>(signupRequest), signupResponseType);
+
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            headers.set(HEADER_LOGIN_ID, "testuser1");
+            headers.set(HEADER_LOGIN_PW, "Test1234!");
+            headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+
+            UserV1Dto.ChangePasswordRequest request = new UserV1Dto.ChangePasswordRequest(
+                "Test1234!",
+                "Test1234!"
+            );
+
+            // act
+            ParameterizedTypeReference<ApiResponse<UserV1Dto.ChangePasswordResponse>> responseType = new ParameterizedTypeReference<>() {};
+            ResponseEntity<ApiResponse<UserV1Dto.ChangePasswordResponse>> response =
+                testRestTemplate.exchange(ENDPOINT_CHANGE_PASSWORD, HttpMethod.PATCH, new HttpEntity<>(request, headers), responseType);
+
+            // assert
+            assertAll(
+                () -> assertTrue(response.getStatusCode().is4xxClientError()),
+                () -> assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST)
+            );
+        }
+
+        @DisplayName("새 비밀번호에 생년월일이 포함되면, 400 BAD_REQUEST 응답을 받는다")
+        @Test
+        void changePassword_whenNewPasswordContainsBirthDate() {
+            // arrange
+            UserV1Dto.SignupRequest signupRequest = new UserV1Dto.SignupRequest(
+                "testuser1",
+                "Test1234!",
+                "홍길동",
+                "19900101",
+                "test@example.com"
+            );
+
+            ParameterizedTypeReference<ApiResponse<UserV1Dto.SignupResponse>> signupResponseType = new ParameterizedTypeReference<>() {};
+            testRestTemplate.exchange(ENDPOINT_SIGNUP, HttpMethod.POST, new HttpEntity<>(signupRequest), signupResponseType);
+
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            headers.set(HEADER_LOGIN_ID, "testuser1");
+            headers.set(HEADER_LOGIN_PW, "Test1234!");
+            headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+
+            UserV1Dto.ChangePasswordRequest request = new UserV1Dto.ChangePasswordRequest(
+                "Test1234!",
+                "Pw19900101!"
+            );
+
+            // act
+            ParameterizedTypeReference<ApiResponse<UserV1Dto.ChangePasswordResponse>> responseType = new ParameterizedTypeReference<>() {};
+            ResponseEntity<ApiResponse<UserV1Dto.ChangePasswordResponse>> response =
+                testRestTemplate.exchange(ENDPOINT_CHANGE_PASSWORD, HttpMethod.PATCH, new HttpEntity<>(request, headers), responseType);
+
+            // assert
+            assertAll(
+                () -> assertTrue(response.getStatusCode().is4xxClientError()),
+                () -> assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST)
+            );
+        }
+
+        @DisplayName("잘못된 인증 헤더로 요청하면, 401 UNAUTHORIZED 응답을 받는다")
+        @Test
+        void changePassword_whenUnauthorized() {
+            // arrange
+            UserV1Dto.SignupRequest signupRequest = new UserV1Dto.SignupRequest(
+                "testuser1",
+                "Test1234!",
+                "홍길동",
+                "19900101",
+                "test@example.com"
+            );
+
+            ParameterizedTypeReference<ApiResponse<UserV1Dto.SignupResponse>> signupResponseType = new ParameterizedTypeReference<>() {};
+            testRestTemplate.exchange(ENDPOINT_SIGNUP, HttpMethod.POST, new HttpEntity<>(signupRequest), signupResponseType);
+
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            headers.set(HEADER_LOGIN_ID, "testuser1");
+            headers.set(HEADER_LOGIN_PW, "Wrong1234!");
+            headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+
+            UserV1Dto.ChangePasswordRequest request = new UserV1Dto.ChangePasswordRequest(
+                "Test1234!",
+                "NewPass123!@"
+            );
+
+            // act
+            ParameterizedTypeReference<ApiResponse<UserV1Dto.ChangePasswordResponse>> responseType = new ParameterizedTypeReference<>() {};
+            ResponseEntity<ApiResponse<UserV1Dto.ChangePasswordResponse>> response =
+                testRestTemplate.exchange(ENDPOINT_CHANGE_PASSWORD, HttpMethod.PATCH, new HttpEntity<>(request, headers), responseType);
+
+            // assert
+            assertAll(
+                () -> assertTrue(response.getStatusCode().is4xxClientError()),
+                () -> assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED)
+            );
+        }
+
+        @DisplayName("새 비밀번호 형식이 잘못되면, 400 BAD_REQUEST 응답을 받는다")
+        @Test
+        void changePassword_whenInvalidPasswordFormat() {
+            // arrange
+            UserV1Dto.SignupRequest signupRequest = new UserV1Dto.SignupRequest(
+                "testuser1",
+                "Test1234!",
+                "홍길동",
+                "19900101",
+                "test@example.com"
+            );
+
+            ParameterizedTypeReference<ApiResponse<UserV1Dto.SignupResponse>> signupResponseType = new ParameterizedTypeReference<>() {};
+            testRestTemplate.exchange(ENDPOINT_SIGNUP, HttpMethod.POST, new HttpEntity<>(signupRequest), signupResponseType);
+
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            headers.set(HEADER_LOGIN_ID, "testuser1");
+            headers.set(HEADER_LOGIN_PW, "Test1234!");
+            headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+
+            UserV1Dto.ChangePasswordRequest request = new UserV1Dto.ChangePasswordRequest(
+                "Test1234!",
+                "short"
+            );
+
+            // act
+            ParameterizedTypeReference<ApiResponse<UserV1Dto.ChangePasswordResponse>> responseType = new ParameterizedTypeReference<>() {};
+            ResponseEntity<ApiResponse<UserV1Dto.ChangePasswordResponse>> response =
+                testRestTemplate.exchange(ENDPOINT_CHANGE_PASSWORD, HttpMethod.PATCH, new HttpEntity<>(request, headers), responseType);
+
+            // assert
+            assertAll(
+                () -> assertTrue(response.getStatusCode().is4xxClientError()),
+                () -> assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST)
+            );
+        }
+    }
 }
