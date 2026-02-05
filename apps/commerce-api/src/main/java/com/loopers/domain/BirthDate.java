@@ -6,6 +6,9 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
 public class BirthDate {
+
+    private static final DateTimeFormatter DATE_STRING_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
+
     private final LocalDate birthDate;
 
     public BirthDate(LocalDate birthDate) {
@@ -23,8 +26,7 @@ public class BirthDate {
     }
 
     public String toDateString() {
-        return birthDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-    }
+        return birthDate.format(DATE_STRING_FORMATTER);    }
 
     public LocalDate getDate() {
         return birthDate;
