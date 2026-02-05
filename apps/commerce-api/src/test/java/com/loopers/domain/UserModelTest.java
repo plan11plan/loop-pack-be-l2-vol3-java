@@ -88,7 +88,7 @@ class UserModelTest {
         void createUserModel_whenPasswordContainsBirthDate() {
             // arrange
             BirthDate birthDate = new BirthDate(LocalDate.of(1990, 1, 15));
-            Password passwordWithBirthDate = new Password("pw19900115!");
+            Password passwordWithBirthDate = new Password("Pw19900115!");
 
             // expect
             assertThatThrownBy(() -> new UserModel(validLoginId, passwordWithBirthDate, validName, birthDate, validEmail))

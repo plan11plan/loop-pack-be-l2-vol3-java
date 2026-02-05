@@ -4,7 +4,9 @@ import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import lombok.EqualsAndHashCode;
 
+@EqualsAndHashCode
 public class BirthDate {
 
     private static final DateTimeFormatter DATE_STRING_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
@@ -26,7 +28,8 @@ public class BirthDate {
     }
 
     public String toDateString() {
-        return birthDate.format(DATE_STRING_FORMATTER);    }
+        return birthDate.format(DATE_STRING_FORMATTER);
+    }
 
     public LocalDate getDate() {
         return birthDate;

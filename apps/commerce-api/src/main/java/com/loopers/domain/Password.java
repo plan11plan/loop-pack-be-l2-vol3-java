@@ -2,19 +2,43 @@ package com.loopers.domain;
 
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
+import java.util.regex.Pattern;
+import lombok.EqualsAndHashCode;
 
+@EqualsAndHashCode
 public class Password {
-    private final String password;
+    // 특수문자 범위를 ~!@#$%^&*()_+=- 로 확장했습니다.
+    private static final Pattern PASSWORD_PATTERN =
+            Pattern.compile("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[~!@#$%^&*()_+=-])[A-Za-z\\d~!@#$%^&*()_+=-]{8,16}$");
 
-    public Password(String password) {
-        this.password = password;
+    private final String value;
+
+    public Password(String value) {
+        validate(value);
+        this.value = value;
+    }
+
+    private void validate(String value) {
+        if (value == null || !PASSWORD_PATTERN.matcher(value).matches()) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "비밀번호는 8~16자의 영문 대소문자, 숫자, 특수문자 조합이어야 합니다.");
+        }
     }
 
     public void validateNotContainBirthday(BirthDate birthDate) {
-        String targetDate = birthDate.toDateString();
+        String birthDateString = birthDate.toDateString();
 
-        if (this.password.contains(targetDate)) {
-            throw new CoreException(ErrorType.BAD_REQUEST,"생년월일은 비밀번호 내에 포함될 수 없습니다");
+        if (this.value.contains(birthDateString)) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "생년월일은 비밀번호 내에 포함될 수 없습니다.");
         }
+    }
+
+    public void validateNotSameAs(Password other) {
+        if (this.equals(other)) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "현재 사용 중인 비밀번호는 사용할 수 없습니다.");
+        }
+    }
+
+    public String getValue() {
+        return value;
     }
 }
