@@ -156,7 +156,12 @@ public class UserServiceIntegrationTest {
 
             // assert
             UserModel updatedUser = userService.getMyInfo(validLoginId);
-            assertThat(updatedUser.getPassword()).isEqualTo(newPassword);
+            String savedPassword = updatedUser.getPassword().getValue();
+            assertAll(
+                    () -> assertThat(savedPassword).isNotEqualTo(rawPassword), // 이전 평문과 다름
+                    () -> assertThat(savedPassword).isNotEqualTo(newPassword.getValue()), // 새 평문과도 다름 (암호화됨)
+                    () -> assertThat(passwordEncoder.matches(newPassword.getValue(), savedPassword)).isTrue() // 새 비밀번호와 매칭됨
+            );
         }
 
         @DisplayName("현재 비밀번호가 일치하지 않으면 예외가 발생한다")

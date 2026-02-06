@@ -61,13 +61,7 @@ public class UserModel extends BaseEntity {
     }
 
     public void changePassword(Password currentPassword, Password newPassword) {
-        if (!this.password.equals(currentPassword)) {
-            throw new CoreException(ErrorType.BAD_REQUEST, "현재 비밀번호가 일치하지 않습니다.");
-        }
-
-        newPassword.validateNotSameAs(currentPassword);
-        newPassword.validateNotContainBirthday(this.birthDate);
-
+        // 검증은 UserService에서 수행
         this.password = newPassword;
     }
 }

@@ -40,7 +40,23 @@ public class UserService {
         UserModel user = userRepository.find(loginId)
             .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "사용자를 찾을 수 없습니다."));
 
-        user.changePassword(currentPassword, newPassword);
+        // 현재 비밀번호 검증
+        if (!passwordEncoder.matches(currentPassword.getValue(), user.getPassword().getValue())) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "현재 비밀번호가 일치하지 않습니다.");
+        }
+
+        // 새 비밀번호 검증
+        if (passwordEncoder.matches(newPassword.getValue(), user.getPassword().getValue())) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "현재 사용 중인 비밀번호는 사용할 수 없습니다.");
+        }
+
+        newPassword.validateNotContainBirthday(user.getBirthDate());
+
+        // 새 비밀번호 암호화 및 저장
+        String encodedNewPassword = passwordEncoder.encode(newPassword.getValue());
+        Password encryptedNewPassword = Password.fromEncoded(encodedNewPassword);
+
+        user.changePassword(Password.fromEncoded(user.getPassword().getValue()), encryptedNewPassword);
         userRepository.save(user);
     }
 }
