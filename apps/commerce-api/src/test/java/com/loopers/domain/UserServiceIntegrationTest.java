@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
 
+import com.loopers.infrastructure.PasswordEncoder;
 import com.loopers.infrastructure.UserJpaRepository;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
@@ -26,10 +27,14 @@ public class UserServiceIntegrationTest {
     private UserJpaRepository userJpaRepository;
 
     @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Autowired
     private DatabaseCleanUp databaseCleanUp;
 
     private LoginId validLoginId;
     private Password validPassword;
+    private String rawPassword;
     private Name validName;
     private BirthDate validBirthDate;
     private Email validEmail;
@@ -37,7 +42,8 @@ public class UserServiceIntegrationTest {
     @BeforeEach
     void setUp() {
         validLoginId = new LoginId("testuser123");
-        validPassword = new Password("Test1234!@#");
+        rawPassword = "Test1234!@#";
+        validPassword = new Password(rawPassword);
         validName = new Name("홍길동");
         validBirthDate = new BirthDate(LocalDate.of(1990, 1, 15));
         validEmail = new Email("test@example.com");
@@ -61,10 +67,40 @@ public class UserServiceIntegrationTest {
                 assertAll(
                         () -> assertThat(result).isNotNull(),
                         () -> assertThat(result.getLoginId()).isEqualTo(validLoginId),
-                        () -> assertThat(result.getPassword()).isEqualTo(validPassword),
                         () -> assertThat(result.getName()).isEqualTo(validName),
                         () -> assertThat(result.getBirthDate()).isEqualTo(validBirthDate),
                         () -> assertThat(result.getEmail()).isEqualTo(validEmail)
+                );
+            }
+
+            @DisplayName("비밀번호를 암호화하여 저장한다")
+            @Test
+            void signup_should_encrypt_password() {
+                // act
+                UserModel result = userService.signup(validLoginId,validPassword,validName,validBirthDate,validEmail);
+
+                // assert
+                String savedPassword = result.getPassword().getValue();
+                assertAll(
+                        () -> assertThat(savedPassword).isNotEqualTo(rawPassword), // 평문과 다름
+                        () -> assertThat(savedPassword).startsWith("$2a$"), // BCrypt 포맷
+                        () -> assertThat(passwordEncoder.matches(rawPassword, savedPassword)).isTrue() // 평문과 매칭됨
+                );
+            }
+
+            @DisplayName("DB에 저장된 비밀번호가 암호화되어 있다")
+            @Test
+            void signup_should_save_encrypted_password_to_database() {
+                // act
+                UserModel result = userService.signup(validLoginId,validPassword,validName,validBirthDate,validEmail);
+
+                // assert
+                UserModel savedUser = userJpaRepository.findById(result.getId()).orElseThrow();
+                String savedPassword = savedUser.getPassword().getValue();
+                assertAll(
+                        () -> assertThat(savedPassword).isNotEqualTo(rawPassword), // 평문과 다름
+                        () -> assertThat(savedPassword).startsWith("$2a$"), // BCrypt 포맷
+                        () -> assertThat(passwordEncoder.matches(rawPassword, savedPassword)).isTrue() // 평문과 매칭됨
                 );
             }
     }

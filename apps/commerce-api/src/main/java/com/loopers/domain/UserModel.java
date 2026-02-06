@@ -53,8 +53,6 @@ public class UserModel extends BaseEntity {
         validateNotNull(name, "이름");
         validateNotNull(birthDate, "생년월일");
         validateNotNull(email, "이메일");
-
-        password.validateNotContainBirthday(birthDate);
     }
     private void validateNotNull(Object value, String fieldName) {
         if (value == null) {

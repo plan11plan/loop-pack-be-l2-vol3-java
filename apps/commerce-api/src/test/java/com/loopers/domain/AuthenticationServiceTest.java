@@ -25,21 +25,26 @@ class AuthenticationServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private com.loopers.infrastructure.PasswordEncoder passwordEncoder;
+
     @InjectMocks
     private AuthenticationService authenticationService;
 
     private UserModel testUser;
     private String validLoginId;
     private String validPassword;
+    private String encodedPassword;
 
     @BeforeEach
     void setUp() {
         validLoginId = "testuser123";
         validPassword = "Test1234!@#";
+        encodedPassword = "$2a$10$encodedPasswordHash";
 
         testUser = new UserModel(
             new LoginId(validLoginId),
-            new Password(validPassword),
+            Password.fromEncoded(encodedPassword),
             new Name("홍길동"),
             new BirthDate(LocalDate.of(1990, 1, 15)),
             new Email("test@example.com")
@@ -55,6 +60,7 @@ class AuthenticationServiceTest {
         void authenticate_should_return_user_when_credentials_are_correct() {
             // arrange
             when(userRepository.find(any(LoginId.class))).thenReturn(Optional.of(testUser));
+            when(passwordEncoder.matches(validPassword, encodedPassword)).thenReturn(true);
 
             // act
             UserModel result = authenticationService.authenticate(validLoginId, validPassword);
@@ -83,6 +89,7 @@ class AuthenticationServiceTest {
             // arrange
             when(userRepository.find(any(LoginId.class))).thenReturn(Optional.of(testUser));
             String wrongPassword = "Wrong1234!@#";
+            when(passwordEncoder.matches(wrongPassword, encodedPassword)).thenReturn(false);
 
             // act & assert
             assertThatThrownBy(() -> authenticationService.authenticate(validLoginId, wrongPassword))
@@ -92,12 +99,16 @@ class AuthenticationServiceTest {
         }
 
         @Test
-        @DisplayName("비밀번호가 null이면 BAD_REQUEST 예외를 던진다")
+        @DisplayName("비밀번호가 null이면 UNAUTHORIZED 예외를 던진다")
         void authenticate_should_throw_exception_when_password_is_null() {
+            // arrange
+            when(userRepository.find(any(LoginId.class))).thenReturn(Optional.of(testUser));
+            when(passwordEncoder.matches(null, encodedPassword)).thenReturn(false);
+
             // act & assert
             assertThatThrownBy(() -> authenticationService.authenticate(validLoginId, null))
                 .isInstanceOf(CoreException.class)
-                .hasFieldOrPropertyWithValue("errorType", ErrorType.BAD_REQUEST);
+                .hasFieldOrPropertyWithValue("errorType", ErrorType.UNAUTHORIZED);
         }
     }
 }
