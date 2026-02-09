@@ -28,8 +28,7 @@ public class Name {
         }
     }
 
-    public String getMaskedName() {
-        if (name == null || name.isEmpty()) return name;
-        return name.substring(0, name.length() - 1) + "*";
+    public String getValue() {
+        return name;
     }
 }

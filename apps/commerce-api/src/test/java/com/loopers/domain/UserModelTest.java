@@ -14,15 +14,17 @@ import org.junit.jupiter.api.Test;
 class UserModelTest {
 
     private LoginId validLoginId;
-    private Password validPassword;
+    private EncryptedPassword validPassword;
     private Name validName;
     private BirthDate validBirthDate;
     private Email validEmail;
+    private FakePasswordEncoder encoder;
 
     @BeforeEach
     void setUp() {
+        encoder = new FakePasswordEncoder();
         validLoginId = new LoginId("testuser123");
-        validPassword = Password.of("Test1234!@#");
+        validPassword = EncryptedPassword.of("Test1234!@#", encoder);
         validName = new Name("홍길동");
         validBirthDate = new BirthDate(LocalDate.of(1990, 1, 15));
         validEmail = new Email("test@example.com");
@@ -81,6 +83,60 @@ class UserModelTest {
         void createUserModel_whenEmailIsNull() {
             assertThatThrownBy(() -> new UserModel(validLoginId, validPassword, validName, validBirthDate, null))
                     .isInstanceOf(CoreException.class);
+        }
+    }
+
+    @DisplayName("비밀번호를 변경할 때, ")
+    @Nested
+    class ChangePassword {
+
+        @DisplayName("올바른 현재 비밀번호와 유효한 새 비밀번호가 주어지면 비밀번호가 변경된다.")
+        @Test
+        void changePassword_success() {
+            // arrange
+            UserModel user = new UserModel(validLoginId, validPassword, validName, validBirthDate, validEmail);
+
+            // act
+            user.changePassword("Test1234!@#", "NewPass123!@", encoder);
+
+            // assert
+            assertThat(user.getPassword().getValue()).isEqualTo("ENCODED_NewPass123!@");
+        }
+
+        @DisplayName("현재 비밀번호가 일치하지 않으면 예외가 발생한다.")
+        @Test
+        void changePassword_whenCurrentPasswordNotMatch() {
+            // arrange
+            UserModel user = new UserModel(validLoginId, validPassword, validName, validBirthDate, validEmail);
+
+            // act & assert
+            assertThatThrownBy(() -> user.changePassword("Wrong123!@#", "NewPass123!@", encoder))
+                    .isInstanceOf(CoreException.class)
+                    .hasMessageContaining("현재 비밀번호가 일치하지 않습니다.");
+        }
+
+        @DisplayName("새 비밀번호가 현재 비밀번호와 동일하면 예외가 발생한다.")
+        @Test
+        void changePassword_whenNewPasswordSameAsCurrent() {
+            // arrange
+            UserModel user = new UserModel(validLoginId, validPassword, validName, validBirthDate, validEmail);
+
+            // act & assert
+            assertThatThrownBy(() -> user.changePassword("Test1234!@#", "Test1234!@#", encoder))
+                    .isInstanceOf(CoreException.class)
+                    .hasMessageContaining("현재 사용 중인 비밀번호는 사용할 수 없습니다.");
+        }
+
+        @DisplayName("새 비밀번호에 생년월일이 포함되면 예외가 발생한다.")
+        @Test
+        void changePassword_whenNewPasswordContainsBirthDate() {
+            // arrange
+            UserModel user = new UserModel(validLoginId, validPassword, validName, validBirthDate, validEmail);
+
+            // act & assert
+            assertThatThrownBy(() -> user.changePassword("Test1234!@#", "Pw19900115!", encoder))
+                    .isInstanceOf(CoreException.class)
+                    .hasMessageContaining("생년월일은 비밀번호 내에 포함될 수 없습니다.");
         }
     }
 }

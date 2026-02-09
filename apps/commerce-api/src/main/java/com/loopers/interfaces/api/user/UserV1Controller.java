@@ -1,20 +1,21 @@
 package com.loopers.interfaces.api.user;
 
-import com.loopers.domain.*;
+import com.loopers.domain.AuthenticationService;
+import com.loopers.domain.ChangePasswordCommand;
+import com.loopers.domain.SignupCommand;
+import com.loopers.domain.UserInfo;
+import com.loopers.domain.UserModel;
+import com.loopers.domain.UserService;
 import com.loopers.interfaces.api.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
-
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/v1/users")
 public class UserV1Controller implements UserV1ApiSpec {
 
-    private static final DateTimeFormatter BIRTH_DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final String HEADER_LOGIN_ID = "X-Loopers-LoginId";
     private static final String HEADER_LOGIN_PW = "X-Loopers-LoginPw";
 
@@ -26,16 +27,12 @@ public class UserV1Controller implements UserV1ApiSpec {
     public ApiResponse<UserV1Dto.SignupResponse> signup(
         @Valid @RequestBody UserV1Dto.SignupRequest request
     ) {
-        LoginId loginId = new LoginId(request.loginId());
-        Password password = Password.of(request.password());
-        Name name = new Name(request.name());
-        BirthDate birthDate = new BirthDate(LocalDate.parse(request.birthDate(), BIRTH_DATE_FORMATTER));
-        Email email = new Email(request.email());
+        SignupCommand command = new SignupCommand(
+            request.loginId(), request.password(), request.name(), request.birthDate(), request.email()
+        );
+        UserInfo userInfo = userService.signup(command);
 
-        UserModel userModel = userService.signup(loginId, password, name, birthDate, email);
-        UserV1Dto.SignupResponse response = UserV1Dto.SignupResponse.from(userModel);
-
-        return ApiResponse.success(response);
+        return ApiResponse.success(UserV1Dto.SignupResponse.from(userInfo));
     }
 
     @GetMapping("/me")
@@ -45,10 +42,9 @@ public class UserV1Controller implements UserV1ApiSpec {
         @RequestHeader(HEADER_LOGIN_PW) String password
     ) {
         UserModel authenticatedUser = authenticationService.authenticate(loginId, password);
-        UserModel userInfo = userService.getMyInfo(authenticatedUser.getLoginId());
-        UserV1Dto.MyInfoResponse response = UserV1Dto.MyInfoResponse.from(userInfo);
+        UserInfo userInfo = userService.getMyInfo(authenticatedUser.getLoginId());
 
-        return ApiResponse.success(response);
+        return ApiResponse.success(UserV1Dto.MyInfoResponse.from(userInfo));
     }
 
     @PatchMapping("/password")
@@ -59,11 +55,10 @@ public class UserV1Controller implements UserV1ApiSpec {
         @Valid @RequestBody UserV1Dto.ChangePasswordRequest request
     ) {
         UserModel authenticatedUser = authenticationService.authenticate(loginId, currentPasswordValue);
-
-        Password currentPassword = Password.of(request.currentPassword());
-        Password newPassword = Password.of(request.newPassword());
-
-        userService.changePassword(authenticatedUser.getLoginId(), currentPassword, newPassword);
+        ChangePasswordCommand command = new ChangePasswordCommand(
+            authenticatedUser.getLoginId(), request.currentPassword(), request.newPassword()
+        );
+        userService.changePassword(command);
 
         return ApiResponse.success(UserV1Dto.ChangePasswordResponse.success());
     }

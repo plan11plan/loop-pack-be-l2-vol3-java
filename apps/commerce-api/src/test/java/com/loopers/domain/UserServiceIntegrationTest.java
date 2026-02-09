@@ -4,12 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
 
-// PasswordEncoder는 이제 domain 패키지 — import 불필요
 import com.loopers.infrastructure.UserJpaRepository;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import com.loopers.utils.DatabaseCleanUp;
-import java.time.LocalDate;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -32,26 +30,28 @@ public class UserServiceIntegrationTest {
     @Autowired
     private DatabaseCleanUp databaseCleanUp;
 
-    private LoginId validLoginId;
-    private Password validPassword;
+    private String loginId;
     private String rawPassword;
-    private Name validName;
-    private BirthDate validBirthDate;
-    private Email validEmail;
+    private String name;
+    private String birthDate;
+    private String email;
 
     @BeforeEach
     void setUp() {
-        validLoginId = new LoginId("testuser123");
+        loginId = "testuser123";
         rawPassword = "Test1234!@#";
-        validPassword = Password.of(rawPassword);
-        validName = new Name("홍길동");
-        validBirthDate = new BirthDate(LocalDate.of(1990, 1, 15));
-        validEmail = new Email("test@example.com");
+        name = "홍길동";
+        birthDate = "19900115";
+        email = "test@example.com";
     }
 
     @AfterEach
     void tearDown() {
         databaseCleanUp.truncateAllTables();
+    }
+
+    private SignupCommand signupCommand() {
+        return new SignupCommand(loginId, rawPassword, name, birthDate, email);
     }
 
     @DisplayName("유저가 회원가입할 때")
@@ -61,15 +61,15 @@ public class UserServiceIntegrationTest {
             @Test
             void signup_whenAllInfoProvided() {
                 // act
-                UserModel result = userService.signup(validLoginId,validPassword,validName,validBirthDate,validEmail);
+                UserInfo result = userService.signup(signupCommand());
 
                 // assert
                 assertAll(
                         () -> assertThat(result).isNotNull(),
-                        () -> assertThat(result.getLoginId()).isEqualTo(validLoginId),
-                        () -> assertThat(result.getName()).isEqualTo(validName),
-                        () -> assertThat(result.getBirthDate()).isEqualTo(validBirthDate),
-                        () -> assertThat(result.getEmail()).isEqualTo(validEmail)
+                        () -> assertThat(result.loginId()).isEqualTo(loginId),
+                        () -> assertThat(result.name()).isEqualTo(name),
+                        () -> assertThat(result.birthDate()).isEqualTo(birthDate),
+                        () -> assertThat(result.email()).isEqualTo(email)
                 );
             }
 
@@ -77,14 +77,15 @@ public class UserServiceIntegrationTest {
             @Test
             void signup_should_encrypt_password() {
                 // act
-                UserModel result = userService.signup(validLoginId,validPassword,validName,validBirthDate,validEmail);
+                UserInfo result = userService.signup(signupCommand());
 
                 // assert
-                String savedPassword = result.getPassword().getValue();
+                UserModel savedUser = userJpaRepository.findById(result.id()).orElseThrow();
+                String savedPassword = savedUser.getPassword().getValue();
                 assertAll(
-                        () -> assertThat(savedPassword).isNotEqualTo(rawPassword), // 평문과 다름
-                        () -> assertThat(savedPassword).startsWith("$2a$"), // BCrypt 포맷
-                        () -> assertThat(passwordEncoder.matches(rawPassword, savedPassword)).isTrue() // 평문과 매칭됨
+                        () -> assertThat(savedPassword).isNotEqualTo(rawPassword),
+                        () -> assertThat(savedPassword).startsWith("$2a$"),
+                        () -> assertThat(passwordEncoder.matches(rawPassword, savedPassword)).isTrue()
                 );
             }
 
@@ -92,15 +93,15 @@ public class UserServiceIntegrationTest {
             @Test
             void signup_should_save_encrypted_password_to_database() {
                 // act
-                UserModel result = userService.signup(validLoginId,validPassword,validName,validBirthDate,validEmail);
+                UserInfo result = userService.signup(signupCommand());
 
                 // assert
-                UserModel savedUser = userJpaRepository.findById(result.getId()).orElseThrow();
+                UserModel savedUser = userJpaRepository.findById(result.id()).orElseThrow();
                 String savedPassword = savedUser.getPassword().getValue();
                 assertAll(
-                        () -> assertThat(savedPassword).isNotEqualTo(rawPassword), // 평문과 다름
-                        () -> assertThat(savedPassword).startsWith("$2a$"), // BCrypt 포맷
-                        () -> assertThat(passwordEncoder.matches(rawPassword, savedPassword)).isTrue() // 평문과 매칭됨
+                        () -> assertThat(savedPassword).isNotEqualTo(rawPassword),
+                        () -> assertThat(savedPassword).startsWith("$2a$"),
+                        () -> assertThat(passwordEncoder.matches(rawPassword, savedPassword)).isTrue()
                 );
             }
     }
@@ -112,18 +113,19 @@ public class UserServiceIntegrationTest {
         @Test
         void getMyInfo_whenValidLoginId() {
             // arrange
-            userService.signup(validLoginId, validPassword, validName, validBirthDate, validEmail);
+            userService.signup(signupCommand());
 
             // act
-            UserModel result = userService.getMyInfo(validLoginId);
+            LoginId loginIdVo = new LoginId(loginId);
+            UserInfo result = userService.getMyInfo(loginIdVo);
 
             // assert
             assertAll(
                 () -> assertThat(result).isNotNull(),
-                () -> assertThat(result.getLoginId()).isEqualTo(validLoginId),
-                () -> assertThat(result.getName()).isEqualTo(validName),
-                () -> assertThat(result.getBirthDate()).isEqualTo(validBirthDate),
-                () -> assertThat(result.getEmail()).isEqualTo(validEmail)
+                () -> assertThat(result.loginId()).isEqualTo(loginId),
+                () -> assertThat(result.name()).isEqualTo(name),
+                () -> assertThat(result.birthDate()).isEqualTo(birthDate),
+                () -> assertThat(result.email()).isEqualTo(email)
             );
         }
 
@@ -148,19 +150,21 @@ public class UserServiceIntegrationTest {
         @Test
         void changePassword_whenValidPasswords() {
             // arrange
-            userService.signup(validLoginId, validPassword, validName, validBirthDate, validEmail);
-            Password newPassword = Password.of("NewPass123!@");
+            userService.signup(signupCommand());
+            String newRawPassword = "NewPass123!@";
 
             // act
-            userService.changePassword(validLoginId, validPassword, newPassword);
+            LoginId loginIdVo = new LoginId(loginId);
+            userService.changePassword(new ChangePasswordCommand(loginIdVo, rawPassword, newRawPassword));
 
             // assert
-            UserModel updatedUser = userService.getMyInfo(validLoginId);
-            String savedPassword = updatedUser.getPassword().getValue();
+            UserInfo updatedUser = userService.getMyInfo(loginIdVo);
+            UserModel savedUser = userJpaRepository.findById(updatedUser.id()).orElseThrow();
+            String savedPassword = savedUser.getPassword().getValue();
             assertAll(
-                    () -> assertThat(savedPassword).isNotEqualTo(rawPassword), // 이전 평문과 다름
-                    () -> assertThat(savedPassword).isNotEqualTo(newPassword.getValue()), // 새 평문과도 다름 (암호화됨)
-                    () -> assertThat(passwordEncoder.matches(newPassword.getValue(), savedPassword)).isTrue() // 새 비밀번호와 매칭됨
+                    () -> assertThat(savedPassword).isNotEqualTo(rawPassword),
+                    () -> assertThat(savedPassword).isNotEqualTo(newRawPassword),
+                    () -> assertThat(passwordEncoder.matches(newRawPassword, savedPassword)).isTrue()
             );
         }
 
@@ -168,12 +172,11 @@ public class UserServiceIntegrationTest {
         @Test
         void changePassword_whenCurrentPasswordNotMatch() {
             // arrange
-            userService.signup(validLoginId, validPassword, validName, validBirthDate, validEmail);
-            Password wrongPassword = Password.of("Wrong123!@#");
-            Password newPassword = Password.of("NewPass123!@");
+            userService.signup(signupCommand());
 
             // act & assert
-            assertThatThrownBy(() -> userService.changePassword(validLoginId, wrongPassword, newPassword))
+            LoginId loginIdVo = new LoginId(loginId);
+            assertThatThrownBy(() -> userService.changePassword(new ChangePasswordCommand(loginIdVo, "Wrong123!@#", "NewPass123!@")))
                 .isInstanceOf(CoreException.class)
                 .hasMessageContaining("현재 비밀번호가 일치하지 않습니다.");
         }
@@ -182,11 +185,11 @@ public class UserServiceIntegrationTest {
         @Test
         void changePassword_whenNewPasswordSameAsCurrent() {
             // arrange
-            userService.signup(validLoginId, validPassword, validName, validBirthDate, validEmail);
-            Password samePassword = Password.of("Test1234!@#");
+            userService.signup(signupCommand());
 
             // act & assert
-            assertThatThrownBy(() -> userService.changePassword(validLoginId, validPassword, samePassword))
+            LoginId loginIdVo = new LoginId(loginId);
+            assertThatThrownBy(() -> userService.changePassword(new ChangePasswordCommand(loginIdVo, rawPassword, rawPassword)))
                 .isInstanceOf(CoreException.class)
                 .hasMessageContaining("현재 사용 중인 비밀번호는 사용할 수 없습니다.");
         }
@@ -195,11 +198,11 @@ public class UserServiceIntegrationTest {
         @Test
         void changePassword_whenNewPasswordContainsBirthDate() {
             // arrange
-            userService.signup(validLoginId, validPassword, validName, validBirthDate, validEmail);
-            Password newPasswordWithBirthDate = Password.of("Pw19900115!");
+            userService.signup(signupCommand());
 
             // act & assert
-            assertThatThrownBy(() -> userService.changePassword(validLoginId, validPassword, newPasswordWithBirthDate))
+            LoginId loginIdVo = new LoginId(loginId);
+            assertThatThrownBy(() -> userService.changePassword(new ChangePasswordCommand(loginIdVo, rawPassword, "Pw19900115!")))
                 .isInstanceOf(CoreException.class)
                 .hasMessageContaining("생년월일은 비밀번호 내에 포함될 수 없습니다.");
         }
@@ -209,10 +212,9 @@ public class UserServiceIntegrationTest {
         void changePassword_whenUserNotFound() {
             // arrange
             LoginId invalidLoginId = new LoginId("invalid123");
-            Password newPassword = Password.of("NewPass123!@");
 
             // act & assert
-            assertThatThrownBy(() -> userService.changePassword(invalidLoginId, validPassword, newPassword))
+            assertThatThrownBy(() -> userService.changePassword(new ChangePasswordCommand(invalidLoginId, rawPassword, "NewPass123!@")))
                 .isInstanceOf(CoreException.class)
                 .hasFieldOrPropertyWithValue("errorType", ErrorType.NOT_FOUND)
                 .hasMessageContaining("사용자를 찾을 수 없습니다.");

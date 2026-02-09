@@ -27,7 +27,6 @@ class AuthenticationServiceTest {
 
     @Mock
     private PasswordEncoder passwordEncoder;
-    // STEP2: infrastructure import가 사라졌다. 같은 domain 패키지.
 
     @InjectMocks
     private AuthenticationService authenticationService;
@@ -45,7 +44,7 @@ class AuthenticationServiceTest {
 
         testUser = new UserModel(
             new LoginId(validLoginId),
-            Password.fromEncoded(encodedPassword),
+            EncryptedPassword.fromEncoded(encodedPassword),
             new Name("홍길동"),
             new BirthDate(LocalDate.of(1990, 1, 15)),
             new Email("test@example.com")

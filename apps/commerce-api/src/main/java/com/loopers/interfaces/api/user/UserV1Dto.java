@@ -1,6 +1,6 @@
 package com.loopers.interfaces.api.user;
 
-import com.loopers.domain.UserModel;
+import com.loopers.domain.UserInfo;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -42,13 +42,13 @@ public class UserV1Dto {
         String birthDate,
         String email
     ) {
-        public static SignupResponse from(UserModel model) {
+        public static SignupResponse from(UserInfo info) {
             return new SignupResponse(
-                model.getId(),
-                model.getLoginId().getValue(),
-                model.getName().getMaskedName(),
-                model.getBirthDate().toDateString(),
-                model.getEmail().getMail()
+                info.id(),
+                info.loginId(),
+                maskName(info.name()),
+                info.birthDate(),
+                info.email()
             );
         }
     }
@@ -59,12 +59,12 @@ public class UserV1Dto {
         String birthDate,
         String email
     ) {
-        public static MyInfoResponse from(UserModel model) {
+        public static MyInfoResponse from(UserInfo info) {
             return new MyInfoResponse(
-                model.getLoginId().getValue(),
-                model.getName().getMaskedName(),
-                model.getBirthDate().toDateString(),
-                model.getEmail().getMail()
+                info.loginId(),
+                maskName(info.name()),
+                info.birthDate(),
+                info.email()
             );
         }
     }
@@ -88,5 +88,10 @@ public class UserV1Dto {
         public static ChangePasswordResponse success() {
             return new ChangePasswordResponse("비밀번호가 성공적으로 변경되었습니다.");
         }
+    }
+
+    private static String maskName(String name) {
+        if (name == null || name.isEmpty()) return name;
+        return name.substring(0, name.length() - 1) + "*";
     }
 }

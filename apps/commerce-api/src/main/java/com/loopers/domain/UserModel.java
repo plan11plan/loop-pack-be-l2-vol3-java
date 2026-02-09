@@ -8,7 +8,6 @@ import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -24,7 +23,7 @@ public class UserModel extends BaseEntity {
 
     @Embedded
     @AttributeOverride(name = "value", column = @Column(name = "password"))
-    private Password password;
+    private EncryptedPassword password;
 
     @Embedded
     @AttributeOverride(name = "name", column = @Column(name = "name"))
@@ -38,7 +37,7 @@ public class UserModel extends BaseEntity {
     @AttributeOverride(name = "mail", column = @Column(name = "email"))
     private Email email;
 
-    public UserModel(LoginId loginId, Password password, Name name, BirthDate birthDate, Email email) {
+    public UserModel(LoginId loginId, EncryptedPassword password, Name name, BirthDate birthDate, Email email) {
         validate(loginId, password, name, birthDate, email);
         this.loginId = loginId;
         this.password = password;
@@ -47,7 +46,7 @@ public class UserModel extends BaseEntity {
         this.email = email;
     }
 
-    private void validate(LoginId loginId, Password password, Name name, BirthDate birthDate, Email email) {
+    private void validate(LoginId loginId, EncryptedPassword password, Name name, BirthDate birthDate, Email email) {
         validateNotNull(loginId, "로그인 ID");
         validateNotNull(password, "비밀번호");
         validateNotNull(name, "이름");
@@ -60,8 +59,13 @@ public class UserModel extends BaseEntity {
         }
     }
 
-    public void changePassword(Password currentPassword, Password newPassword) {
-        // 검증은 UserService에서 수행
-        this.password = newPassword;
+    public void changePassword(String rawCurrentPassword, String rawNewPassword, PasswordEncoder encoder) {
+        if (!this.password.matches(rawCurrentPassword, encoder)) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "현재 비밀번호가 일치하지 않습니다.");
+        }
+        if (this.password.matches(rawNewPassword, encoder)) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "현재 사용 중인 비밀번호는 사용할 수 없습니다.");
+        }
+        this.password = EncryptedPassword.of(rawNewPassword, encoder, this.birthDate);
     }
 }
