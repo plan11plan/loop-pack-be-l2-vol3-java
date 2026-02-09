@@ -37,25 +37,29 @@ public class UserModel extends BaseEntity {
     @AttributeOverride(name = "mail", column = @Column(name = "email"))
     private Email email;
 
-    public UserModel(LoginId loginId, EncryptedPassword password, Name name, BirthDate birthDate, Email email) {
-        validate(loginId, password, name, birthDate, email);
+    public UserModel(LoginId loginId, String rawPassword, PasswordEncoder encoder, Name name, BirthDate birthDate, Email email) {
+        validateNotNull(loginId, "로그인 ID");
+        validateNotNull(name, "이름");
+        validateNotNull(birthDate, "생년월일");
+        validateNotNull(email, "이메일");
+        validateBirthDateNotInPassword(rawPassword, birthDate);
+
         this.loginId = loginId;
-        this.password = password;
+        this.password = EncryptedPassword.of(rawPassword, encoder);
         this.name = name;
         this.birthDate = birthDate;
         this.email = email;
     }
 
-    private void validate(LoginId loginId, EncryptedPassword password, Name name, BirthDate birthDate, Email email) {
-        validateNotNull(loginId, "로그인 ID");
-        validateNotNull(password, "비밀번호");
-        validateNotNull(name, "이름");
-        validateNotNull(birthDate, "생년월일");
-        validateNotNull(email, "이메일");
-    }
     private void validateNotNull(Object value, String fieldName) {
         if (value == null) {
-            throw new CoreException(ErrorType.BAD_REQUEST,fieldName + "은(는) 필수 입력값입니다.");
+            throw new CoreException(ErrorType.BAD_REQUEST, fieldName + "은(는) 필수 입력값입니다.");
+        }
+    }
+
+    private void validateBirthDateNotInPassword(String rawPassword, BirthDate birthDate) {
+        if (rawPassword != null && rawPassword.contains(birthDate.toDateString())) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "생년월일은 비밀번호 내에 포함될 수 없습니다.");
         }
     }
 
@@ -66,6 +70,7 @@ public class UserModel extends BaseEntity {
         if (this.password.matches(rawNewPassword, encoder)) {
             throw new CoreException(ErrorType.BAD_REQUEST, "현재 사용 중인 비밀번호는 사용할 수 없습니다.");
         }
-        this.password = EncryptedPassword.of(rawNewPassword, encoder, this.birthDate);
+        validateBirthDateNotInPassword(rawNewPassword, this.birthDate);
+        this.password = EncryptedPassword.of(rawNewPassword, encoder);
     }
 }

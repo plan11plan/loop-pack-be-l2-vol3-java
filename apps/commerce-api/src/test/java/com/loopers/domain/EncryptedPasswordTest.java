@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 import com.loopers.support.error.CoreException;
-import java.time.LocalDate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -13,12 +12,10 @@ import org.junit.jupiter.api.Test;
 
 class EncryptedPasswordTest {
 
-    private BirthDate defaultBirthDate;
     private PasswordEncoder noOpEncoder;
 
     @BeforeEach
     void setUp() {
-        defaultBirthDate = new BirthDate(LocalDate.of(1990, 1, 15));
         noOpEncoder = new PasswordEncoder() {
             @Override
             public String encode(String rawPassword) { return rawPassword; }
@@ -48,13 +45,6 @@ class EncryptedPasswordTest {
     @DisplayName("비밀번호 비즈니스 규칙을 검증할 때, ")
     @Nested
     class Validation {
-
-        @DisplayName("비밀번호에 생년월일(yyyyMMdd)이 포함되어 있으면 예외가 발생한다.")
-        @Test
-        void validateNotContainBirthday_fail() {
-            assertThatThrownBy(() -> EncryptedPassword.of("Pw19900115!", noOpEncoder, defaultBirthDate))
-                    .isInstanceOf(CoreException.class);
-        }
 
         @DisplayName("matches()로 원시 비밀번호와 암호화된 비밀번호를 비교할 수 있다.")
         @Test

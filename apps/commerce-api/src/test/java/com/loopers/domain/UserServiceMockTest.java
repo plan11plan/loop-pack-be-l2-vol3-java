@@ -134,9 +134,14 @@ class UserServiceMockTest {
     // --- 헬퍼 ---
 
     private UserModel createTestUser(String encodedPassword) {
+        PasswordEncoder fixedEncoder = new PasswordEncoder() {
+            @Override public String encode(String rawPassword) { return encodedPassword; }
+            @Override public boolean matches(String rawPassword, String encoded) { return false; }
+        };
         return new UserModel(
             new LoginId(loginId),
-            EncryptedPassword.fromEncoded(encodedPassword),
+            rawPassword,
+            fixedEncoder,
             new Name(name),
             new BirthDate(java.time.LocalDate.of(1990, 1, 15)),
             new Email(email)

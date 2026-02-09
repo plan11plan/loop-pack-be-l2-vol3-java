@@ -27,8 +27,7 @@ public class UserService {
             throw new CoreException(ErrorType.BAD_REQUEST,"이미 존재하는 아이디입니다.");
         }
 
-        EncryptedPassword password = EncryptedPassword.of(command.rawPassword(), passwordEncoder, birthDate);
-        UserModel userModel = new UserModel(loginId, password, name, birthDate, email);
+        UserModel userModel = new UserModel(loginId, command.rawPassword(), passwordEncoder, name, birthDate, email);
 
         return UserInfo.from(userRepository.save(userModel));
     }

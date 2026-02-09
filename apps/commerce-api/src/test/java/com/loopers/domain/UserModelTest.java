@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test;
 class UserModelTest {
 
     private LoginId validLoginId;
-    private EncryptedPassword validPassword;
+    private String validRawPassword;
     private Name validName;
     private BirthDate validBirthDate;
     private Email validEmail;
@@ -24,7 +24,7 @@ class UserModelTest {
     void setUp() {
         encoder = new FakePasswordEncoder();
         validLoginId = new LoginId("testuser123");
-        validPassword = EncryptedPassword.of("Test1234!@#", encoder);
+        validRawPassword = "Test1234!@#";
         validName = new Name("홍길동");
         validBirthDate = new BirthDate(LocalDate.of(1990, 1, 15));
         validEmail = new Email("test@example.com");
@@ -38,12 +38,12 @@ class UserModelTest {
         @Test
         void createUserModel_whenAllDataProvided() {
             // act
-            UserModel user = new UserModel(validLoginId, validPassword, validName, validBirthDate, validEmail);
+            UserModel user = new UserModel(validLoginId, validRawPassword, encoder, validName, validBirthDate, validEmail);
 
             // assert
             assertAll(
                     () -> assertThat(user.getLoginId()).isEqualTo(validLoginId),
-                    () -> assertThat(user.getPassword()).isEqualTo(validPassword),
+                    () -> assertThat(user.getPassword().getValue()).isEqualTo("ENCODED_Test1234!@#"),
                     () -> assertThat(user.getName()).isEqualTo(validName),
                     () -> assertThat(user.getBirthDate()).isEqualTo(validBirthDate),
                     () -> assertThat(user.getEmail()).isEqualTo(validEmail)
@@ -53,36 +53,44 @@ class UserModelTest {
         @DisplayName("로그인 ID가 누락되면 예외가 발생한다.")
         @Test
         void createUserModel_whenLoginIdIsNull() {
-            assertThatThrownBy(() -> new UserModel(null, validPassword, validName, validBirthDate, validEmail))
+            assertThatThrownBy(() -> new UserModel(null, validRawPassword, encoder, validName, validBirthDate, validEmail))
                     .isInstanceOf(CoreException.class);
         }
 
         @DisplayName("비밀번호가 누락되면 예외가 발생한다.")
         @Test
         void createUserModel_whenPasswordIsNull() {
-            assertThatThrownBy(() -> new UserModel(validLoginId, null, validName, validBirthDate, validEmail))
+            assertThatThrownBy(() -> new UserModel(validLoginId, null, encoder, validName, validBirthDate, validEmail))
                     .isInstanceOf(CoreException.class);
         }
 
         @DisplayName("이름이 누락되면 예외가 발생한다.")
         @Test
         void createUserModel_whenNameIsNull() {
-            assertThatThrownBy(() -> new UserModel(validLoginId, validPassword, null, validBirthDate, validEmail))
+            assertThatThrownBy(() -> new UserModel(validLoginId, validRawPassword, encoder, null, validBirthDate, validEmail))
                     .isInstanceOf(CoreException.class);
         }
 
         @DisplayName("생년월일이 누락되면 예외가 발생한다.")
         @Test
         void createUserModel_whenBirthDateIsNull() {
-            assertThatThrownBy(() -> new UserModel(validLoginId, validPassword, validName, null, validEmail))
+            assertThatThrownBy(() -> new UserModel(validLoginId, validRawPassword, encoder, validName, null, validEmail))
                     .isInstanceOf(CoreException.class);
         }
 
         @DisplayName("이메일이 누락되면 예외가 발생한다.")
         @Test
         void createUserModel_whenEmailIsNull() {
-            assertThatThrownBy(() -> new UserModel(validLoginId, validPassword, validName, validBirthDate, null))
+            assertThatThrownBy(() -> new UserModel(validLoginId, validRawPassword, encoder, validName, validBirthDate, null))
                     .isInstanceOf(CoreException.class);
+        }
+
+        @DisplayName("비밀번호에 생년월일이 포함되면 예외가 발생한다.")
+        @Test
+        void createUserModel_whenPasswordContainsBirthDate() {
+            assertThatThrownBy(() -> new UserModel(validLoginId, "Pw19900115!", encoder, validName, validBirthDate, validEmail))
+                    .isInstanceOf(CoreException.class)
+                    .hasMessageContaining("생년월일은 비밀번호 내에 포함될 수 없습니다.");
         }
     }
 
@@ -94,7 +102,7 @@ class UserModelTest {
         @Test
         void changePassword_success() {
             // arrange
-            UserModel user = new UserModel(validLoginId, validPassword, validName, validBirthDate, validEmail);
+            UserModel user = new UserModel(validLoginId, validRawPassword, encoder, validName, validBirthDate, validEmail);
 
             // act
             user.changePassword("Test1234!@#", "NewPass123!@", encoder);
@@ -107,7 +115,7 @@ class UserModelTest {
         @Test
         void changePassword_whenCurrentPasswordNotMatch() {
             // arrange
-            UserModel user = new UserModel(validLoginId, validPassword, validName, validBirthDate, validEmail);
+            UserModel user = new UserModel(validLoginId, validRawPassword, encoder, validName, validBirthDate, validEmail);
 
             // act & assert
             assertThatThrownBy(() -> user.changePassword("Wrong123!@#", "NewPass123!@", encoder))
@@ -119,7 +127,7 @@ class UserModelTest {
         @Test
         void changePassword_whenNewPasswordSameAsCurrent() {
             // arrange
-            UserModel user = new UserModel(validLoginId, validPassword, validName, validBirthDate, validEmail);
+            UserModel user = new UserModel(validLoginId, validRawPassword, encoder, validName, validBirthDate, validEmail);
 
             // act & assert
             assertThatThrownBy(() -> user.changePassword("Test1234!@#", "Test1234!@#", encoder))
@@ -131,7 +139,7 @@ class UserModelTest {
         @Test
         void changePassword_whenNewPasswordContainsBirthDate() {
             // arrange
-            UserModel user = new UserModel(validLoginId, validPassword, validName, validBirthDate, validEmail);
+            UserModel user = new UserModel(validLoginId, validRawPassword, encoder, validName, validBirthDate, validEmail);
 
             // act & assert
             assertThatThrownBy(() -> user.changePassword("Test1234!@#", "Pw19900115!", encoder))

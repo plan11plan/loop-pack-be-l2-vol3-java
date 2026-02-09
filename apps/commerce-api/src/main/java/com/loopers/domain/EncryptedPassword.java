@@ -25,12 +25,6 @@ public class EncryptedPassword {
         return new EncryptedPassword(encoder.encode(rawPassword));
     }
 
-    public static EncryptedPassword of(String rawPassword, PasswordEncoder encoder, BirthDate birthDate) {
-        validateFormat(rawPassword);
-        validateNotContainBirthday(rawPassword, birthDate);
-        return new EncryptedPassword(encoder.encode(rawPassword));
-    }
-
     public static EncryptedPassword fromEncoded(String encodedValue) {
         return new EncryptedPassword(encodedValue);
     }
@@ -49,11 +43,4 @@ public class EncryptedPassword {
         }
     }
 
-    private static void validateNotContainBirthday(String rawPassword, BirthDate birthDate) {
-        String birthDateString = birthDate.toDateString();
-
-        if (rawPassword.contains(birthDateString)) {
-            throw new CoreException(ErrorType.BAD_REQUEST, "생년월일은 비밀번호 내에 포함될 수 없습니다.");
-        }
-    }
 }
