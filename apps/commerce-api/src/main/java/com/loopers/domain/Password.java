@@ -9,7 +9,6 @@ import lombok.EqualsAndHashCode;
 @Embeddable
 @EqualsAndHashCode
 public class Password {
-    // 특수문자 범위를 ~!@#$%^&*()_+=- 로 확장했습니다.
     private static final Pattern PASSWORD_PATTERN =
             Pattern.compile("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[~!@#$%^&*()_+=-])[A-Za-z\\d~!@#$%^&*()_+=-]{8,16}$");
 
@@ -17,9 +16,19 @@ public class Password {
 
     protected Password() {}
 
-    public Password(String value) {
-        validate(value);
-        this.value = value;
+    private Password(String value) {
+       this. value = value;
+    }
+
+    public static Password of(String rawPassword) {
+        validateFormat(rawPassword);
+        return new Password(rawPassword);
+    }
+
+    public static Password of(String rawPassword, BirthDate birthDate) {
+        validateFormat(rawPassword);
+        validateNotContainBirthday(rawPassword, birthDate);
+        return new Password(rawPassword);
     }
 
     private Password(String value, boolean skipValidation) {
@@ -30,18 +39,22 @@ public class Password {
         return new Password(encodedValue, true);
     }
 
-    private void validate(String value) {
+    private static void validateFormat(String value) {
         if (value == null || !PASSWORD_PATTERN.matcher(value).matches()) {
             throw new CoreException(ErrorType.BAD_REQUEST, "비밀번호는 8~16자의 영문 대소문자, 숫자, 특수문자 조합이어야 합니다.");
         }
     }
 
-    public void validateNotContainBirthday(BirthDate birthDate) {
+    private static void validateNotContainBirthday(String rawPassword, BirthDate birthDate) {
         String birthDateString = birthDate.toDateString();
 
-        if (this.value.contains(birthDateString)) {
+        if (rawPassword.contains(birthDateString)) {
             throw new CoreException(ErrorType.BAD_REQUEST, "생년월일은 비밀번호 내에 포함될 수 없습니다.");
         }
+    }
+
+    public void validateNotContainBirthday(BirthDate birthDate) {
+        validateNotContainBirthday(this.value, birthDate);
     }
 
     public void validateNotSameAs(Password other) {

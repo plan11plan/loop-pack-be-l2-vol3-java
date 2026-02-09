@@ -1,6 +1,6 @@
 package com.loopers.domain;
 
-import com.loopers.infrastructure.PasswordEncoder;
+// PasswordEncoder는 이제 같은 domain 패키지에 있으므로 import 불필요
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;

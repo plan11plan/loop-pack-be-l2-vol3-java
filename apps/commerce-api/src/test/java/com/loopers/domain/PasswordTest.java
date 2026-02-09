@@ -5,11 +5,19 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 import com.loopers.support.error.CoreException;
 import java.time.LocalDate;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 class PasswordTest {
+
+    private BirthDate defaultBirthDate;
+
+    @BeforeEach
+    void setUp() {
+        defaultBirthDate = new BirthDate(LocalDate.of(1990, 1, 15));
+    }
 
     @DisplayName("비밀번호 객체를 생성할 때, ")
     @Nested
@@ -19,13 +27,13 @@ class PasswordTest {
         @Test
         void createPassword_whenValidFormat() {
             // 대문자(V), 소문자(alid), 숫자(123), 특수문자(!@#) 모두 포함
-            assertDoesNotThrow(() -> new Password("Valid123!@#"));
+            assertDoesNotThrow(() -> Password.of("Valid123!@#", defaultBirthDate));
         }
 
         @DisplayName("규칙에 어긋나는 형식이면 예외가 발생한다.")
         @Test
         void createPassword_whenInvalidFormat() {
-            assertThatThrownBy(() -> new Password("invalid"))
+            assertThatThrownBy(() -> Password.of("invalid", defaultBirthDate))
                     .isInstanceOf(CoreException.class);
         }
     }
@@ -37,12 +45,8 @@ class PasswordTest {
         @DisplayName("비밀번호에 생년월일(yyyyMMdd)이 포함되어 있으면 예외가 발생한다.")
         @Test
         void validateNotContainBirthday_fail() {
-            // arrange: 정규식을 통과하기 위해 대문자 'P' 추가
-            Password password = new Password("Pw19900115!");
-            BirthDate birthDate = new BirthDate(LocalDate.of(1990, 1, 15));
-
-            // act & assert
-            assertThatThrownBy(() -> password.validateNotContainBirthday(birthDate))
+            // act & assert: Password.of 생성 시점에 생년월일 포함 검증이 수행됨
+            assertThatThrownBy(() -> Password.of("Pw19900115!", defaultBirthDate))
                     .isInstanceOf(CoreException.class);
         }
 
@@ -50,8 +54,8 @@ class PasswordTest {
         @Test
         void validateNotSameAs_fail() {
             // arrange
-            Password currentPassword = new Password("Current123!");
-            Password newPassword = new Password("Current123!");
+            Password currentPassword = Password.of("Current123!", defaultBirthDate);
+            Password newPassword = Password.of("Current123!", defaultBirthDate);
 
             // act & assert
             assertThatThrownBy(() -> newPassword.validateNotSameAs(currentPassword))

@@ -3,6 +3,8 @@ package com.loopers.infrastructure;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import com.loopers.domain.PasswordEncoder;
+
 @Component
 public class BCryptPasswordEncoderImpl implements PasswordEncoder {
 

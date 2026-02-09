@@ -27,7 +27,7 @@ public class UserV1Controller implements UserV1ApiSpec {
         @Valid @RequestBody UserV1Dto.SignupRequest request
     ) {
         LoginId loginId = new LoginId(request.loginId());
-        Password password = new Password(request.password());
+        Password password = Password.of(request.password());
         Name name = new Name(request.name());
         BirthDate birthDate = new BirthDate(LocalDate.parse(request.birthDate(), BIRTH_DATE_FORMATTER));
         Email email = new Email(request.email());
@@ -60,8 +60,8 @@ public class UserV1Controller implements UserV1ApiSpec {
     ) {
         UserModel authenticatedUser = authenticationService.authenticate(loginId, currentPasswordValue);
 
-        Password currentPassword = new Password(request.currentPassword());
-        Password newPassword = new Password(request.newPassword());
+        Password currentPassword = Password.of(request.currentPassword());
+        Password newPassword = Password.of(request.newPassword());
 
         userService.changePassword(authenticatedUser.getLoginId(), currentPassword, newPassword);
 

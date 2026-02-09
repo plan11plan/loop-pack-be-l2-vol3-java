@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
 
-import com.loopers.infrastructure.PasswordEncoder;
+// PasswordEncoder는 이제 domain 패키지 — import 불필요
 import com.loopers.infrastructure.UserJpaRepository;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
@@ -43,7 +43,7 @@ public class UserServiceIntegrationTest {
     void setUp() {
         validLoginId = new LoginId("testuser123");
         rawPassword = "Test1234!@#";
-        validPassword = new Password(rawPassword);
+        validPassword = Password.of(rawPassword);
         validName = new Name("홍길동");
         validBirthDate = new BirthDate(LocalDate.of(1990, 1, 15));
         validEmail = new Email("test@example.com");
@@ -149,7 +149,7 @@ public class UserServiceIntegrationTest {
         void changePassword_whenValidPasswords() {
             // arrange
             userService.signup(validLoginId, validPassword, validName, validBirthDate, validEmail);
-            Password newPassword = new Password("NewPass123!@");
+            Password newPassword = Password.of("NewPass123!@");
 
             // act
             userService.changePassword(validLoginId, validPassword, newPassword);
@@ -169,8 +169,8 @@ public class UserServiceIntegrationTest {
         void changePassword_whenCurrentPasswordNotMatch() {
             // arrange
             userService.signup(validLoginId, validPassword, validName, validBirthDate, validEmail);
-            Password wrongPassword = new Password("Wrong123!@#");
-            Password newPassword = new Password("NewPass123!@");
+            Password wrongPassword = Password.of("Wrong123!@#");
+            Password newPassword = Password.of("NewPass123!@");
 
             // act & assert
             assertThatThrownBy(() -> userService.changePassword(validLoginId, wrongPassword, newPassword))
@@ -183,7 +183,7 @@ public class UserServiceIntegrationTest {
         void changePassword_whenNewPasswordSameAsCurrent() {
             // arrange
             userService.signup(validLoginId, validPassword, validName, validBirthDate, validEmail);
-            Password samePassword = new Password("Test1234!@#");
+            Password samePassword = Password.of("Test1234!@#");
 
             // act & assert
             assertThatThrownBy(() -> userService.changePassword(validLoginId, validPassword, samePassword))
@@ -196,7 +196,7 @@ public class UserServiceIntegrationTest {
         void changePassword_whenNewPasswordContainsBirthDate() {
             // arrange
             userService.signup(validLoginId, validPassword, validName, validBirthDate, validEmail);
-            Password newPasswordWithBirthDate = new Password("Pw19900115!");
+            Password newPasswordWithBirthDate = Password.of("Pw19900115!");
 
             // act & assert
             assertThatThrownBy(() -> userService.changePassword(validLoginId, validPassword, newPasswordWithBirthDate))
@@ -209,7 +209,7 @@ public class UserServiceIntegrationTest {
         void changePassword_whenUserNotFound() {
             // arrange
             LoginId invalidLoginId = new LoginId("invalid123");
-            Password newPassword = new Password("NewPass123!@");
+            Password newPassword = Password.of("NewPass123!@");
 
             // act & assert
             assertThatThrownBy(() -> userService.changePassword(invalidLoginId, validPassword, newPassword))

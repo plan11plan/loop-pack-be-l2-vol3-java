@@ -26,7 +26,8 @@ class AuthenticationServiceTest {
     private UserRepository userRepository;
 
     @Mock
-    private com.loopers.infrastructure.PasswordEncoder passwordEncoder;
+    private PasswordEncoder passwordEncoder;
+    // STEP2: infrastructure import가 사라졌다. 같은 domain 패키지.
 
     @InjectMocks
     private AuthenticationService authenticationService;

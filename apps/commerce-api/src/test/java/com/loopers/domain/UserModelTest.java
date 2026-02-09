@@ -22,7 +22,7 @@ class UserModelTest {
     @BeforeEach
     void setUp() {
         validLoginId = new LoginId("testuser123");
-        validPassword = new Password("Test1234!@#");
+        validPassword = Password.of("Test1234!@#");
         validName = new Name("홍길동");
         validBirthDate = new BirthDate(LocalDate.of(1990, 1, 15));
         validEmail = new Email("test@example.com");
