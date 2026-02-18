@@ -40,7 +40,8 @@ out/
 .kotlin
 
 ### Claude Code ###
-.claude/
+claude/*
+!.claude/skills/
 
 ### Documentation ###
 docs/*
