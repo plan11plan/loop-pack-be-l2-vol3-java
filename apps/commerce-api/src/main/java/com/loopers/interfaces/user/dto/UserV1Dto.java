@@ -1,6 +1,7 @@
-package com.loopers.interfaces.api.user;
+package com.loopers.interfaces.user.dto;
 
-import com.loopers.domain.UserInfo;
+import com.loopers.application.user.dto.UserCommand;
+import com.loopers.application.user.dto.UserInfo;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -33,6 +34,9 @@ public class UserV1Dto {
         @Email(message = "이메일 형식이 올바르지 않습니다.")
         String email
     ) {
+        public UserCommand.Signup toCommand() {
+            return new UserCommand.Signup(loginId, password, name, birthDate, email);
+        }
     }
 
     public record SignupResponse(
@@ -80,6 +84,9 @@ public class UserV1Dto {
         )
         String newPassword
     ) {
+        public UserCommand.ChangePassword toCommand() {
+            return new UserCommand.ChangePassword(currentPassword, newPassword);
+        }
     }
 
     public record ChangePasswordResponse(

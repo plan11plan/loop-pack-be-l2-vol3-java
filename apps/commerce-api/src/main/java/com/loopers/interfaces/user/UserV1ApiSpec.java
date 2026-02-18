@@ -1,6 +1,7 @@
-package com.loopers.interfaces.api.user;
+package com.loopers.interfaces.user;
 
 import com.loopers.interfaces.api.ApiResponse;
+import com.loopers.interfaces.user.dto.UserV1Dto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.parameters.RequestBody;
