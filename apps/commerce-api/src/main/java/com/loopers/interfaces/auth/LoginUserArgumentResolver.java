@@ -13,12 +13,12 @@ import org.springframework.web.method.support.ModelAndViewContainer;
 
 @Component
 @RequiredArgsConstructor
-public class AuthUserArgumentResolver implements HandlerMethodArgumentResolver {
+public class LoginUserArgumentResolver implements HandlerMethodArgumentResolver {
 
     @Override
     public boolean supportsParameter(MethodParameter parameter) {
-        return parameter.hasParameterAnnotation(Auth.class)
-            && AuthUser.class.isAssignableFrom(parameter.getParameterType());
+        return parameter.hasParameterAnnotation(Login.class)
+            && LoginUser.class.isAssignableFrom(parameter.getParameterType());
     }
 
     @Override
@@ -27,12 +27,12 @@ public class AuthUserArgumentResolver implements HandlerMethodArgumentResolver {
                                   NativeWebRequest webRequest,
                                   WebDataBinderFactory binderFactory) {
         HttpServletRequest request = (HttpServletRequest) webRequest.getNativeRequest();
-        AuthUser authUser = (AuthUser) request.getAttribute("authUser");
+        LoginUser loginUser = (LoginUser) request.getAttribute("loginUser");
 
-        if (authUser == null) {
+        if (loginUser == null) {
             throw new CoreException(ErrorType.UNAUTHORIZED);
         }
 
-        return authUser;
+        return loginUser;
     }
 }

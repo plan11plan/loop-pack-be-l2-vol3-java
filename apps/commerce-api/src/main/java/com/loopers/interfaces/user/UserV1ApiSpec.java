@@ -1,7 +1,7 @@
 package com.loopers.interfaces.user;
 
 import com.loopers.interfaces.api.ApiResponse;
-import com.loopers.interfaces.auth.AuthUser;
+import com.loopers.interfaces.auth.LoginUser;
 import com.loopers.interfaces.user.dto.UserV1Dto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -26,7 +26,7 @@ public interface UserV1ApiSpec {
     )
     ApiResponse<UserV1Dto.MyInfoResponse> getMyInfo(
         @Parameter(hidden = true)
-        AuthUser authUser
+        LoginUser loginUser
     );
 
     @Operation(
@@ -35,7 +35,7 @@ public interface UserV1ApiSpec {
     )
     ApiResponse<UserV1Dto.ChangePasswordResponse> changePassword(
         @Parameter(hidden = true)
-        AuthUser authUser,
+        LoginUser loginUser,
         @RequestBody(description = "비밀번호 변경 요청 정보")
         UserV1Dto.ChangePasswordRequest request
     );

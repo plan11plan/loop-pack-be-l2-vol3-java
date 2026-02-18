@@ -2,7 +2,6 @@ package com.loopers.interfaces.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.when;
 
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
@@ -11,46 +10,45 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.MethodParameter;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.context.request.ServletWebRequest;
 
-@DisplayName("AuthUserArgumentResolver 단위 테스트")
+@DisplayName("LoginUserArgumentResolver 단위 테스트")
 @ExtendWith(MockitoExtension.class)
-class AuthUserArgumentResolverTest {
+class LoginUserArgumentResolverTest {
 
-    private AuthUserArgumentResolver resolver;
+    private LoginUserArgumentResolver resolver;
 
     @BeforeEach
     void setUp() {
-        resolver = new AuthUserArgumentResolver();
+        resolver = new LoginUserArgumentResolver();
     }
 
     @DisplayName("supportsParameter 메서드는")
     @Nested
     class SupportsParameter {
 
-        @DisplayName("@Auth 어노테이션과 AuthUser 타입이면 true를 반환한다")
+        @DisplayName("@Login 어노테이션과 LoginUser 타입이면 true를 반환한다")
         @Test
-        void returnsTrue_whenAuthAnnotationAndAuthUserType() throws Exception {
+        void returnsTrue_whenLoginAnnotationAndLoginUserType() throws Exception {
             // arrange
             MethodParameter parameter = new MethodParameter(
-                TestController.class.getMethod("testMethod", AuthUser.class), 0
+                TestController.class.getMethod("testMethod", LoginUser.class), 0
             );
 
             // act & assert
             assertThat(resolver.supportsParameter(parameter)).isTrue();
         }
 
-        @DisplayName("@Auth 어노테이션이 없으면 false를 반환한다")
+        @DisplayName("@Login 어노테이션이 없으면 false를 반환한다")
         @Test
-        void returnsFalse_whenNoAuthAnnotation() throws Exception {
+        void returnsFalse_whenNoLoginAnnotation() throws Exception {
             // arrange
             MethodParameter parameter = new MethodParameter(
-                TestController.class.getMethod("noAnnotationMethod", AuthUser.class), 0
+                TestController.class.getMethod("noAnnotationMethod", LoginUser.class), 0
             );
 
             // act & assert
@@ -62,38 +60,38 @@ class AuthUserArgumentResolverTest {
     @Nested
     class ResolveArgument {
 
-        @DisplayName("request attribute에 AuthUser가 있으면 반환한다")
+        @DisplayName("request attribute에 LoginUser가 있으면 반환한다")
         @Test
-        void returnsAuthUser_whenAttributeExists() throws Exception {
+        void returnsLoginUser_whenAttributeExists() throws Exception {
             // arrange
             MockHttpServletRequest request = new MockHttpServletRequest();
-            AuthUser expectedAuthUser = new AuthUser(1L, "testuser1", "홍길동");
-            request.setAttribute("authUser", expectedAuthUser);
+            LoginUser expectedLoginUser = new LoginUser(1L, "testuser1", "홍길동");
+            request.setAttribute("loginUser", expectedLoginUser);
 
             NativeWebRequest webRequest = new ServletWebRequest(request);
             MethodParameter parameter = new MethodParameter(
-                TestController.class.getMethod("testMethod", AuthUser.class), 0
+                TestController.class.getMethod("testMethod", LoginUser.class), 0
             );
 
             // act
             Object result = resolver.resolveArgument(parameter, null, webRequest, null);
 
             // assert
-            assertThat(result).isInstanceOf(AuthUser.class);
-            AuthUser authUser = (AuthUser) result;
-            assertThat(authUser.id()).isEqualTo(1L);
-            assertThat(authUser.loginId()).isEqualTo("testuser1");
-            assertThat(authUser.name()).isEqualTo("홍길동");
+            assertThat(result).isInstanceOf(LoginUser.class);
+            LoginUser loginUser = (LoginUser) result;
+            assertThat(loginUser.id()).isEqualTo(1L);
+            assertThat(loginUser.loginId()).isEqualTo("testuser1");
+            assertThat(loginUser.name()).isEqualTo("홍길동");
         }
 
-        @DisplayName("request attribute에 AuthUser가 없으면 CoreException(UNAUTHORIZED)을 던진다")
+        @DisplayName("request attribute에 LoginUser가 없으면 CoreException(UNAUTHORIZED)을 던진다")
         @Test
         void throwsUnauthorized_whenAttributeNotExists() throws Exception {
             // arrange
             MockHttpServletRequest request = new MockHttpServletRequest();
             NativeWebRequest webRequest = new ServletWebRequest(request);
             MethodParameter parameter = new MethodParameter(
-                TestController.class.getMethod("testMethod", AuthUser.class), 0
+                TestController.class.getMethod("testMethod", LoginUser.class), 0
             );
 
             // act & assert
@@ -105,7 +103,7 @@ class AuthUserArgumentResolverTest {
 
     // 테스트용 컨트롤러
     static class TestController {
-        public void testMethod(@Auth AuthUser authUser) {}
-        public void noAnnotationMethod(AuthUser authUser) {}
+        public void testMethod(@Login LoginUser loginUser) {}
+        public void noAnnotationMethod(LoginUser loginUser) {}
     }
 }

@@ -46,9 +46,9 @@ class AuthFilterTest {
         authFilter = new AuthFilter(authenticationService, objectMapper);
     }
 
-    @DisplayName("인증 필요 URL에 유효한 헤더가 있으면, AuthUser attribute를 설정하고 filterChain을 진행한다")
+    @DisplayName("인증 필요 URL에 유효한 헤더가 있으면, LoginUser attribute를 설정하고 filterChain을 진행한다")
     @Test
-    void setsAuthUserAttribute_whenValidHeadersOnAuthRequiredUrl() throws Exception {
+    void setsLoginUserAttribute_whenValidHeadersOnAuthRequiredUrl() throws Exception {
         // arrange
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/v1/users/me");
         request.addHeader("X-Loopers-LoginId", "testuser1");
@@ -66,10 +66,10 @@ class AuthFilterTest {
         authFilter.doFilterInternal(request, response, filterChain);
 
         // assert
-        AuthUser authUser = (AuthUser) request.getAttribute("authUser");
-        assertThat(authUser).isNotNull();
-        assertThat(authUser.loginId()).isEqualTo("testuser1");
-        assertThat(authUser.name()).isEqualTo("홍길동");
+        LoginUser loginUser = (LoginUser) request.getAttribute("loginUser");
+        assertThat(loginUser).isNotNull();
+        assertThat(loginUser.loginId()).isEqualTo("testuser1");
+        assertThat(loginUser.name()).isEqualTo("홍길동");
         verify(filterChain).doFilter(request, response);
     }
 

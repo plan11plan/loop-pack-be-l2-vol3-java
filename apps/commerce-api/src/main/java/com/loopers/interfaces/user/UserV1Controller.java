@@ -3,8 +3,8 @@ package com.loopers.interfaces.user;
 import com.loopers.application.user.UserFacade;
 import com.loopers.application.user.dto.UserInfo;
 import com.loopers.interfaces.api.ApiResponse;
-import com.loopers.interfaces.auth.Auth;
-import com.loopers.interfaces.auth.AuthUser;
+import com.loopers.interfaces.auth.Login;
+import com.loopers.interfaces.auth.LoginUser;
 import com.loopers.interfaces.user.dto.UserV1Dto;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -29,8 +29,8 @@ public class UserV1Controller implements UserV1ApiSpec {
 
     @GetMapping("/me")
     @Override
-    public ApiResponse<UserV1Dto.MyInfoResponse> getMyInfo(@Auth AuthUser authUser) {
-        UserInfo userInfo = userFacade.getMyInfo(authUser.loginId());
+    public ApiResponse<UserV1Dto.MyInfoResponse> getMyInfo(@Login LoginUser loginUser) {
+        UserInfo userInfo = userFacade.getMyInfo(loginUser.loginId());
 
         return ApiResponse.success(UserV1Dto.MyInfoResponse.from(userInfo));
     }
@@ -38,10 +38,10 @@ public class UserV1Controller implements UserV1ApiSpec {
     @PatchMapping("/password")
     @Override
     public ApiResponse<UserV1Dto.ChangePasswordResponse> changePassword(
-        @Auth AuthUser authUser,
+        @Login LoginUser loginUser,
         @Valid @RequestBody UserV1Dto.ChangePasswordRequest request
     ) {
-        userFacade.changePassword(authUser.loginId(), request.toCommand());
+        userFacade.changePassword(loginUser.loginId(), request.toCommand());
 
         return ApiResponse.success(UserV1Dto.ChangePasswordResponse.success());
     }
