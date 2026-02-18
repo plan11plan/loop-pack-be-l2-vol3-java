@@ -41,10 +41,12 @@ class AuthenticationServiceTest {
         validLoginId = "testuser123";
         validPassword = "Test1234!@#";
         encodedPassword = "$2a$10$encodedPasswordHash";
+        when(passwordEncoder.encode(validPassword)).thenReturn(encodedPassword);
 
         testUser = new UserModel(
             new LoginId(validLoginId),
-            EncryptedPassword.fromEncoded(encodedPassword),
+            validPassword,
+            passwordEncoder,
             new Name("홍길동"),
             new BirthDate(LocalDate.of(1990, 1, 15)),
             new Email("test@example.com")
@@ -79,7 +81,7 @@ class AuthenticationServiceTest {
             // act & assert
             assertThatThrownBy(() -> authenticationService.authenticate(validLoginId, validPassword))
                 .isInstanceOf(CoreException.class)
-                .hasFieldOrPropertyWithValue("errorType", ErrorType.UNAUTHORIZED)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorType.UNAUTHORIZED)
                 .hasMessageContaining("로그인 ID 또는 비밀번호가 일치하지 않습니다.");
         }
 
@@ -94,7 +96,7 @@ class AuthenticationServiceTest {
             // act & assert
             assertThatThrownBy(() -> authenticationService.authenticate(validLoginId, wrongPassword))
                 .isInstanceOf(CoreException.class)
-                .hasFieldOrPropertyWithValue("errorType", ErrorType.UNAUTHORIZED)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorType.UNAUTHORIZED)
                 .hasMessageContaining("로그인 ID 또는 비밀번호가 일치하지 않습니다.");
         }
 
@@ -108,7 +110,7 @@ class AuthenticationServiceTest {
             // act & assert
             assertThatThrownBy(() -> authenticationService.authenticate(validLoginId, null))
                 .isInstanceOf(CoreException.class)
-                .hasFieldOrPropertyWithValue("errorType", ErrorType.UNAUTHORIZED);
+                .hasFieldOrPropertyWithValue("errorCode", ErrorType.UNAUTHORIZED);
         }
     }
 }

@@ -138,7 +138,7 @@ public class UserServiceIntegrationTest {
             // act & assert
             assertThatThrownBy(() -> userService.getMyInfo(invalidLoginId))
                 .isInstanceOf(CoreException.class)
-                .hasFieldOrPropertyWithValue("errorType", ErrorType.NOT_FOUND)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorType.NOT_FOUND)
                 .hasMessageContaining("사용자를 찾을 수 없습니다.");
         }
     }
@@ -216,7 +216,7 @@ public class UserServiceIntegrationTest {
             // act & assert
             assertThatThrownBy(() -> userService.changePassword(new ChangePasswordCommand(invalidLoginId, rawPassword, "NewPass123!@")))
                 .isInstanceOf(CoreException.class)
-                .hasFieldOrPropertyWithValue("errorType", ErrorType.NOT_FOUND)
+                .hasFieldOrPropertyWithValue("errorCode", ErrorType.NOT_FOUND)
                 .hasMessageContaining("사용자를 찾을 수 없습니다.");
         }
     }

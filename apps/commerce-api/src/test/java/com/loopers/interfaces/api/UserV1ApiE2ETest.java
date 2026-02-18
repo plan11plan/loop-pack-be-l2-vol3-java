@@ -91,8 +91,8 @@ class UserV1ApiE2ETest {
             );
 
             // act
-            ParameterizedTypeReference<ApiResponse<UserV1Dto.SignupResponse>> responseType = new ParameterizedTypeReference<>() {};
-            ResponseEntity<ApiResponse<UserV1Dto.SignupResponse>> response =
+            ParameterizedTypeReference<ApiResponse<Object>> responseType = new ParameterizedTypeReference<>() {};
+            ResponseEntity<ApiResponse<Object>> response =
                 testRestTemplate.exchange(ENDPOINT_SIGNUP, HttpMethod.POST, new HttpEntity<>(request), responseType);
 
             // assert
@@ -116,8 +116,8 @@ class UserV1ApiE2ETest {
             );
 
             // act
-            ParameterizedTypeReference<ApiResponse<UserV1Dto.SignupResponse>> responseType = new ParameterizedTypeReference<>() {};
-            ResponseEntity<ApiResponse<UserV1Dto.SignupResponse>> response =
+            ParameterizedTypeReference<ApiResponse<Object>> responseType = new ParameterizedTypeReference<>() {};
+            ResponseEntity<ApiResponse<Object>> response =
                 testRestTemplate.exchange(ENDPOINT_SIGNUP, HttpMethod.POST, new HttpEntity<>(request), responseType);
 
             // assert
@@ -141,8 +141,8 @@ class UserV1ApiE2ETest {
             );
 
             // act
-            ParameterizedTypeReference<ApiResponse<UserV1Dto.SignupResponse>> responseType = new ParameterizedTypeReference<>() {};
-            ResponseEntity<ApiResponse<UserV1Dto.SignupResponse>> response =
+            ParameterizedTypeReference<ApiResponse<Object>> responseType = new ParameterizedTypeReference<>() {};
+            ResponseEntity<ApiResponse<Object>> response =
                 testRestTemplate.exchange(ENDPOINT_SIGNUP, HttpMethod.POST, new HttpEntity<>(request), responseType);
 
             // assert
@@ -166,8 +166,8 @@ class UserV1ApiE2ETest {
             );
 
             // act
-            ParameterizedTypeReference<ApiResponse<UserV1Dto.SignupResponse>> responseType = new ParameterizedTypeReference<>() {};
-            ResponseEntity<ApiResponse<UserV1Dto.SignupResponse>> response =
+            ParameterizedTypeReference<ApiResponse<Object>> responseType = new ParameterizedTypeReference<>() {};
+            ResponseEntity<ApiResponse<Object>> response =
                 testRestTemplate.exchange(ENDPOINT_SIGNUP, HttpMethod.POST, new HttpEntity<>(request), responseType);
 
             // assert
@@ -191,8 +191,8 @@ class UserV1ApiE2ETest {
             );
 
             // act
-            ParameterizedTypeReference<ApiResponse<UserV1Dto.SignupResponse>> responseType = new ParameterizedTypeReference<>() {};
-            ResponseEntity<ApiResponse<UserV1Dto.SignupResponse>> response =
+            ParameterizedTypeReference<ApiResponse<Object>> responseType = new ParameterizedTypeReference<>() {};
+            ResponseEntity<ApiResponse<Object>> response =
                 testRestTemplate.exchange(ENDPOINT_SIGNUP, HttpMethod.POST, new HttpEntity<>(request), responseType);
 
             // assert
@@ -241,8 +241,8 @@ class UserV1ApiE2ETest {
             );
 
             // act
-            ParameterizedTypeReference<ApiResponse<UserV1Dto.SignupResponse>> responseType = new ParameterizedTypeReference<>() {};
-            ResponseEntity<ApiResponse<UserV1Dto.SignupResponse>> response =
+            ParameterizedTypeReference<ApiResponse<Object>> responseType = new ParameterizedTypeReference<>() {};
+            ResponseEntity<ApiResponse<Object>> response =
                 testRestTemplate.exchange(ENDPOINT_SIGNUP, HttpMethod.POST, new HttpEntity<>(request), responseType);
 
             // assert
@@ -300,8 +300,8 @@ class UserV1ApiE2ETest {
             );
 
             // act
-            ParameterizedTypeReference<ApiResponse<UserV1Dto.SignupResponse>> responseType = new ParameterizedTypeReference<>() {};
-            ResponseEntity<ApiResponse<UserV1Dto.SignupResponse>> response =
+            ParameterizedTypeReference<ApiResponse<Object>> responseType = new ParameterizedTypeReference<>() {};
+            ResponseEntity<ApiResponse<Object>> response =
                 testRestTemplate.exchange(ENDPOINT_SIGNUP, HttpMethod.POST, new HttpEntity<>(request), responseType);
 
             // assert
@@ -325,8 +325,8 @@ class UserV1ApiE2ETest {
             );
 
             // act
-            ParameterizedTypeReference<ApiResponse<UserV1Dto.SignupResponse>> responseType = new ParameterizedTypeReference<>() {};
-            ResponseEntity<ApiResponse<UserV1Dto.SignupResponse>> response =
+            ParameterizedTypeReference<ApiResponse<Object>> responseType = new ParameterizedTypeReference<>() {};
+            ResponseEntity<ApiResponse<Object>> response =
                 testRestTemplate.exchange(ENDPOINT_SIGNUP, HttpMethod.POST, new HttpEntity<>(request), responseType);
 
             // assert
@@ -665,8 +665,8 @@ class UserV1ApiE2ETest {
             );
 
             // act
-            ParameterizedTypeReference<ApiResponse<UserV1Dto.ChangePasswordResponse>> responseType = new ParameterizedTypeReference<>() {};
-            ResponseEntity<ApiResponse<UserV1Dto.ChangePasswordResponse>> response =
+            ParameterizedTypeReference<ApiResponse<Object>> responseType = new ParameterizedTypeReference<>() {};
+            ResponseEntity<ApiResponse<Object>> response =
                 testRestTemplate.exchange(ENDPOINT_CHANGE_PASSWORD, HttpMethod.PATCH, new HttpEntity<>(request, headers), responseType);
 
             // assert
