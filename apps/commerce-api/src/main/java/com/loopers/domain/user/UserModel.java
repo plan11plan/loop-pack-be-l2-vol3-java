@@ -1,5 +1,6 @@
-package com.loopers.domain;
+package com.loopers.domain.user;
 
+import com.loopers.domain.BaseEntity;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import jakarta.persistence.AttributeOverride;
@@ -7,6 +8,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import java.time.LocalDate;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -37,31 +39,21 @@ public class UserModel extends BaseEntity {
     @AttributeOverride(name = "mail", column = @Column(name = "email"))
     private Email email;
 
-    public UserModel(LoginId loginId, String rawPassword, PasswordEncoder encoder, Name name, BirthDate birthDate, Email email) {
-        validateNotNull(loginId, "로그인 ID");
-        validateNotNull(name, "이름");
-        validateNotNull(birthDate, "생년월일");
-        validateNotNull(email, "이메일");
-        validateBirthDateNotInPassword(rawPassword, birthDate);
+    // === 생성 === //
 
-        this.loginId = loginId;
-        this.password = EncryptedPassword.of(rawPassword, encoder);
-        this.name = name;
-        this.birthDate = birthDate;
-        this.email = email;
+    public static UserModel create(String loginId, String rawPassword, PasswordEncoder encoder,
+                                   String name, LocalDate birthDate, String email) {
+        UserModel model = new UserModel();
+        model.loginId = new LoginId(loginId);
+        model.name = new Name(name);
+        model.birthDate = new BirthDate(birthDate);
+        model.email = new Email(email);
+        model.validateBirthDateNotInPassword(rawPassword, model.birthDate);
+        model.password = EncryptedPassword.of(rawPassword, encoder);
+        return model;
     }
 
-    private void validateNotNull(Object value, String fieldName) {
-        if (value == null) {
-            throw new CoreException(ErrorType.BAD_REQUEST, fieldName + "은(는) 필수 입력값입니다.");
-        }
-    }
-
-    private void validateBirthDateNotInPassword(String rawPassword, BirthDate birthDate) {
-        if (rawPassword != null && rawPassword.contains(birthDate.toDateString())) {
-            throw new CoreException(ErrorType.BAD_REQUEST, "생년월일은 비밀번호 내에 포함될 수 없습니다.");
-        }
-    }
+    // === 도메인 로직 === //
 
     public void changePassword(String rawCurrentPassword, String rawNewPassword, PasswordEncoder encoder) {
         if (!this.password.matches(rawCurrentPassword, encoder)) {
@@ -72,5 +64,13 @@ public class UserModel extends BaseEntity {
         }
         validateBirthDateNotInPassword(rawNewPassword, this.birthDate);
         this.password = EncryptedPassword.of(rawNewPassword, encoder);
+    }
+
+    // === 검증 === //
+
+    private void validateBirthDateNotInPassword(String rawPassword, BirthDate birthDate) {
+        if (rawPassword != null && rawPassword.contains(birthDate.toDateString())) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "생년월일은 비밀번호 내에 포함될 수 없습니다.");
+        }
     }
 }

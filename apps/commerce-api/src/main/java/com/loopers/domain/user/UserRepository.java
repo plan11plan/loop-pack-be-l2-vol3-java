@@ -1,4 +1,4 @@
-package com.loopers.domain;
+package com.loopers.domain.user;
 
 import java.util.Optional;
 
