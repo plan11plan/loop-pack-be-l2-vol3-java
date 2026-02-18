@@ -109,12 +109,16 @@ public record StockDeductionInfo(int remainingStock, boolean success) {}
 
 | 파라미터 수 | 전달 방식 | 예시 |
 |------------|----------|------|
-| **1~3개** | 원시 타입 / VO 직접 전달 | `orderService.create(memberId, address, shopId)` |
+| **1~3개** | 원시 타입 직접 전달 | `orderService.create(memberId, address, shopId)` |
 | **4개 이상** | DTO(`~Data`) 사용 | `orderService.create(orderProductData)` |
 
+> **주의 — VO 전달과 VO 생성은 다르다.**
+> Entity 필드용 VO를 호출자(Facade 등)가 **새로 생성하여 전달하는 것은 금지**한다. VO는 Entity 내부에서 원시값으로부터 생성한다 (→ entity-vo-convention 참조).
+> 여기서 "직접 전달"이란, Entity getter 등에서 이미 존재하는 값을 꺼내 넘기는 경우를 말한다.
+
 ```java
-// ✅ 파라미터 3개 이하 → 원시 타입/VO
-public Order create(Long memberId, Address address, Long shopId) { ... }
+// ✅ 파라미터 3개 이하 → 원시 타입
+public Order create(Long memberId, String address, Long shopId) { ... }
 
 // ✅ 파라미터 4개 이상 → Data DTO
 public Order create(OrderProductData productData) { ... }
