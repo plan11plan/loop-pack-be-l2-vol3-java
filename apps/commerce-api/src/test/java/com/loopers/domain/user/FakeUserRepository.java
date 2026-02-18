@@ -1,11 +1,4 @@
-package com.loopers.domain;
-
-// ============================================================
-// STEP 3: Fake 구현체
-//
-// UserRepository 인터페이스는 원래부터 domain에 있었으므로
-// 이 Fake는 처음부터 infrastructure import 없이 작성 가능했다.
-// ============================================================
+package com.loopers.domain.user;
 
 import java.util.HashMap;
 import java.util.Map;

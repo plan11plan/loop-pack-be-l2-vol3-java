@@ -1,4 +1,4 @@
-package com.loopers.domain;
+package com.loopers.domain.user;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.loopers.support.error.CoreException;
+import java.time.LocalDate;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -45,10 +46,6 @@ class UserServiceMockTest {
         email = "test@example.com";
     }
 
-    private SignupCommand signupCommand() {
-        return new SignupCommand(loginId, rawPassword, name, birthDate, email);
-    }
-
     @DisplayName("회원가입")
     @Nested
     class Signup {
@@ -62,11 +59,11 @@ class UserServiceMockTest {
             when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
             // act
-            UserInfo result = userService.signup(signupCommand());
+            UserModel result = userService.signup(loginId, rawPassword, name, birthDate, email);
 
             // assert
             assertThat(result).isNotNull();
-            assertThat(result.loginId()).isEqualTo(loginId);
+            assertThat(result.getLoginId().getValue()).isEqualTo(loginId);
         }
 
         @Test
@@ -78,7 +75,7 @@ class UserServiceMockTest {
 
             // act & assert
             assertThatThrownBy(() ->
-                userService.signup(signupCommand())
+                userService.signup(loginId, rawPassword, name, birthDate, email)
             ).isInstanceOf(CoreException.class)
              .hasMessageContaining("이미 존재하는 아이디입니다.");
         }
@@ -106,7 +103,7 @@ class UserServiceMockTest {
                 .thenAnswer(inv -> inv.getArgument(0));
 
             // act
-            userService.changePassword(new ChangePasswordCommand(new LoginId(loginId), "Test1234!@#", "NewPass123!@"));
+            userService.changePassword(loginId, "Test1234!@#", "NewPass123!@");
 
             // assert
             verify(userRepository).save(any());
@@ -125,7 +122,7 @@ class UserServiceMockTest {
 
             // act & assert
             assertThatThrownBy(() ->
-                userService.changePassword(new ChangePasswordCommand(new LoginId(loginId), "Wrong123!@#", "NewPass123!@"))
+                userService.changePassword(loginId, "Wrong123!@#", "NewPass123!@")
             ).isInstanceOf(CoreException.class)
              .hasMessageContaining("현재 비밀번호가 일치하지 않습니다.");
         }
@@ -138,13 +135,9 @@ class UserServiceMockTest {
             @Override public String encode(String rawPassword) { return encodedPassword; }
             @Override public boolean matches(String rawPassword, String encoded) { return false; }
         };
-        return new UserModel(
-            new LoginId(loginId),
-            rawPassword,
-            fixedEncoder,
-            new Name(name),
-            new BirthDate(java.time.LocalDate.of(1990, 1, 15)),
-            new Email(email)
+        return UserModel.create(
+            loginId, rawPassword, fixedEncoder,
+            name, LocalDate.of(1990, 1, 15), email
         );
     }
 }

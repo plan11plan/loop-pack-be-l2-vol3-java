@@ -1,11 +1,12 @@
-package com.loopers.interfaces.api;
+package com.loopers.interfaces.user;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import com.loopers.infrastructure.UserJpaRepository;
-import com.loopers.interfaces.api.user.UserV1Dto;
+import com.loopers.infrastructure.user.UserJpaRepository;
+import com.loopers.interfaces.api.ApiResponse;
+import com.loopers.interfaces.user.dto.UserV1Dto;
 import com.loopers.utils.DatabaseCleanUp;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;

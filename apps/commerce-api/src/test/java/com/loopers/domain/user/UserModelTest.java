@@ -1,4 +1,4 @@
-package com.loopers.domain;
+package com.loopers.domain.user;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -13,21 +13,21 @@ import org.junit.jupiter.api.Test;
 
 class UserModelTest {
 
-    private LoginId validLoginId;
+    private String validLoginId;
     private String validRawPassword;
-    private Name validName;
-    private BirthDate validBirthDate;
-    private Email validEmail;
+    private String validName;
+    private LocalDate validBirthDate;
+    private String validEmail;
     private FakePasswordEncoder encoder;
 
     @BeforeEach
     void setUp() {
         encoder = new FakePasswordEncoder();
-        validLoginId = new LoginId("testuser123");
+        validLoginId = "testuser123";
         validRawPassword = "Test1234!@#";
-        validName = new Name("홍길동");
-        validBirthDate = new BirthDate(LocalDate.of(1990, 1, 15));
-        validEmail = new Email("test@example.com");
+        validName = "홍길동";
+        validBirthDate = LocalDate.of(1990, 1, 15);
+        validEmail = "test@example.com";
     }
 
     @DisplayName("유저 모델을 생성할 때, ")
@@ -38,57 +38,57 @@ class UserModelTest {
         @Test
         void createUserModel_whenAllDataProvided() {
             // act
-            UserModel user = new UserModel(validLoginId, validRawPassword, encoder, validName, validBirthDate, validEmail);
+            UserModel user = UserModel.create(validLoginId, validRawPassword, encoder, validName, validBirthDate, validEmail);
 
             // assert
             assertAll(
-                    () -> assertThat(user.getLoginId()).isEqualTo(validLoginId),
+                    () -> assertThat(user.getLoginId().getValue()).isEqualTo(validLoginId),
                     () -> assertThat(user.getPassword().getValue()).isEqualTo("ENCODED_Test1234!@#"),
-                    () -> assertThat(user.getName()).isEqualTo(validName),
-                    () -> assertThat(user.getBirthDate()).isEqualTo(validBirthDate),
-                    () -> assertThat(user.getEmail()).isEqualTo(validEmail)
+                    () -> assertThat(user.getName().getValue()).isEqualTo(validName),
+                    () -> assertThat(user.getBirthDate().getDate()).isEqualTo(validBirthDate),
+                    () -> assertThat(user.getEmail().getMail()).isEqualTo(validEmail)
             );
         }
 
         @DisplayName("로그인 ID가 누락되면 예외가 발생한다.")
         @Test
         void createUserModel_whenLoginIdIsNull() {
-            assertThatThrownBy(() -> new UserModel(null, validRawPassword, encoder, validName, validBirthDate, validEmail))
+            assertThatThrownBy(() -> UserModel.create(null, validRawPassword, encoder, validName, validBirthDate, validEmail))
                     .isInstanceOf(CoreException.class);
         }
 
         @DisplayName("비밀번호가 누락되면 예외가 발생한다.")
         @Test
         void createUserModel_whenPasswordIsNull() {
-            assertThatThrownBy(() -> new UserModel(validLoginId, null, encoder, validName, validBirthDate, validEmail))
+            assertThatThrownBy(() -> UserModel.create(validLoginId, null, encoder, validName, validBirthDate, validEmail))
                     .isInstanceOf(CoreException.class);
         }
 
         @DisplayName("이름이 누락되면 예외가 발생한다.")
         @Test
         void createUserModel_whenNameIsNull() {
-            assertThatThrownBy(() -> new UserModel(validLoginId, validRawPassword, encoder, null, validBirthDate, validEmail))
+            assertThatThrownBy(() -> UserModel.create(validLoginId, validRawPassword, encoder, null, validBirthDate, validEmail))
                     .isInstanceOf(CoreException.class);
         }
 
         @DisplayName("생년월일이 누락되면 예외가 발생한다.")
         @Test
         void createUserModel_whenBirthDateIsNull() {
-            assertThatThrownBy(() -> new UserModel(validLoginId, validRawPassword, encoder, validName, null, validEmail))
+            assertThatThrownBy(() -> UserModel.create(validLoginId, validRawPassword, encoder, validName, null, validEmail))
                     .isInstanceOf(CoreException.class);
         }
 
         @DisplayName("이메일이 누락되면 예외가 발생한다.")
         @Test
         void createUserModel_whenEmailIsNull() {
-            assertThatThrownBy(() -> new UserModel(validLoginId, validRawPassword, encoder, validName, validBirthDate, null))
+            assertThatThrownBy(() -> UserModel.create(validLoginId, validRawPassword, encoder, validName, validBirthDate, null))
                     .isInstanceOf(CoreException.class);
         }
 
         @DisplayName("비밀번호에 생년월일이 포함되면 예외가 발생한다.")
         @Test
         void createUserModel_whenPasswordContainsBirthDate() {
-            assertThatThrownBy(() -> new UserModel(validLoginId, "Pw19900115!", encoder, validName, validBirthDate, validEmail))
+            assertThatThrownBy(() -> UserModel.create(validLoginId, "Pw19900115!", encoder, validName, validBirthDate, validEmail))
                     .isInstanceOf(CoreException.class)
                     .hasMessageContaining("생년월일은 비밀번호 내에 포함될 수 없습니다.");
         }
@@ -102,7 +102,7 @@ class UserModelTest {
         @Test
         void changePassword_success() {
             // arrange
-            UserModel user = new UserModel(validLoginId, validRawPassword, encoder, validName, validBirthDate, validEmail);
+            UserModel user = UserModel.create(validLoginId, validRawPassword, encoder, validName, validBirthDate, validEmail);
 
             // act
             user.changePassword("Test1234!@#", "NewPass123!@", encoder);
@@ -115,7 +115,7 @@ class UserModelTest {
         @Test
         void changePassword_whenCurrentPasswordNotMatch() {
             // arrange
-            UserModel user = new UserModel(validLoginId, validRawPassword, encoder, validName, validBirthDate, validEmail);
+            UserModel user = UserModel.create(validLoginId, validRawPassword, encoder, validName, validBirthDate, validEmail);
 
             // act & assert
             assertThatThrownBy(() -> user.changePassword("Wrong123!@#", "NewPass123!@", encoder))
@@ -127,7 +127,7 @@ class UserModelTest {
         @Test
         void changePassword_whenNewPasswordSameAsCurrent() {
             // arrange
-            UserModel user = new UserModel(validLoginId, validRawPassword, encoder, validName, validBirthDate, validEmail);
+            UserModel user = UserModel.create(validLoginId, validRawPassword, encoder, validName, validBirthDate, validEmail);
 
             // act & assert
             assertThatThrownBy(() -> user.changePassword("Test1234!@#", "Test1234!@#", encoder))
@@ -139,7 +139,7 @@ class UserModelTest {
         @Test
         void changePassword_whenNewPasswordContainsBirthDate() {
             // arrange
-            UserModel user = new UserModel(validLoginId, validRawPassword, encoder, validName, validBirthDate, validEmail);
+            UserModel user = UserModel.create(validLoginId, validRawPassword, encoder, validName, validBirthDate, validEmail);
 
             // act & assert
             assertThatThrownBy(() -> user.changePassword("Test1234!@#", "Pw19900115!", encoder))

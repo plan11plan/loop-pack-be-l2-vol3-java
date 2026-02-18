@@ -1,10 +1,10 @@
-package com.loopers.domain;
+package com.loopers.domain.user;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
 
-import com.loopers.infrastructure.UserJpaRepository;
+import com.loopers.infrastructure.user.UserJpaRepository;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import com.loopers.utils.DatabaseCleanUp;
@@ -18,6 +18,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
 public class UserServiceIntegrationTest {
+
     @Autowired
     private UserService userService;
 
@@ -50,8 +51,8 @@ public class UserServiceIntegrationTest {
         databaseCleanUp.truncateAllTables();
     }
 
-    private SignupCommand signupCommand() {
-        return new SignupCommand(loginId, rawPassword, name, birthDate, email);
+    private UserModel doSignup() {
+        return userService.signup(loginId, rawPassword, name, birthDate, email);
     }
 
     @DisplayName("유저가 회원가입할 때")
@@ -61,15 +62,15 @@ public class UserServiceIntegrationTest {
             @Test
             void signup_whenAllInfoProvided() {
                 // act
-                UserInfo result = userService.signup(signupCommand());
+                UserModel result = doSignup();
 
                 // assert
                 assertAll(
                         () -> assertThat(result).isNotNull(),
-                        () -> assertThat(result.loginId()).isEqualTo(loginId),
-                        () -> assertThat(result.name()).isEqualTo(name),
-                        () -> assertThat(result.birthDate()).isEqualTo(birthDate),
-                        () -> assertThat(result.email()).isEqualTo(email)
+                        () -> assertThat(result.getLoginId().getValue()).isEqualTo(loginId),
+                        () -> assertThat(result.getName().getValue()).isEqualTo(name),
+                        () -> assertThat(result.getBirthDate().toDateString()).isEqualTo(birthDate),
+                        () -> assertThat(result.getEmail().getMail()).isEqualTo(email)
                 );
             }
 
@@ -77,10 +78,10 @@ public class UserServiceIntegrationTest {
             @Test
             void signup_should_encrypt_password() {
                 // act
-                UserInfo result = userService.signup(signupCommand());
+                UserModel result = doSignup();
 
                 // assert
-                UserModel savedUser = userJpaRepository.findById(result.id()).orElseThrow();
+                UserModel savedUser = userJpaRepository.findById(result.getId()).orElseThrow();
                 String savedPassword = savedUser.getPassword().getValue();
                 assertAll(
                         () -> assertThat(savedPassword).isNotEqualTo(rawPassword),
@@ -93,10 +94,10 @@ public class UserServiceIntegrationTest {
             @Test
             void signup_should_save_encrypted_password_to_database() {
                 // act
-                UserInfo result = userService.signup(signupCommand());
+                UserModel result = doSignup();
 
                 // assert
-                UserModel savedUser = userJpaRepository.findById(result.id()).orElseThrow();
+                UserModel savedUser = userJpaRepository.findById(result.getId()).orElseThrow();
                 String savedPassword = savedUser.getPassword().getValue();
                 assertAll(
                         () -> assertThat(savedPassword).isNotEqualTo(rawPassword),
@@ -113,30 +114,26 @@ public class UserServiceIntegrationTest {
         @Test
         void getMyInfo_whenValidLoginId() {
             // arrange
-            userService.signup(signupCommand());
+            doSignup();
 
             // act
-            LoginId loginIdVo = new LoginId(loginId);
-            UserInfo result = userService.getMyInfo(loginIdVo);
+            UserModel result = userService.getByLoginId(loginId);
 
             // assert
             assertAll(
                 () -> assertThat(result).isNotNull(),
-                () -> assertThat(result.loginId()).isEqualTo(loginId),
-                () -> assertThat(result.name()).isEqualTo(name),
-                () -> assertThat(result.birthDate()).isEqualTo(birthDate),
-                () -> assertThat(result.email()).isEqualTo(email)
+                () -> assertThat(result.getLoginId().getValue()).isEqualTo(loginId),
+                () -> assertThat(result.getName().getValue()).isEqualTo(name),
+                () -> assertThat(result.getBirthDate().toDateString()).isEqualTo(birthDate),
+                () -> assertThat(result.getEmail().getMail()).isEqualTo(email)
             );
         }
 
         @DisplayName("존재하지 않는 로그인 ID로 조회하면 예외가 발생한다")
         @Test
         void getMyInfo_whenInvalidLoginId() {
-            // arrange
-            LoginId invalidLoginId = new LoginId("invalid123");
-
             // act & assert
-            assertThatThrownBy(() -> userService.getMyInfo(invalidLoginId))
+            assertThatThrownBy(() -> userService.getByLoginId("invalid123"))
                 .isInstanceOf(CoreException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorType.NOT_FOUND)
                 .hasMessageContaining("사용자를 찾을 수 없습니다.");
@@ -150,16 +147,15 @@ public class UserServiceIntegrationTest {
         @Test
         void changePassword_whenValidPasswords() {
             // arrange
-            userService.signup(signupCommand());
+            doSignup();
             String newRawPassword = "NewPass123!@";
 
             // act
-            LoginId loginIdVo = new LoginId(loginId);
-            userService.changePassword(new ChangePasswordCommand(loginIdVo, rawPassword, newRawPassword));
+            userService.changePassword(loginId, rawPassword, newRawPassword);
 
             // assert
-            UserInfo updatedUser = userService.getMyInfo(loginIdVo);
-            UserModel savedUser = userJpaRepository.findById(updatedUser.id()).orElseThrow();
+            UserModel updatedUser = userService.getByLoginId(loginId);
+            UserModel savedUser = userJpaRepository.findById(updatedUser.getId()).orElseThrow();
             String savedPassword = savedUser.getPassword().getValue();
             assertAll(
                     () -> assertThat(savedPassword).isNotEqualTo(rawPassword),
@@ -172,11 +168,10 @@ public class UserServiceIntegrationTest {
         @Test
         void changePassword_whenCurrentPasswordNotMatch() {
             // arrange
-            userService.signup(signupCommand());
+            doSignup();
 
             // act & assert
-            LoginId loginIdVo = new LoginId(loginId);
-            assertThatThrownBy(() -> userService.changePassword(new ChangePasswordCommand(loginIdVo, "Wrong123!@#", "NewPass123!@")))
+            assertThatThrownBy(() -> userService.changePassword(loginId, "Wrong123!@#", "NewPass123!@"))
                 .isInstanceOf(CoreException.class)
                 .hasMessageContaining("현재 비밀번호가 일치하지 않습니다.");
         }
@@ -185,11 +180,10 @@ public class UserServiceIntegrationTest {
         @Test
         void changePassword_whenNewPasswordSameAsCurrent() {
             // arrange
-            userService.signup(signupCommand());
+            doSignup();
 
             // act & assert
-            LoginId loginIdVo = new LoginId(loginId);
-            assertThatThrownBy(() -> userService.changePassword(new ChangePasswordCommand(loginIdVo, rawPassword, rawPassword)))
+            assertThatThrownBy(() -> userService.changePassword(loginId, rawPassword, rawPassword))
                 .isInstanceOf(CoreException.class)
                 .hasMessageContaining("현재 사용 중인 비밀번호는 사용할 수 없습니다.");
         }
@@ -198,11 +192,10 @@ public class UserServiceIntegrationTest {
         @Test
         void changePassword_whenNewPasswordContainsBirthDate() {
             // arrange
-            userService.signup(signupCommand());
+            doSignup();
 
             // act & assert
-            LoginId loginIdVo = new LoginId(loginId);
-            assertThatThrownBy(() -> userService.changePassword(new ChangePasswordCommand(loginIdVo, rawPassword, "Pw19900115!")))
+            assertThatThrownBy(() -> userService.changePassword(loginId, rawPassword, "Pw19900115!"))
                 .isInstanceOf(CoreException.class)
                 .hasMessageContaining("생년월일은 비밀번호 내에 포함될 수 없습니다.");
         }
@@ -210,11 +203,8 @@ public class UserServiceIntegrationTest {
         @DisplayName("존재하지 않는 사용자의 비밀번호 변경 시 예외가 발생한다")
         @Test
         void changePassword_whenUserNotFound() {
-            // arrange
-            LoginId invalidLoginId = new LoginId("invalid123");
-
             // act & assert
-            assertThatThrownBy(() -> userService.changePassword(new ChangePasswordCommand(invalidLoginId, rawPassword, "NewPass123!@")))
+            assertThatThrownBy(() -> userService.changePassword("invalid123", rawPassword, "NewPass123!@"))
                 .isInstanceOf(CoreException.class)
                 .hasFieldOrPropertyWithValue("errorCode", ErrorType.NOT_FOUND)
                 .hasMessageContaining("사용자를 찾을 수 없습니다.");

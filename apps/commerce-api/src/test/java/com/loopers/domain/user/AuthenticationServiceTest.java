@@ -1,4 +1,4 @@
-package com.loopers.domain;
+package com.loopers.domain.user;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -43,13 +43,9 @@ class AuthenticationServiceTest {
         encodedPassword = "$2a$10$encodedPasswordHash";
         when(passwordEncoder.encode(validPassword)).thenReturn(encodedPassword);
 
-        testUser = new UserModel(
-            new LoginId(validLoginId),
-            validPassword,
-            passwordEncoder,
-            new Name("홍길동"),
-            new BirthDate(LocalDate.of(1990, 1, 15)),
-            new Email("test@example.com")
+        testUser = UserModel.create(
+            validLoginId, validPassword, passwordEncoder,
+            "홍길동", LocalDate.of(1990, 1, 15), "test@example.com"
         );
     }
 
