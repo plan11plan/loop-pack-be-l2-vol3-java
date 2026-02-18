@@ -3,6 +3,8 @@ package com.loopers.interfaces.user;
 import com.loopers.application.user.UserFacade;
 import com.loopers.application.user.dto.UserInfo;
 import com.loopers.interfaces.api.ApiResponse;
+import com.loopers.interfaces.auth.Auth;
+import com.loopers.interfaces.auth.AuthUser;
 import com.loopers.interfaces.user.dto.UserV1Dto;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -12,9 +14,6 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/users")
 public class UserV1Controller implements UserV1ApiSpec {
-
-    private static final String HEADER_LOGIN_ID = "X-Loopers-LoginId";
-    private static final String HEADER_LOGIN_PW = "X-Loopers-LoginPw";
 
     private final UserFacade userFacade;
 
@@ -30,11 +29,8 @@ public class UserV1Controller implements UserV1ApiSpec {
 
     @GetMapping("/me")
     @Override
-    public ApiResponse<UserV1Dto.MyInfoResponse> getMyInfo(
-        @RequestHeader(HEADER_LOGIN_ID) String loginId,
-        @RequestHeader(HEADER_LOGIN_PW) String password
-    ) {
-        UserInfo userInfo = userFacade.getMyInfo(loginId, password);
+    public ApiResponse<UserV1Dto.MyInfoResponse> getMyInfo(@Auth AuthUser authUser) {
+        UserInfo userInfo = userFacade.getMyInfo(authUser.loginId());
 
         return ApiResponse.success(UserV1Dto.MyInfoResponse.from(userInfo));
     }
@@ -42,11 +38,10 @@ public class UserV1Controller implements UserV1ApiSpec {
     @PatchMapping("/password")
     @Override
     public ApiResponse<UserV1Dto.ChangePasswordResponse> changePassword(
-        @RequestHeader(HEADER_LOGIN_ID) String loginId,
-        @RequestHeader(HEADER_LOGIN_PW) String currentPasswordValue,
+        @Auth AuthUser authUser,
         @Valid @RequestBody UserV1Dto.ChangePasswordRequest request
     ) {
-        userFacade.changePassword(loginId, currentPasswordValue, request.toCommand());
+        userFacade.changePassword(authUser.loginId(), request.toCommand());
 
         return ApiResponse.success(UserV1Dto.ChangePasswordResponse.success());
     }
