@@ -222,10 +222,37 @@ public record ApiResponse<T>(Metadata meta, T data) {
 - `HttpMessageNotReadableException`은 `InvalidFormatException`, `MismatchedInputException`, `JsonMappingException`까지 세분화
 - `Throwable` 최후 방어 핸들러 필수
 - 예외는 발생 지점에서 그대로 전파, Application에서 잡아서 변환하지 않는다
+- **`@ExceptionHandler`는 응답 생성 책임만 가진다** — DB 저장 등 부가 작업을 핸들러 내부에서 수행하면, 부가 작업 예외 시 핸들러가 삼켜져(swallowed) 디버깅이 극히 어려워진다. 부가 작업이 필요하면 `ApplicationEventPublisher` + `@Async @EventListener`로 분리한다.
+
+### ⚠️ `@ExceptionHandler`의 처리 경계
+
+`@ExceptionHandler`는 `DispatcherServlet` **내부에서만** 동작한다. Filter에서 발생한 예외는 잡을 수 없다.
+
+```
+WAS → Filter → DispatcherServlet → Interceptor → Controller
+       ↑                              ↑
+   @ExceptionHandler 못 잡음      @ExceptionHandler 잡음
+```
+
+Filter 예외 처리 시 `HttpServletResponse`에 직접 JSON 응답을 작성해야 하며, 이때 `ApiResponse` 형식을 맞추기 위해 `ObjectMapper`를 사용한다.
+
+```java
+// Filter 내 예외 처리 패턴
+catch (AuthenticationException e) {
+    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+    response.setContentType("application/json;charset=UTF-8");
+    
+    ApiResponse<?> errorResponse = ApiResponse.fail(
+        ErrorType.UNAUTHORIZED.getCode(), e.getMessage());
+    response.getWriter().write(objectMapper.writeValueAsString(errorResponse));
+}
+```
 
 ---
 
 ## 5. 예외 흐름
+
+### DispatcherServlet 내부 (일반 흐름)
 
 ```
 Domain에서 throw new CoreException(OrderErrorCode.STOCK_INSUFFICIENT)
@@ -240,6 +267,15 @@ Domain에서 throw new CoreException(OrderErrorCode.STOCK_INSUFFICIENT)
     → @RestControllerAdvice에서 catch
       → FieldError 목록 추출
         → ApiResponse.failValidation(code, message, fieldErrors) 반환
+```
+
+### Filter 예외 (DispatcherServlet 외부)
+
+```
+Filter에서 인증 실패 등 예외 발생
+  → @RestControllerAdvice 도달 불가 (DispatcherServlet 바깥)
+    → Filter 내부에서 HttpServletResponse에 직접 JSON 작성
+      → ApiResponse.fail() 형식으로 응답 (ObjectMapper 사용)
 ```
 
 ---
@@ -286,6 +322,10 @@ interfaces/
 **예외 흐름**
 - [ ] Domain 예외를 Application에서 잡아서 변환하고 있지 않은가? (그대로 전파)
 - [ ] ControllerAdvice에 `Throwable` 최후 방어 핸들러가 있는가?
+- [ ] Filter 예외 처리 시 `ApiResponse` 형식으로 직접 JSON을 작성하고 있는가?
+
+**ControllerAdvice 설계**
+- [ ] `@ExceptionHandler`가 응답 생성 외 부가 작업(DB 저장 등)을 직접 수행하고 있지 않은가?
 
 **API 응답**
 - [ ] 성공 응답이 `ApiResponse.success()` 또는 `ApiResponse.success(data)`를 사용하는가?
