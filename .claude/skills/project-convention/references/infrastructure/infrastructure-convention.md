@@ -104,20 +104,32 @@ public class OrderRepositoryImpl implements OrderRepository {
 
 ### Soft Delete 조회 처리
 
-soft delete된 엔티티 필터링은 **RepositoryImpl에서 처리**한다. domain Repository 인터페이스의 `findById`를 호출하면 내부적으로 `deletedAt IS NULL` 조건이 적용된다.
+soft delete된 엔티티 필터링은 **RepositoryImpl에서만 처리**한다. Domain Service에서 `isDeleted()` 등을 이중 체크하지 않는다.
+
+**핵심 규칙: RepositoryImpl의 모든 조회 메서드는 `deletedAt IS NULL`을 기본 적용한다.**
 
 ```java
 // domain 인터페이스 — soft delete를 모른다
 Optional<Order> findById(Long id);
+Optional<Order> findByName(String name);
 
-// RepositoryImpl — soft delete 필터링을 여기서 처리
+// RepositoryImpl — 모든 조회에서 soft delete 필터링
 @Override
 public Optional<Order> findById(Long id) {
     return orderJpaRepository.findByIdAndDeletedAtIsNull(id);
 }
+
+@Override
+public Optional<Order> findByName(String name) {
+    return orderJpaRepository.findByNameAndDeletedAtIsNull(name);
+}
 ```
 
-domain이 "삭제된 데이터"를 알 필요 없다. infrastructure가 저장소 세부사항으로서 처리한다.
+왜 RepositoryImpl에서만 처리하는가:
+- **단일 책임**: soft delete는 저장소 세부사항이므로 infrastructure가 담당한다
+- **domain 순수성**: domain이 "삭제된 데이터" 개념을 알 필요 없다
+- **일관성**: 모든 조회 메서드에 동일한 규칙이 적용되므로 누락 위험이 없다
+- **Service 단순화**: Domain Service에서 `isDeleted()` 체크가 불필요하다
 
 ### 네이밍 규칙
 

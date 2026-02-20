@@ -32,20 +32,16 @@ public class Order {
     @Enumerated(EnumType.STRING)
     private OrderStatus status;
 
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OrderLine> orderLines = new ArrayList<>();
-
     // === 생성 === //
 
-    public static Order create(Long memberId, int price, List<OrderLineData> lines) {
-        Order order = new Order();
-        order.memberId = memberId;
-        order.totalPrice = Money.of(price);
-        order.status = OrderStatus.CREATED;
-        order.orderLines = lines.stream()
-            .map(OrderLine::create)
-            .toList();
-        return order;
+    private Order(Long memberId, Money totalPrice, OrderStatus status) {
+        this.memberId = memberId;
+        this.totalPrice = totalPrice;
+        this.status = status;
+    }
+
+    public static Order create(Long memberId, int price) {
+        return new Order(memberId, Money.of(price), OrderStatus.CREATED);
     }
 
     // === 도메인 로직 === //
@@ -65,18 +61,21 @@ public class Order {
 }
 ```
 
-### 생성 패턴: 정적 팩토리 메서드
+### 생성 패턴: 정적 팩토리 메서드 + private 생성자
 
 모든 Entity는 **정적 팩토리 메서드**로 생성한다. 생성자를 직접 노출하지 않는다.
+내부 생성은 **private 생성자**를 사용하여 필드를 초기화한다.
 
 ```java
-// ✅ 정적 팩토리 메서드
+// ✅ private 생성자 + 정적 팩토리 메서드 (권장)
+private Order(Long memberId, Money totalPrice, OrderStatus status) {
+    this.memberId = memberId;
+    this.totalPrice = totalPrice;
+    this.status = status;
+}
+
 public static Order create(Long memberId, int price) {
-    Order order = new Order();
-    order.memberId = memberId;
-    order.totalPrice = Money.of(price);
-    order.status = OrderStatus.CREATED;
-    return order;
+    return new Order(memberId, Money.of(price), OrderStatus.CREATED);
 }
 
 // ❌ 생성자 직접 노출
@@ -87,10 +86,11 @@ public Order(Long memberId, int price) { ... }
 public Order(Long memberId, int price) { ... }
 ```
 
-왜 정적 팩토리인가:
+왜 정적 팩토리 + private 생성자인가:
 - 생성 의도를 메서드 이름으로 표현할 수 있다 (`create`, `register`, `createFromImport`)
 - 생성 시점에 VO 변환, 초기값 설정, 검증을 Entity가 통제한다
 - 불변식(invariant)을 생성 시점부터 보장한다
+- private 생성자로 필드 초기화가 한 곳에서 완결되어 의도가 명확하다
 
 ### 접근 제어
 

@@ -116,6 +116,13 @@ public class OrderFacade {
 - DTO 변환 (Info → Response 등) → Facade 또는 Interface 계층
 - Entity 자기 필드만으로 완결되는 로직 → Entity 메서드
 
+### CUD 메서드는 void를 반환한다
+
+Domain Service의 생성/수정/삭제(CUD) 메서드는 **void**를 반환한다. 상위 계층(Facade)에서 필요하면 별도 조회 메서드를 호출한다.
+
+- YAGNI: 반환값이 필요할 때 추가하면 된다
+- 명령과 조회를 분리하여 메서드의 의도가 명확해진다
+
 ### 예시
 
 ```java
@@ -125,12 +132,12 @@ public class OrderService {
     private final OrderRepository orderRepository;
 
     @Transactional
-    public Order create(OrderMemberData member, List<OrderProductData> products) {
+    public void create(OrderMemberData member, List<OrderProductData> products) {
         List<OrderLine> lines = products.stream()
             .map(p -> OrderLine.create(p.productId(), p.name(), p.price()))
             .toList();
         Order order = Order.create(member.memberId(), lines);
-        return orderRepository.save(order);
+        orderRepository.save(order);
     }
 
     @Transactional
