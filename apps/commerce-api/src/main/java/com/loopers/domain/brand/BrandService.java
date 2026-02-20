@@ -2,6 +2,8 @@ package com.loopers.domain.brand;
 
 import com.loopers.support.error.CoreException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,5 +45,10 @@ public class BrandService {
     public void delete(Long id) {
         BrandModel brandModel = getById(id);
         brandModel.delete();
+    }
+
+    @Transactional(readOnly = true)
+    public Page<BrandModel> getAll(Pageable pageable) {
+        return brandRepository.findAll(pageable);
     }
 }
