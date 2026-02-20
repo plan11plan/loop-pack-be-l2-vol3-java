@@ -1,9 +1,14 @@
 package com.loopers.domain.brand;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 
 public class FakeBrandRepository implements BrandRepository {
 
@@ -37,5 +42,21 @@ public class FakeBrandRepository implements BrandRepository {
             .filter(brand -> brand.getDeletedAt() == null)
             .filter(brand -> brand.getName().equals(name))
             .findFirst();
+    }
+
+    @Override
+    public Page<BrandModel> findAll(Pageable pageable) {
+        List<BrandModel> activeModels = store.values().stream()
+            .filter(brand -> brand.getDeletedAt() == null)
+            .toList();
+
+        int start = (int) pageable.getOffset();
+        int end = Math.min(start + pageable.getPageSize(), activeModels.size());
+
+        List<BrandModel> pageContent = start >= activeModels.size()
+            ? new ArrayList<>()
+            : activeModels.subList(start, end);
+
+        return new PageImpl<>(pageContent, pageable, activeModels.size());
     }
 }

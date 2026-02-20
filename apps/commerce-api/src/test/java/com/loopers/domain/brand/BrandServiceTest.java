@@ -8,6 +8,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 
 class BrandServiceTest {
 
@@ -140,6 +142,56 @@ class BrandServiceTest {
             assertThatThrownBy(() -> brandService.getById(savedId))
                 .isInstanceOf(CoreException.class)
                 .satisfies(e -> assertThat(((CoreException) e).getErrorCode()).isEqualTo(BrandErrorCode.NOT_FOUND));
+        }
+    }
+
+    @DisplayName("브랜드 목록을 조회할 때, ")
+    @Nested
+    class GetAll {
+
+        @DisplayName("등록된 브랜드가 있으면, 페이지네이션된 목록을 반환한다.")
+        @Test
+        void getAll_whenBrandsExist() {
+            // arrange
+            brandService.register("Nike");
+            brandService.register("Adidas");
+            brandService.register("Puma");
+
+            // act
+            Page<BrandModel> result = brandService.getAll(PageRequest.of(0, 2));
+
+            // assert
+            assertThat(result.getContent()).hasSize(2);
+            assertThat(result.getTotalElements()).isEqualTo(3);
+            assertThat(result.getTotalPages()).isEqualTo(2);
+        }
+
+        @DisplayName("등록된 브랜드가 없으면, 빈 목록을 반환한다.")
+        @Test
+        void getAll_whenNoBrandsExist() {
+            // act
+            Page<BrandModel> result = brandService.getAll(PageRequest.of(0, 20));
+
+            // assert
+            assertThat(result.getContent()).isEmpty();
+            assertThat(result.getTotalElements()).isEqualTo(0);
+        }
+
+        @DisplayName("삭제된 브랜드는 목록에 포함되지 않는다.")
+        @Test
+        void getAll_excludesDeletedBrands() {
+            // arrange
+            brandService.register("Nike");
+            brandService.register("Adidas");
+            Long nikeId = brandRepository.findByName("Nike").orElseThrow().getId();
+            brandService.delete(nikeId);
+
+            // act
+            Page<BrandModel> result = brandService.getAll(PageRequest.of(0, 20));
+
+            // assert
+            assertThat(result.getContent()).hasSize(1);
+            assertThat(result.getContent().get(0).getName()).isEqualTo("Adidas");
         }
     }
 }
