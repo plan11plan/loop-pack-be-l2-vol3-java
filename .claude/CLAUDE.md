@@ -4,38 +4,17 @@ Spring Boot 기반 멀티모듈 Java 프로젝트. TDD 방식으로 개발하며
 
 ---
 
-## 기술 스택 및 버전
+## 기술 스택
 
-### Core
-- **Java**: 21
-- **Spring Boot**: 3.4.4
-- **Spring Cloud**: 2024.0.1
-- **Gradle**: Kotlin DSL
-
-### Framework & Libraries
-- **Spring Web**: REST API 개발
-- **Spring Data JPA**: 데이터 접근 계층
-- **Spring Data Redis**: 캐싱 및 세션 관리
-- **QueryDSL**: 타입 세이프한 쿼리 작성
-- **Kafka**: 메시지 브로커 (commerce-streamer)
-- **Spring Batch**: 배치 처리 (commerce-batch)
-
-### Utilities
-- **Lombok**: 보일러플레이트 코드 감소
-- **Jackson**: JSON 직렬화/역직렬화
-- **SpringDoc OpenAPI**: API 문서화 (Swagger)
-
-### Testing
-- **JUnit 5 + AssertJ + Mockito**: 테스트 프레임워크
-- **Testcontainers**: 통합 테스트 (MySQL, Redis)
-
-### Monitoring & Logging
-- **Spring Actuator**: 애플리케이션 모니터링
-- **Slack Appender**: 로그 알림
-- **Jacoco**: 코드 커버리지
+- **Java 21**, **Spring Boot 3.4.4**, **Gradle Kotlin DSL**
+- Spring Web, Spring Data JPA, Spring Data Redis, QueryDSL, Kafka, Spring Batch
+- Lombok, Jackson, SpringDoc OpenAPI
+- JUnit 5 + AssertJ + Mockito, Testcontainers (MySQL, Redis)
 
 ---
+
 ## 모듈 구조
+
 ```
 apps/
 ├── commerce-api          # REST API 서버
@@ -52,6 +31,7 @@ supports/
 ├── logging               # 로깅 설정
 └── monitoring            # 모니터링 설정
 ```
+
 ---
 
 ## 아키텍처
@@ -82,17 +62,45 @@ supports/
 
 ---
 
+## TDD 개발 모드
+
+"TDD로 개발" 트리거 시 `.claude/skills/tdd/SKILL.md`를 읽고 시작한다. 아래 규칙은 **Round 진행 중 매 턴 적용**.
+
+### 핵심 규칙
+
+- Red 1개 → Green → Refactor → 다음 Red. **한 번에 여러 테스트 작성 금지**
+- Red를 반드시 실행하여 **실패를 확인**한 후 Green 진행
+- Green은 **통과할 최소 코드만**. 다음 시나리오까지 미리 구현 금지
+- 기능 수직 슬라이스: 기능 하나를 Domain → Application 관통 후 다음 기능
+- 매 Round 후 진행 문서(`docs/tdd/{domain}/{feature}.md`) 갱신
+
+### 계층별 전략
+
+| 계층 | 테스트 더블 | TDD 방식 |
+|------|-----------|---------|
+| Domain Entity/VO | 더블 불필요 | TFD |
+| Domain Service | **Fake 우선** | TFD |
+| Application Facade | Mockito mock() | TFD |
+| Controller / Repository | - | TLD (별도 진행) |
+
+### 테스트 실행
+
+- Round 중: `./gradlew :apps:commerce-api:test --tests "{패키지}.{클래스}"`
+- 전체 완료 후: `./gradlew :apps:commerce-api:test`
+
+### 코드 작성
+
+- 실제 동작하는 코드만. 불필요한 Mock 데이터 금지
+- null-safety (Optional 활용), `println` 금지
+- 기존 코드 패턴 분석 후 일관성 유지
+
+---
+
 ## 프로젝트 실행
 
 ```bash
-# 개발 환경
-./gradlew :apps:commerce-api:bootRun
-
-# 테스트
-./gradlew test                          # 전체
-./gradlew :apps:commerce-api:test       # 특정 모듈
+./gradlew :apps:commerce-api:bootRun    # 개발 환경
+./gradlew :apps:commerce-api:test       # 특정 모듈 테스트
 ./gradlew test jacocoTestReport         # 커버리지
-
-# 인프라
-docker compose up -d
+docker compose up -d                    # 인프라
 ```
