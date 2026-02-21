@@ -1,6 +1,6 @@
 ## 프로젝트 개요
 
-이 프로젝트는 Spring Boot 기반의 멀티모듈 Java 프로젝트입니다. TDD(Test-Driven Development) 방식으로 개발하며, 테스트 가능한 구조를 목표로 합니다.
+Spring Boot 기반 멀티모듈 Java 프로젝트. TDD 방식으로 개발하며, 테스트 가능한 구조를 목표로 한다.
 
 ---
 
@@ -35,63 +35,64 @@
 - **Jacoco**: 코드 커버리지
 
 ---
-
 ## 모듈 구조
-
-### Apps (실행 가능한 애플리케이션)
 ```
 apps/
-├── commerce-api       # REST API 서버
-├── commerce-streamer  # Kafka 스트리밍 처리
-└── commerce-batch     # 배치 작업
-```
+├── commerce-api          # REST API 서버
+├── commerce-streamer     # Kafka 스트리밍 처리
+└── commerce-batch        # 배치 작업
 
-### Modules (도메인 및 인프라 모듈)
-```
 modules/
-├── jpa     # BaseEntity, QueryDSL/JPA/DataSource Config
-├── redis   # Redis 설정 및 Repository
-└── kafka   # Kafka 설정 및 Producer/Consumer
-```
+├── jpa                   # BaseEntity, QueryDSL/JPA/DataSource Config
+├── redis                 # Redis 설정 및 Repository
+└── kafka                 # Kafka 설정 및 Producer/Consumer
 
-### Supports (공통 지원 모듈)
-```
 supports/
-├── jackson     # JSON 직렬화 설정
-├── logging     # 로깅 설정
-└── monitoring  # 모니터링 설정
+├── jackson               # JSON 직렬화 설정
+├── logging               # 로깅 설정
+└── monitoring            # 모니터링 설정
 ```
-
 ---
 
 ## 아키텍처
 
-- 계층 우선 패키지: `interfaces → application → domain ← infrastructure`
+계층 우선 패키지: `interfaces → application → domain ← infrastructure`
+
+### 컨벤션
+
 - 코딩 컨벤션: `.claude/skills/project-convention/` 참조 (코드 작성 시 해당 스킬의 references/ 하위 문서를 반드시 Read 도구로 읽을 것)
 - 커밋 규칙: `.claude/skills/commit-convention/` 참조
+
+### 설계 문서
+
+기능 개발 시 해당 도메인의 설계 문서를 **먼저 읽고** 시작한다.
+
+| 문서 | 경로 | 용도 |
+|------|------|------|
+| 공통 원칙 | `docs/spec/shared/CONVENTIONS.md` | 참조 방식, Soft Delete, 용어집 등 |
+| 전체 구조 | `docs/spec/shared/OVERVIEW.md` | 전체 ERD + 클래스 다이어그램 |
+| 도메인 스펙 | `docs/spec/{domain}/DESIGN.md` | 요구사항 + 유즈케이스 + 시퀀스 + ERD + 클래스 |
+
+도메인: `brand`, `product`, `like`, `cart`, `order`
+
+**참조 규칙:**
+1. 해당 도메인의 `DESIGN.md`를 읽는다
+2. 다른 도메인과 연동이 필요하면 그 도메인의 `DESIGN.md`도 읽는다
+3. 전체 관계 확인이 필요하면 `OVERVIEW.md`를 읽는다
 
 ---
 
 ## 프로젝트 실행
 
-### 개발 환경 실행
 ```bash
+# 개발 환경
 ./gradlew :apps:commerce-api:bootRun
-```
 
-### 테스트 실행
-```bash
-# 전체 테스트
-./gradlew test
+# 테스트
+./gradlew test                          # 전체
+./gradlew :apps:commerce-api:test       # 특정 모듈
+./gradlew test jacocoTestReport         # 커버리지
 
-# 특정 모듈 테스트
-./gradlew :apps:commerce-api:test
-
-# 커버리지 리포트 생성
-./gradlew test jacocoTestReport
-```
-
-### Docker Compose 실행
-```bash
+# 인프라
 docker compose up -d
 ```
