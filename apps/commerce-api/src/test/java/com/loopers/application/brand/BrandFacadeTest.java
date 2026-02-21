@@ -8,6 +8,7 @@ import com.loopers.application.brand.dto.BrandCommand;
 import com.loopers.application.brand.dto.BrandInfo;
 import com.loopers.domain.brand.BrandModel;
 import com.loopers.domain.brand.BrandService;
+import com.loopers.domain.product.ProductService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -22,6 +23,9 @@ class BrandFacadeTest {
 
     @Mock
     private BrandService brandService;
+
+    @Mock
+    private ProductService productService;
 
     @InjectMocks
     private BrandFacade brandFacade;
@@ -87,13 +91,14 @@ class BrandFacadeTest {
     class Delete {
 
         @Test
-        @DisplayName("id를 BrandService.delete에 전달한다")
+        @DisplayName("id를 BrandService.delete에 전달하고 해당 브랜드의 상품을 일괄 삭제한다")
         void delete_호출_검증() {
             // arrange & act
             brandFacade.delete(1L);
 
             // assert
             verify(brandService).delete(1L);
+            verify(productService).softDeleteByBrandId(1L);
         }
     }
 }

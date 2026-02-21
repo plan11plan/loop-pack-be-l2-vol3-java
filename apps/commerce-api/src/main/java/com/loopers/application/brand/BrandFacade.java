@@ -4,6 +4,7 @@ import com.loopers.application.brand.dto.BrandCommand;
 import com.loopers.application.brand.dto.BrandInfo;
 import com.loopers.domain.brand.BrandModel;
 import com.loopers.domain.brand.BrandService;
+import com.loopers.domain.product.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -15,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class BrandFacade {
 
     private final BrandService brandService;
+    private final ProductService productService;
 
     @Transactional
     public void register(BrandCommand.Register command) {
@@ -35,6 +37,7 @@ public class BrandFacade {
     @Transactional
     public void delete(Long id) {
         brandService.delete(id);
+        productService.softDeleteByBrandId(id);
     }
 
     @Transactional(readOnly = true)
