@@ -104,6 +104,12 @@ ApiResponse.failValidation(code, message, fieldErrors)       // Validation 에�
 
 ### Domain 계층
 
+**Domain Service 허용 사항**
+
+- `@Service`, `@Transactional` 사용 가능 (Facade와 REQUIRED 전파)
+- `Page`, `Pageable` (Spring Data 페이지네이션) 사용 가능
+- 금지: `@Component`, `@Repository`(Spring), `JpaRepository` 상속
+
 **Entity**
 
 - 생성: **정적 팩토리 메서드** (`Order.create(...)`)

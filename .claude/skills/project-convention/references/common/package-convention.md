@@ -225,7 +225,7 @@ interfaces → application → domain ← infrastructure
 
 - **interfaces**는 application을 알 수 있다. domain을 직접 참조하지 않는다.
 - **application**은 domain을 알 수 있다. interfaces를 알면 안 된다.
-- **domain**은 아무 계층도 알지 못한다. 순수 Java로만 구성한다.
+- **domain**은 아무 계층도 알지 못한다. 단, domain Service는 `@Service`, `@Transactional`, `Page`/`Pageable` 사용을 허용한다 (service-layer-convention.md § 3~4).
 - **infrastructure**는 domain을 알 수 있다 (Repository 인터페이스 구현).
 
 ### 도메인 간 의존
@@ -272,7 +272,8 @@ public class OrderService {
 
 **의존 방향**
 - [ ] interfaces → application → domain ← infrastructure 방향을 지키는가?
-- [ ] domain 패키지에 Spring 의존성(`@Service`, `@Transactional` 등)이 없는가?
+- [ ] domain Entity/VO/Repository 인터페이스에 Spring 어노테이션(`@Component`, `@Repository`)이 없는가?
+- [ ] domain Service의 `@Service`, `@Transactional`, `Page`/`Pageable` 사용은 컨벤션 허용 (service-layer-convention.md § 3~4)
 - [ ] 도메인 간 Entity 직접 참조가 없는가?
 
 **네이밍**
