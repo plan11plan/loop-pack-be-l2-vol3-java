@@ -1,6 +1,7 @@
 package com.loopers.domain.like;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
@@ -35,5 +36,12 @@ public class FakeProductLikeRepository implements ProductLikeRepository {
     @Override
     public void delete(ProductLikeModel productLike) {
         store.remove(productLike.getId());
+    }
+
+    @Override
+    public List<ProductLikeModel> findAllByUserId(Long userId) {
+        return store.values().stream()
+            .filter(like -> like.getUserId().equals(userId))
+            .toList();
     }
 }
