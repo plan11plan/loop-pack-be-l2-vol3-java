@@ -1,12 +1,9 @@
 package com.loopers.application.like;
 
-import static com.loopers.domain.like.dto.LikeCommand.ApplyLikeRequestType.LIKE;
-import static com.loopers.domain.like.dto.LikeCommand.ApplyLikeRequestType.UNLIKE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.loopers.application.like.dto.LikeCriteria;
 import com.loopers.application.like.dto.LikeResult;
 import com.loopers.domain.brand.BrandModel;
 import com.loopers.domain.like.ProductLikeModel;
@@ -35,34 +32,37 @@ class LikeFacadeTest {
     @InjectMocks
     private LikeFacade likeFacade;
 
-    @DisplayName("좋아요를 토글할 때, ")
+    @DisplayName("좋아요를 등록할 때, ")
     @Nested
-    class ToggleLike {
+    class Like {
 
-        @DisplayName("LIKE 요청이면, 상품을 검증하고 like를 호출하고 likeCount를 증가시킨다.")
+        @DisplayName("상품을 검증하고 like를 호출하고 likeCount를 증가시킨다.")
         @Test
-        void toggleLike_whenLike_addsLikeAndIncreasesCount() {
+        void like_addsLikeAndIncreasesCount() {
             // arrange
-            LikeCriteria.Toggle criteria = new LikeCriteria.Toggle(LIKE, 1L, 2L);
             ProductModel product = ProductModel.create(
                 BrandModel.create("Nike"), "에어맥스", 150000, 100
             );
             when(productService.getById(2L)).thenReturn(product);
 
             // act
-            likeFacade.toggleLike(criteria);
+            likeFacade.like(1L, 2L);
 
             // assert
             verify(productService).getById(2L);
             verify(productLikeService).like(1L, 2L);
             assertThat(product.getLikeCount()).isEqualTo(1);
         }
+    }
 
-        @DisplayName("UNLIKE 요청이면, 상품을 검증하고 unlike를 호출하고 likeCount를 감소시킨다.")
+    @DisplayName("좋아요를 취소할 때, ")
+    @Nested
+    class Unlike {
+
+        @DisplayName("상품을 검증하고 unlike를 호출하고 likeCount를 감소시킨다.")
         @Test
-        void toggleLike_whenUnlike_removesLikeAndDecreasesCount() {
+        void unlike_removesLikeAndDecreasesCount() {
             // arrange
-            LikeCriteria.Toggle criteria = new LikeCriteria.Toggle(UNLIKE, 1L, 2L);
             ProductModel product = ProductModel.create(
                 BrandModel.create("Nike"), "에어맥스", 150000, 100
             );
@@ -70,7 +70,7 @@ class LikeFacadeTest {
             when(productService.getById(2L)).thenReturn(product);
 
             // act
-            likeFacade.toggleLike(criteria);
+            likeFacade.unlike(1L, 2L);
 
             // assert
             verify(productService).getById(2L);
