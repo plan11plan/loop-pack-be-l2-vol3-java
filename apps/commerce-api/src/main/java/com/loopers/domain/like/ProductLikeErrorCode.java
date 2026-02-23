@@ -8,7 +8,7 @@ import org.springframework.http.HttpStatus;
 @Getter
 @RequiredArgsConstructor
 public enum ProductLikeErrorCode implements ErrorCode {
-    DUPLICATE_NAME(HttpStatus.CONFLICT, "PRODUCT_LIKE_001", "이미 좋아요가 됐습니다.");
+    DUPLICATE_LIKE(HttpStatus.CONFLICT, "PRODUCT_LIKE_001", "이미 좋아요가 됐습니다.");
 
     private final HttpStatus status;
     private final String code;
