@@ -1,4 +1,4 @@
-package com.loopers.application.user.dto;
+package com.loopers.domain.user.dto;
 
 public class UserCommand {
 

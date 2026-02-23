@@ -1,7 +1,7 @@
 package com.loopers.interfaces.product;
 
 import com.loopers.application.product.ProductFacade;
-import com.loopers.application.product.dto.ProductInfo;
+import com.loopers.application.product.dto.ProductResult;
 import com.loopers.interfaces.api.ApiResponse;
 import com.loopers.interfaces.product.dto.ProductV1Dto;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +26,7 @@ public class ProductV1Controller implements ProductV1ApiSpec {
         @RequestParam(defaultValue = "20") int size
     ) {
         PageRequest pageRequest = PageRequest.of(page, size, toSort(sort));
-        Page<ProductInfo> productInfoPage = brandId != null
+        Page<ProductResult> productInfoPage = brandId != null
             ? productFacade.getActiveProductsByBrandId(brandId, pageRequest)
             : productFacade.getActiveProducts(pageRequest);
 
@@ -47,7 +47,7 @@ public class ProductV1Controller implements ProductV1ApiSpec {
     public ApiResponse<ProductV1Dto.DetailResponse> getById(
         @PathVariable Long productId
     ) {
-        ProductInfo productInfo = productFacade.getProduct(productId);
+        ProductResult productInfo = productFacade.getProduct(productId);
         return ApiResponse.success(ProductV1Dto.DetailResponse.from(productInfo));
     }
 

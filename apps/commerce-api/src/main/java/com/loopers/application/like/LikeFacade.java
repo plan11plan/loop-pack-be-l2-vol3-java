@@ -1,7 +1,7 @@
 package com.loopers.application.like;
 
-import com.loopers.application.like.dto.LikeCommand.Toggle;
-import com.loopers.application.like.dto.LikeInfo;
+import com.loopers.application.like.dto.LikeCriteria;
+import com.loopers.application.like.dto.LikeResult;
 import com.loopers.domain.like.ProductLikeService;
 import com.loopers.domain.product.ProductModel;
 import com.loopers.domain.product.ProductService;
@@ -17,26 +17,26 @@ public class LikeFacade {
     private final ProductService productService;
 
     @Transactional
-    public void toggleLike(Toggle command) {
-        ProductModel product = productService.getById(command.productId());
+    public void toggleLike(LikeCriteria.Toggle criteria) {
+        ProductModel product = productService.getById(criteria.productId());
 
-        switch (command.type()) {
+        switch (criteria.type()) {
             case LIKE -> {
-                productLikeService.like(command.userId(), command.productId());
+                productLikeService.like(criteria.userId(), criteria.productId());
                 product.addLikeCount();
             }
             case UNLIKE -> {
-                productLikeService.unlike(command.userId(), command.productId());
+                productLikeService.unlike(criteria.userId(), criteria.productId());
                 product.subtractLikeCount();
             }
         }
     }
 
     @Transactional(readOnly = true)
-    public List<LikeInfo> getMyLikedProducts(Long userId) {
+    public List<LikeResult> getMyLikedProducts(Long userId) {
         return productLikeService.getLikesByUserId(userId).stream()
             .filter(like -> productService.existsById(like.getProductId()))
-            .map(LikeInfo::from)
+            .map(LikeResult::from)
             .toList();
     }
 }

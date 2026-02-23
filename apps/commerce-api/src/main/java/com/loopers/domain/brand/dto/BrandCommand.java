@@ -1,4 +1,4 @@
-package com.loopers.application.brand.dto;
+package com.loopers.domain.brand.dto;
 
 public class BrandCommand {
 

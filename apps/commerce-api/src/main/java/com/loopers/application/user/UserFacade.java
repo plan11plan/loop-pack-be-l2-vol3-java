@@ -1,7 +1,7 @@
 package com.loopers.application.user;
 
-import com.loopers.application.user.dto.UserCommand;
-import com.loopers.application.user.dto.UserInfo;
+import com.loopers.application.user.dto.UserCriteria;
+import com.loopers.application.user.dto.UserResult;
 import com.loopers.domain.user.UserModel;
 import com.loopers.domain.user.UserService;
 import lombok.RequiredArgsConstructor;
@@ -15,21 +15,21 @@ public class UserFacade {
     private final UserService userService;
 
     @Transactional
-    public UserInfo signup(UserCommand.Signup command) {
+    public UserResult signup(UserCriteria.Signup criteria) {
         UserModel userModel = userService.signup(
-            command.loginId(), command.rawPassword(), command.name(), command.birthDate(), command.email()
+            criteria.loginId(), criteria.rawPassword(), criteria.name(), criteria.birthDate(), criteria.email()
         );
-        return UserInfo.from(userModel);
+        return UserResult.from(userModel);
     }
 
     @Transactional(readOnly = true)
-    public UserInfo getMyInfo(String loginId) {
+    public UserResult getMyInfo(String loginId) {
         UserModel user = userService.getByLoginId(loginId);
-        return UserInfo.from(user);
+        return UserResult.from(user);
     }
 
     @Transactional
-    public void changePassword(String loginId, UserCommand.ChangePassword command) {
-        userService.changePassword(loginId, command.rawCurrentPassword(), command.rawNewPassword());
+    public void changePassword(String loginId, UserCriteria.ChangePassword criteria) {
+        userService.changePassword(loginId, criteria.rawCurrentPassword(), criteria.rawNewPassword());
     }
 }

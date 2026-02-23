@@ -1,7 +1,7 @@
 package com.loopers.application.brand;
 
-import com.loopers.application.brand.dto.BrandCommand;
-import com.loopers.application.brand.dto.BrandInfo;
+import com.loopers.application.brand.dto.BrandCriteria;
+import com.loopers.application.brand.dto.BrandResult;
 import com.loopers.domain.brand.BrandModel;
 import com.loopers.domain.brand.BrandService;
 import com.loopers.domain.product.ProductService;
@@ -19,19 +19,19 @@ public class BrandFacade {
     private final ProductService productService;
 
     @Transactional
-    public void registerBrand(BrandCommand.Register command) {
-        brandService.register(command.name());
+    public void registerBrand(BrandCriteria.Register criteria) {
+        brandService.register(criteria.name());
     }
 
     @Transactional(readOnly = true)
-    public BrandInfo getBrand(Long id) {
+    public BrandResult getBrand(Long id) {
         BrandModel brandModel = brandService.getById(id);
-        return BrandInfo.from(brandModel);
+        return BrandResult.from(brandModel);
     }
 
     @Transactional
-    public void updateBrand(Long id, BrandCommand.Update command) {
-        brandService.update(id, command.name());
+    public void updateBrand(Long id, BrandCriteria.Update criteria) {
+        brandService.update(id, criteria.name());
     }
 
     @Transactional
@@ -41,7 +41,7 @@ public class BrandFacade {
     }
 
     @Transactional(readOnly = true)
-    public Page<BrandInfo> getBrands(Pageable pageable) {
-        return brandService.getAll(pageable).map(BrandInfo::from);
+    public Page<BrandResult> getBrands(Pageable pageable) {
+        return brandService.getAll(pageable).map(BrandResult::from);
     }
 }

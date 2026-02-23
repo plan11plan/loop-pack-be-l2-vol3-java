@@ -1,6 +1,6 @@
 package com.loopers.interfaces.brand.dto;
 
-import com.loopers.application.brand.dto.BrandInfo;
+import com.loopers.application.brand.dto.BrandResult;
 
 public class BrandV1Dto {
 
@@ -8,7 +8,7 @@ public class BrandV1Dto {
         Long id,
         String name
     ) {
-        public static DetailResponse from(BrandInfo info) {
+        public static DetailResponse from(BrandResult info) {
             return new DetailResponse(info.id(), info.name());
         }
     }

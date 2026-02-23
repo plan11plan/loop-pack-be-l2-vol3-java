@@ -1,7 +1,7 @@
 package com.loopers.interfaces.product;
 
 import com.loopers.application.product.ProductFacade;
-import com.loopers.application.product.dto.ProductInfo;
+import com.loopers.application.product.dto.ProductResult;
 import com.loopers.interfaces.api.ApiResponse;
 import com.loopers.interfaces.product.dto.AdminProductV1Dto;
 import jakarta.validation.Valid;
@@ -22,7 +22,7 @@ public class AdminProductV1Controller implements AdminProductV1ApiSpec {
     public ApiResponse<Object> register(
         @Valid @RequestBody AdminProductV1Dto.RegisterRequest request
     ) {
-        productFacade.registerProduct(request.toCommand());
+        productFacade.registerProduct(request.toCriteria());
         return ApiResponse.success();
     }
 
@@ -33,7 +33,7 @@ public class AdminProductV1Controller implements AdminProductV1ApiSpec {
         @RequestParam(defaultValue = "20") int size,
         @RequestParam(required = false) Long brandId
     ) {
-        Page<ProductInfo> productInfoPage = brandId != null
+        Page<ProductResult> productInfoPage = brandId != null
             ? productFacade.getProductsByBrandId(brandId, PageRequest.of(page, size))
             : productFacade.getProducts(PageRequest.of(page, size));
 
@@ -54,7 +54,7 @@ public class AdminProductV1Controller implements AdminProductV1ApiSpec {
     public ApiResponse<AdminProductV1Dto.DetailResponse> getById(
         @PathVariable Long productId
     ) {
-        ProductInfo productInfo = productFacade.getProduct(productId);
+        ProductResult productInfo = productFacade.getProduct(productId);
         return ApiResponse.success(AdminProductV1Dto.DetailResponse.from(productInfo));
     }
 
@@ -64,7 +64,7 @@ public class AdminProductV1Controller implements AdminProductV1ApiSpec {
         @PathVariable Long productId,
         @Valid @RequestBody AdminProductV1Dto.UpdateRequest request
     ) {
-        productFacade.updateProduct(productId, request.toCommand());
+        productFacade.updateProduct(productId, request.toCriteria());
         return ApiResponse.success();
     }
 

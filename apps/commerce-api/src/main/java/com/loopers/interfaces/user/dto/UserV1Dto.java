@@ -1,7 +1,7 @@
 package com.loopers.interfaces.user.dto;
 
-import com.loopers.application.user.dto.UserCommand;
-import com.loopers.application.user.dto.UserInfo;
+import com.loopers.application.user.dto.UserCriteria;
+import com.loopers.application.user.dto.UserResult;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -34,8 +34,8 @@ public class UserV1Dto {
         @Email(message = "이메일 형식이 올바르지 않습니다.")
         String email
     ) {
-        public UserCommand.Signup toCommand() {
-            return new UserCommand.Signup(loginId, password, name, birthDate, email);
+        public UserCriteria.Signup toCriteria() {
+            return new UserCriteria.Signup(loginId, password, name, birthDate, email);
         }
     }
 
@@ -46,7 +46,7 @@ public class UserV1Dto {
         String birthDate,
         String email
     ) {
-        public static SignupResponse from(UserInfo info) {
+        public static SignupResponse from(UserResult info) {
             return new SignupResponse(
                 info.id(),
                 info.loginId(),
@@ -63,7 +63,7 @@ public class UserV1Dto {
         String birthDate,
         String email
     ) {
-        public static MyInfoResponse from(UserInfo info) {
+        public static MyInfoResponse from(UserResult info) {
             return new MyInfoResponse(
                 info.loginId(),
                 maskName(info.name()),
@@ -84,8 +84,8 @@ public class UserV1Dto {
         )
         String newPassword
     ) {
-        public UserCommand.ChangePassword toCommand() {
-            return new UserCommand.ChangePassword(currentPassword, newPassword);
+        public UserCriteria.ChangePassword toCriteria() {
+            return new UserCriteria.ChangePassword(currentPassword, newPassword);
         }
     }
 

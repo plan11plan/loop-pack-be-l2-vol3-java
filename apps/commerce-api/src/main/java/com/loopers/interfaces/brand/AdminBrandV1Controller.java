@@ -1,7 +1,7 @@
 package com.loopers.interfaces.brand;
 
 import com.loopers.application.brand.BrandFacade;
-import com.loopers.application.brand.dto.BrandInfo;
+import com.loopers.application.brand.dto.BrandResult;
 import com.loopers.interfaces.api.ApiResponse;
 import com.loopers.interfaces.brand.dto.AdminBrandV1Dto;
 import jakarta.validation.Valid;
@@ -22,7 +22,7 @@ public class AdminBrandV1Controller implements AdminBrandV1ApiSpec {
     public ApiResponse<Object> register(
         @Valid @RequestBody AdminBrandV1Dto.RegisterRequest request
     ) {
-        brandFacade.registerBrand(request.toCommand());
+        brandFacade.registerBrand(request.toCriteria());
         return ApiResponse.success();
     }
 
@@ -32,7 +32,7 @@ public class AdminBrandV1Controller implements AdminBrandV1ApiSpec {
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size
     ) {
-        Page<BrandInfo> brandInfoPage = brandFacade.getBrands(PageRequest.of(page, size));
+        Page<BrandResult> brandInfoPage = brandFacade.getBrands(PageRequest.of(page, size));
         AdminBrandV1Dto.ListResponse listResponse = new AdminBrandV1Dto.ListResponse(
             brandInfoPage.getNumber(),
             brandInfoPage.getSize(),
@@ -50,7 +50,7 @@ public class AdminBrandV1Controller implements AdminBrandV1ApiSpec {
     public ApiResponse<AdminBrandV1Dto.DetailResponse> getById(
         @PathVariable Long brandId
     ) {
-        BrandInfo brandInfo = brandFacade.getBrand(brandId);
+        BrandResult brandInfo = brandFacade.getBrand(brandId);
         return ApiResponse.success(AdminBrandV1Dto.DetailResponse.from(brandInfo));
     }
 
@@ -60,7 +60,7 @@ public class AdminBrandV1Controller implements AdminBrandV1ApiSpec {
         @PathVariable Long brandId,
         @Valid @RequestBody AdminBrandV1Dto.UpdateRequest request
     ) {
-        brandFacade.updateBrand(brandId, request.toCommand());
+        brandFacade.updateBrand(brandId, request.toCriteria());
         return ApiResponse.success();
     }
 

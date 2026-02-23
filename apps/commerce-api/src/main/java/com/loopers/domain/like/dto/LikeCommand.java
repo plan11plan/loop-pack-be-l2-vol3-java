@@ -1,4 +1,4 @@
-package com.loopers.application.like.dto;
+package com.loopers.domain.like.dto;
 
 public class LikeCommand {
 

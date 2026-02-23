@@ -1,7 +1,7 @@
 package com.loopers.interfaces.brand;
 
 import com.loopers.application.brand.BrandFacade;
-import com.loopers.application.brand.dto.BrandInfo;
+import com.loopers.application.brand.dto.BrandResult;
 import com.loopers.interfaces.api.ApiResponse;
 import com.loopers.interfaces.brand.dto.BrandV1Dto;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +19,7 @@ public class BrandV1Controller implements BrandV1ApiSpec {
     public ApiResponse<BrandV1Dto.DetailResponse> getById(
         @PathVariable Long brandId
     ) {
-        BrandInfo brandInfo = brandFacade.getBrand(brandId);
+        BrandResult brandInfo = brandFacade.getBrand(brandId);
         return ApiResponse.success(BrandV1Dto.DetailResponse.from(brandInfo));
     }
 }

@@ -1,7 +1,7 @@
 package com.loopers.application.product;
 
-import com.loopers.application.product.dto.ProductCommand;
-import com.loopers.application.product.dto.ProductInfo;
+import com.loopers.application.product.dto.ProductCriteria;
+import com.loopers.application.product.dto.ProductResult;
 import com.loopers.domain.brand.BrandModel;
 import com.loopers.domain.brand.BrandService;
 import com.loopers.domain.product.ProductModel;
@@ -20,20 +20,20 @@ public class ProductFacade {
     private final BrandService brandService;
 
     @Transactional
-    public void registerProduct(ProductCommand.Register command) {
-        BrandModel brand = brandService.getById(command.brandId());
-        productService.register(brand, command.name(), command.price(), command.stock());
+    public void registerProduct(ProductCriteria.Register criteria) {
+        BrandModel brand = brandService.getById(criteria.brandId());
+        productService.register(brand, criteria.name(), criteria.price(), criteria.stock());
     }
 
     @Transactional(readOnly = true)
-    public ProductInfo getProduct(Long id) {
+    public ProductResult getProduct(Long id) {
         ProductModel productModel = productService.getById(id);
-        return ProductInfo.from(productModel);
+        return ProductResult.from(productModel);
     }
 
     @Transactional
-    public void updateProduct(Long id, ProductCommand.Update command) {
-        productService.update(id, command.name(), command.price(), command.stock());
+    public void updateProduct(Long id, ProductCriteria.Update criteria) {
+        productService.update(id, criteria.name(), criteria.price(), criteria.stock());
     }
 
     @Transactional
@@ -42,22 +42,22 @@ public class ProductFacade {
     }
 
     @Transactional(readOnly = true)
-    public Page<ProductInfo> getProducts(Pageable pageable) {
-        return productService.getAll(pageable).map(ProductInfo::from);
+    public Page<ProductResult> getProducts(Pageable pageable) {
+        return productService.getAll(pageable).map(ProductResult::from);
     }
 
     @Transactional(readOnly = true)
-    public Page<ProductInfo> getProductsByBrandId(Long brandId, Pageable pageable) {
-        return productService.getAllByBrandId(brandId, pageable).map(ProductInfo::from);
+    public Page<ProductResult> getProductsByBrandId(Long brandId, Pageable pageable) {
+        return productService.getAllByBrandId(brandId, pageable).map(ProductResult::from);
     }
 
     @Transactional(readOnly = true)
-    public Page<ProductInfo> getActiveProducts(Pageable pageable) {
-        return productService.getAllActive(pageable).map(ProductInfo::from);
+    public Page<ProductResult> getActiveProducts(Pageable pageable) {
+        return productService.getAllActive(pageable).map(ProductResult::from);
     }
 
     @Transactional(readOnly = true)
-    public Page<ProductInfo> getActiveProductsByBrandId(Long brandId, Pageable pageable) {
-        return productService.getAllActiveByBrandId(brandId, pageable).map(ProductInfo::from);
+    public Page<ProductResult> getActiveProductsByBrandId(Long brandId, Pageable pageable) {
+        return productService.getAllActiveByBrandId(brandId, pageable).map(ProductResult::from);
     }
 }

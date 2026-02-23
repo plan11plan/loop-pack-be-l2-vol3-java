@@ -1,7 +1,7 @@
 package com.loopers.interfaces.product.dto;
 
-import com.loopers.application.product.dto.ProductCommand;
-import com.loopers.application.product.dto.ProductInfo;
+import com.loopers.application.product.dto.ProductCriteria;
+import com.loopers.application.product.dto.ProductResult;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -24,8 +24,8 @@ public class AdminProductV1Dto {
         @Min(value = 0, message = "재고는 0 이상이어야 합니다.")
         Integer stock
     ) {
-        public ProductCommand.Register toCommand() {
-            return new ProductCommand.Register(brandId, name, price, stock);
+        public ProductCriteria.Register toCriteria() {
+            return new ProductCriteria.Register(brandId, name, price, stock);
         }
     }
 
@@ -40,8 +40,8 @@ public class AdminProductV1Dto {
         @Min(value = 0, message = "재고는 0 이상이어야 합니다.")
         Integer stock
     ) {
-        public ProductCommand.Update toCommand() {
-            return new ProductCommand.Update(name, price, stock);
+        public ProductCriteria.Update toCriteria() {
+            return new ProductCriteria.Update(name, price, stock);
         }
     }
 
@@ -57,7 +57,7 @@ public class AdminProductV1Dto {
         ZonedDateTime updatedAt,
         ZonedDateTime deletedAt
     ) {
-        public static DetailResponse from(ProductInfo info) {
+        public static DetailResponse from(ProductResult info) {
             return new DetailResponse(
                 info.id(), info.brandId(), info.brandName(),
                 info.name(), info.price(), info.stock(), info.likeCount(),
@@ -85,7 +85,7 @@ public class AdminProductV1Dto {
             ZonedDateTime updatedAt,
             ZonedDateTime deletedAt
         ) {
-            public static ListItem from(ProductInfo info) {
+            public static ListItem from(ProductResult info) {
                 return new ListItem(
                     info.id(), info.brandId(), info.brandName(),
                     info.name(), info.price(), info.stock(), info.likeCount(),

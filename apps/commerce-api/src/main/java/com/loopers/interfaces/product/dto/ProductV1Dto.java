@@ -1,6 +1,6 @@
 package com.loopers.interfaces.product.dto;
 
-import com.loopers.application.product.dto.ProductInfo;
+import com.loopers.application.product.dto.ProductResult;
 import java.util.List;
 
 public class ProductV1Dto {
@@ -14,7 +14,7 @@ public class ProductV1Dto {
         int stock,
         int likeCount
     ) {
-        public static DetailResponse from(ProductInfo info) {
+        public static DetailResponse from(ProductResult info) {
             return new DetailResponse(
                 info.id(), info.brandId(), info.brandName(),
                 info.name(), info.price(), info.stock(), info.likeCount()
@@ -37,7 +37,7 @@ public class ProductV1Dto {
             int price,
             int likeCount
         ) {
-            public static ListItem from(ProductInfo info) {
+            public static ListItem from(ProductResult info) {
                 return new ListItem(
                     info.id(), info.brandId(), info.brandName(),
                     info.name(), info.price(), info.likeCount()

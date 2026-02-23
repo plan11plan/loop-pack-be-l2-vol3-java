@@ -1,4 +1,4 @@
-package com.loopers.application.product.dto;
+package com.loopers.domain.product.dto;
 
 public class ProductCommand {
 

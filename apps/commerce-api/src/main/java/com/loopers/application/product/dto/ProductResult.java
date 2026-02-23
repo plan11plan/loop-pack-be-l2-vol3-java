@@ -3,7 +3,7 @@ package com.loopers.application.product.dto;
 import com.loopers.domain.product.ProductModel;
 import java.time.ZonedDateTime;
 
-public record ProductInfo(
+public record ProductResult(
     Long id,
     Long brandId,
     String brandName,
@@ -15,8 +15,8 @@ public record ProductInfo(
     ZonedDateTime updatedAt,
     ZonedDateTime deletedAt
 ) {
-    public static ProductInfo from(ProductModel model) {
-        return new ProductInfo(
+    public static ProductResult from(ProductModel model) {
+        return new ProductResult(
             model.getId(),
             model.getBrand().getId(),
             model.getBrand().getName(),
