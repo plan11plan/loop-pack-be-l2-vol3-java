@@ -12,7 +12,7 @@
 ### 예외 및 정책
 
 - **좋아요 수: Product.likeCount 캐시** — Like 엔티티가 원본 데이터, Product.likeCount는 조회 성능을 위한 파생값(derived data). 찜/취소 시 원자적 증감.
-- **API 방식: 엔드포인트 분리 + 내부 토글** — POST/DELETE 엔드포인트는 분리하되, 내부적으로 같은 Facade 메서드(toggleLike)를 호출. 409/404 없음.
+- **API 방식: 엔드포인트 분리** — POST/DELETE 엔드포인트를 분리하고, Facade도 like/unlike 메서드를 각각 제공. 409/404 없음.
 - **회원당 상품당 1개** — userId + productId DB 유니크 제약. 동시성(더블클릭) 시에도 중복 방지.
 - **삭제된 상품/브랜드의 좋아요** — 목록 조회 시 필터링으로 제외.
 - **상품 검증 항상 수행** — 등록/취소 모두 ProductService로 상품 존재 + 삭제 여부 확인.
@@ -31,15 +31,20 @@
 
 ## 유즈케이스
 
-**UC-L01: 상품 좋아요 토글 (등록/취소)**
+**UC-L01: 상품 좋아요 등록/취소**
 
 ```
-[기능 흐름]
-1. 회원이 productId로 좋아요를 요청한다 (POST 또는 DELETE)
+[기능 흐름 - 등록 (POST)]
+1. 회원이 productId로 좋아요 등록을 요청한다
 2. 해당 상품이 존재하는지 확인한다 (삭제된 상품 불가)
-3. 좋아요 존재 여부를 확인한다
-4-a. 좋아요가 없으면: 좋아요를 저장한다 (등록)
-4-b. 좋아요가 있으면: 좋아요를 삭제한다 (취소)
+3. 좋아요를 저장한다
+4. 상품의 likeCount를 증가시킨다
+
+[기능 흐름 - 취소 (DELETE)]
+1. 회원이 productId로 좋아요 취소를 요청한다
+2. 해당 상품이 존재하는지 확인한다 (삭제된 상품 불가)
+3. 좋아요를 삭제한다
+4. 상품의 likeCount를 감소시킨다
 
 [예외]
 - productId에 해당하는 상품이 없거나 삭제된 경우 404 반환
@@ -47,9 +52,6 @@
 [조건]
 - 로그인한 회원만 가능
 - 회원당 상품당 1개만 저장 (유니크 제약)
-- POST/DELETE 모두 같은 Facade 메서드(toggleLike)를 호출
-- 이미 좋아요한 상품에 POST → 좋아요 취소 (409 없음)
-- 좋아요하지 않은 상품에 DELETE → 좋아요 등록 (404 없음)
 ```
 
 **UC-L02: 내가 좋아요한 상품 목록 조회**
@@ -71,7 +73,7 @@
 
 ## 시퀀스 다이어그램: 좋아요 등록/취소
 
-> 좋아요는 **Product 검증 + Like 등록/취소**를 조율해야 하므로 Facade가 필요하다.
+> 좋아요는 **Product 검증 + Like 등록/취소 + likeCount 갱신**을 조율해야 하므로 Facade가 필요하다.
 
 ```mermaid
 sequenceDiagram
@@ -82,24 +84,37 @@ sequenceDiagram
     participant PS as ProductService
     participant LS as LikeService
 
-    Note left of LC: POST /products/{id}/likes<br/>DELETE /products/{id}/likes
+    Note left of LC: POST /products/{id}/likes
 
-    LC->>LF: 좋아요 토글 요청
+    LC->>LF: like(userId, productId)
 
     Note over LF: @Transactional
-    LF->>PS: 상품 검증
-    activate PS
-    PS-->>PS: 상품 예외처리
-    PS-->>LF: 검증 완료
-    deactivate PS
+    LF->>PS: getById(productId)
+    PS-->>LF: ProductModel
 
-    LF->>LS: 좋아요 존재 확인
+    LF->>LS: like(userId, productId)
+    LF->>LF: product.addLikeCount()
+```
 
-    alt 좋아요가 존재하지 않을 경우
-        LF->>LS: save()
-    else 이미 좋아요한 경우
-        LF->>LS: delete()
-    end
+```mermaid
+sequenceDiagram
+    autonumber
+
+    participant LC as LikeController
+    participant LF as LikeFacade
+    participant PS as ProductService
+    participant LS as LikeService
+
+    Note left of LC: DELETE /products/{id}/likes
+
+    LC->>LF: unlike(userId, productId)
+
+    Note over LF: @Transactional
+    LF->>PS: getById(productId)
+    PS-->>LF: ProductModel
+
+    LF->>LS: unlike(userId, productId)
+    LF->>LF: product.subtractLikeCount()
 ```
 
 ---
