@@ -19,29 +19,29 @@ public class BrandFacade {
     private final ProductService productService;
 
     @Transactional
-    public void register(BrandCommand.Register command) {
+    public void registerBrand(BrandCommand.Register command) {
         brandService.register(command.name());
     }
 
     @Transactional(readOnly = true)
-    public BrandInfo getById(Long id) {
+    public BrandInfo getBrand(Long id) {
         BrandModel brandModel = brandService.getById(id);
         return BrandInfo.from(brandModel);
     }
 
     @Transactional
-    public void update(Long id, BrandCommand.Update command) {
+    public void updateBrand(Long id, BrandCommand.Update command) {
         brandService.update(id, command.name());
     }
 
     @Transactional
-    public void delete(Long id) {
+    public void deleteBrand(Long id) {
         brandService.delete(id);
         productService.softDeleteByBrandId(id);
     }
 
     @Transactional(readOnly = true)
-    public Page<BrandInfo> getAll(Pageable pageable) {
+    public Page<BrandInfo> getBrands(Pageable pageable) {
         return brandService.getAll(pageable).map(BrandInfo::from);
     }
 }

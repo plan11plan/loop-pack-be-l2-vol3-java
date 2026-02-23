@@ -19,7 +19,7 @@ public class BrandV1Controller implements BrandV1ApiSpec {
     public ApiResponse<BrandV1Dto.DetailResponse> getById(
         @PathVariable Long brandId
     ) {
-        BrandInfo brandInfo = brandFacade.getById(brandId);
+        BrandInfo brandInfo = brandFacade.getBrand(brandId);
         return ApiResponse.success(BrandV1Dto.DetailResponse.from(brandInfo));
     }
 }

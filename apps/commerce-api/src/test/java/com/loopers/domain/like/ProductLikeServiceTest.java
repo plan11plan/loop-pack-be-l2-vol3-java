@@ -19,39 +19,58 @@ class ProductLikeServiceTest {
         productLikeService = new ProductLikeService(productLikeRepository);
     }
 
-    @DisplayName("좋아요를 토글할 때, ")
+    @DisplayName("좋아요를 등록할 때, ")
     @Nested
-    class ToggleLike {
+    class Like {
 
-        @DisplayName("좋아요가 없으면, 좋아요를 등록하고 true를 반환한다.")
+        @DisplayName("유효한 userId와 productId가 주어지면, 좋아요가 저장된다.")
         @Test
-        void toggleLike_whenNotExists() {
-            // arrange
-            Long userId = 1L;
-            Long productId = 2L;
-
+        void like_whenValidValues() {
             // act
-            boolean result = productLikeService.toggleLike(userId, productId);
+            productLikeService.like(1L, 2L);
 
             // assert
-            assertThat(result).isTrue();
-            assertThat(productLikeRepository.findByUserIdAndProductId(userId, productId)).isPresent();
+            assertThat(productLikeRepository.findByUserIdAndProductId(1L, 2L)).isPresent();
+        }
+    }
+
+    @DisplayName("좋아요를 취소할 때, ")
+    @Nested
+    class Unlike {
+
+        @DisplayName("존재하는 좋아요가 주어지면, 좋아요가 삭제된다.")
+        @Test
+        void unlike_whenExists() {
+            // arrange
+            productLikeRepository.save(ProductLikeModel.create(1L, 2L));
+
+            // act
+            productLikeService.unlike(1L, 2L);
+
+            // assert
+            assertThat(productLikeRepository.findByUserIdAndProductId(1L, 2L)).isEmpty();
+        }
+    }
+
+    @DisplayName("좋아요 존재 여부를 확인할 때, ")
+    @Nested
+    class ExistsByUserIdAndProductId {
+
+        @DisplayName("좋아요가 존재하면, true를 반환한다.")
+        @Test
+        void exists_whenLikeExists() {
+            // arrange
+            productLikeRepository.save(ProductLikeModel.create(1L, 2L));
+
+            // act & assert
+            assertThat(productLikeService.existsByUserIdAndProductId(1L, 2L)).isTrue();
         }
 
-        @DisplayName("좋아요가 이미 존재하면, 좋아요를 삭제하고 false를 반환한다.")
+        @DisplayName("좋아요가 없으면, false를 반환한다.")
         @Test
-        void toggleLike_whenAlreadyExists() {
-            // arrange
-            Long userId = 1L;
-            Long productId = 2L;
-            productLikeRepository.save(ProductLikeModel.create(userId, productId));
-
-            // act
-            boolean result = productLikeService.toggleLike(userId, productId);
-
-            // assert
-            assertThat(result).isFalse();
-            assertThat(productLikeRepository.findByUserIdAndProductId(userId, productId)).isEmpty();
+        void exists_whenLikeNotExists() {
+            // act & assert
+            assertThat(productLikeService.existsByUserIdAndProductId(1L, 2L)).isFalse();
         }
     }
 
@@ -66,7 +85,7 @@ class ProductLikeServiceTest {
             Long userId = 1L;
             productLikeRepository.save(ProductLikeModel.create(userId, 10L));
             productLikeRepository.save(ProductLikeModel.create(userId, 20L));
-            productLikeRepository.save(ProductLikeModel.create(2L, 30L)); // 다른 사용자
+            productLikeRepository.save(ProductLikeModel.create(2L, 30L));
 
             // act
             List<ProductLikeModel> result = productLikeService.getLikesByUserId(userId);

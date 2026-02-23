@@ -22,7 +22,7 @@ public class AdminBrandV1Controller implements AdminBrandV1ApiSpec {
     public ApiResponse<Object> register(
         @Valid @RequestBody AdminBrandV1Dto.RegisterRequest request
     ) {
-        brandFacade.register(request.toCommand());
+        brandFacade.registerBrand(request.toCommand());
         return ApiResponse.success();
     }
 
@@ -32,7 +32,7 @@ public class AdminBrandV1Controller implements AdminBrandV1ApiSpec {
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size
     ) {
-        Page<BrandInfo> brandInfoPage = brandFacade.getAll(PageRequest.of(page, size));
+        Page<BrandInfo> brandInfoPage = brandFacade.getBrands(PageRequest.of(page, size));
         AdminBrandV1Dto.ListResponse listResponse = new AdminBrandV1Dto.ListResponse(
             brandInfoPage.getNumber(),
             brandInfoPage.getSize(),
@@ -50,7 +50,7 @@ public class AdminBrandV1Controller implements AdminBrandV1ApiSpec {
     public ApiResponse<AdminBrandV1Dto.DetailResponse> getById(
         @PathVariable Long brandId
     ) {
-        BrandInfo brandInfo = brandFacade.getById(brandId);
+        BrandInfo brandInfo = brandFacade.getBrand(brandId);
         return ApiResponse.success(AdminBrandV1Dto.DetailResponse.from(brandInfo));
     }
 
@@ -60,7 +60,7 @@ public class AdminBrandV1Controller implements AdminBrandV1ApiSpec {
         @PathVariable Long brandId,
         @Valid @RequestBody AdminBrandV1Dto.UpdateRequest request
     ) {
-        brandFacade.update(brandId, request.toCommand());
+        brandFacade.updateBrand(brandId, request.toCommand());
         return ApiResponse.success();
     }
 
@@ -69,7 +69,7 @@ public class AdminBrandV1Controller implements AdminBrandV1ApiSpec {
     public ApiResponse<Object> delete(
         @PathVariable Long brandId
     ) {
-        brandFacade.delete(brandId);
+        brandFacade.deleteBrand(brandId);
         return ApiResponse.success();
     }
 }

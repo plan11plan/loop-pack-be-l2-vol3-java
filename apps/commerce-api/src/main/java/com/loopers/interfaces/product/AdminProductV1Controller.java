@@ -22,7 +22,7 @@ public class AdminProductV1Controller implements AdminProductV1ApiSpec {
     public ApiResponse<Object> register(
         @Valid @RequestBody AdminProductV1Dto.RegisterRequest request
     ) {
-        productFacade.register(request.toCommand());
+        productFacade.registerProduct(request.toCommand());
         return ApiResponse.success();
     }
 
@@ -34,8 +34,8 @@ public class AdminProductV1Controller implements AdminProductV1ApiSpec {
         @RequestParam(required = false) Long brandId
     ) {
         Page<ProductInfo> productInfoPage = brandId != null
-            ? productFacade.getAllByBrandId(brandId, PageRequest.of(page, size))
-            : productFacade.getAll(PageRequest.of(page, size));
+            ? productFacade.getProductsByBrandId(brandId, PageRequest.of(page, size))
+            : productFacade.getProducts(PageRequest.of(page, size));
 
         AdminProductV1Dto.ListResponse listResponse = new AdminProductV1Dto.ListResponse(
             productInfoPage.getNumber(),
@@ -54,7 +54,7 @@ public class AdminProductV1Controller implements AdminProductV1ApiSpec {
     public ApiResponse<AdminProductV1Dto.DetailResponse> getById(
         @PathVariable Long productId
     ) {
-        ProductInfo productInfo = productFacade.getById(productId);
+        ProductInfo productInfo = productFacade.getProduct(productId);
         return ApiResponse.success(AdminProductV1Dto.DetailResponse.from(productInfo));
     }
 
@@ -64,7 +64,7 @@ public class AdminProductV1Controller implements AdminProductV1ApiSpec {
         @PathVariable Long productId,
         @Valid @RequestBody AdminProductV1Dto.UpdateRequest request
     ) {
-        productFacade.update(productId, request.toCommand());
+        productFacade.updateProduct(productId, request.toCommand());
         return ApiResponse.success();
     }
 
@@ -73,7 +73,7 @@ public class AdminProductV1Controller implements AdminProductV1ApiSpec {
     public ApiResponse<Object> delete(
         @PathVariable Long productId
     ) {
-        productFacade.delete(productId);
+        productFacade.deleteProduct(productId);
         return ApiResponse.success();
     }
 }

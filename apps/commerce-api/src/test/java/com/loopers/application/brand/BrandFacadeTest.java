@@ -41,7 +41,7 @@ class BrandFacadeTest {
             BrandCommand.Register command = new BrandCommand.Register("나이키");
 
             // act
-            brandFacade.register(command);
+            brandFacade.registerBrand(command);
 
             // assert
             verify(brandService).register("나이키");
@@ -60,7 +60,7 @@ class BrandFacadeTest {
             when(brandService.getById(1L)).thenReturn(brandModel);
 
             // act
-            BrandInfo result = brandFacade.getById(1L);
+            BrandInfo result = brandFacade.getBrand(1L);
 
             // assert
             assertThat(result.name()).isEqualTo("나이키");
@@ -79,7 +79,7 @@ class BrandFacadeTest {
             BrandCommand.Update command = new BrandCommand.Update("아디다스");
 
             // act
-            brandFacade.update(1L, command);
+            brandFacade.updateBrand(1L, command);
 
             // assert
             verify(brandService).update(1L, "아디다스");
@@ -94,7 +94,7 @@ class BrandFacadeTest {
         @DisplayName("id를 BrandService.delete에 전달하고 해당 브랜드의 상품을 일괄 삭제한다")
         void delete_호출_검증() {
             // arrange & act
-            brandFacade.delete(1L);
+            brandFacade.deleteBrand(1L);
 
             // assert
             verify(brandService).delete(1L);
