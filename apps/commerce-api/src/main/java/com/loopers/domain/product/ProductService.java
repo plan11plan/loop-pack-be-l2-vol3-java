@@ -55,6 +55,11 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
+    public boolean existsById(Long id) {
+        return productRepository.findById(id).isPresent();
+    }
+
+    @Transactional(readOnly = true)
     public Page<ProductModel> getAllActive(Pageable pageable) {
         return productRepository.findAllActive(pageable);
     }
