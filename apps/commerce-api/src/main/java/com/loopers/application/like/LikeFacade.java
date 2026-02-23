@@ -1,6 +1,5 @@
 package com.loopers.application.like;
 
-import com.loopers.application.like.dto.LikeCriteria;
 import com.loopers.application.like.dto.LikeResult;
 import com.loopers.domain.like.ProductLikeService;
 import com.loopers.domain.product.ProductModel;
@@ -17,19 +16,17 @@ public class LikeFacade {
     private final ProductService productService;
 
     @Transactional
-    public void toggleLike(LikeCriteria.Toggle criteria) {
-        ProductModel product = productService.getById(criteria.productId());
+    public void like(Long userId, Long productId) {
+        ProductModel product = productService.getById(productId);
+        productLikeService.like(userId, productId);
+        product.addLikeCount();
+    }
 
-        switch (criteria.type()) {
-            case LIKE -> {
-                productLikeService.like(criteria.userId(), criteria.productId());
-                product.addLikeCount();
-            }
-            case UNLIKE -> {
-                productLikeService.unlike(criteria.userId(), criteria.productId());
-                product.subtractLikeCount();
-            }
-        }
+    @Transactional
+    public void unlike(Long userId, Long productId) {
+        ProductModel product = productService.getById(productId);
+        productLikeService.unlike(userId, productId);
+        product.subtractLikeCount();
     }
 
     @Transactional(readOnly = true)
