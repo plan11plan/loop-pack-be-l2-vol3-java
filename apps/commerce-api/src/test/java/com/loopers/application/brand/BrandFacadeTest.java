@@ -4,8 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.loopers.application.brand.dto.BrandCommand;
-import com.loopers.application.brand.dto.BrandInfo;
+import com.loopers.application.brand.dto.BrandCriteria;
+import com.loopers.application.brand.dto.BrandResult;
 import com.loopers.domain.brand.BrandModel;
 import com.loopers.domain.brand.BrandService;
 import com.loopers.domain.product.ProductService;
@@ -38,10 +38,10 @@ class BrandFacadeTest {
         @DisplayName("Command의 name을 BrandService.register에 전달한다")
         void register_호출_검증() {
             // arrange
-            BrandCommand.Register command = new BrandCommand.Register("나이키");
+            BrandCriteria.Register criteria = new BrandCriteria.Register("나이키");
 
             // act
-            brandFacade.registerBrand(command);
+            brandFacade.registerBrand(criteria);
 
             // assert
             verify(brandService).register("나이키");
@@ -53,14 +53,14 @@ class BrandFacadeTest {
     class GetById {
 
         @Test
-        @DisplayName("BrandService.getById 결과를 BrandInfo로 변환하여 반환한다")
+        @DisplayName("BrandService.getById 결과를 BrandResult로 변환하여 반환한다")
         void getById_변환_검증() {
             // arrange
             BrandModel brandModel = BrandModel.create("나이키");
             when(brandService.getById(1L)).thenReturn(brandModel);
 
             // act
-            BrandInfo result = brandFacade.getBrand(1L);
+            BrandResult result = brandFacade.getBrand(1L);
 
             // assert
             assertThat(result.name()).isEqualTo("나이키");
@@ -76,10 +76,10 @@ class BrandFacadeTest {
         @DisplayName("id와 Command의 name을 BrandService.update에 전달한다")
         void update_호출_검증() {
             // arrange
-            BrandCommand.Update command = new BrandCommand.Update("아디다스");
+            BrandCriteria.Update criteria = new BrandCriteria.Update("아디다스");
 
             // act
-            brandFacade.updateBrand(1L, command);
+            brandFacade.updateBrand(1L, criteria);
 
             // assert
             verify(brandService).update(1L, "아디다스");

@@ -1,13 +1,13 @@
 package com.loopers.application.like;
 
-import static com.loopers.application.like.dto.LikeCommand.ApplyLikeRequestType.LIKE;
-import static com.loopers.application.like.dto.LikeCommand.ApplyLikeRequestType.UNLIKE;
+import static com.loopers.domain.like.dto.LikeCommand.ApplyLikeRequestType.LIKE;
+import static com.loopers.domain.like.dto.LikeCommand.ApplyLikeRequestType.UNLIKE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.loopers.application.like.dto.LikeCommand;
-import com.loopers.application.like.dto.LikeInfo;
+import com.loopers.application.like.dto.LikeCriteria;
+import com.loopers.application.like.dto.LikeResult;
 import com.loopers.domain.brand.BrandModel;
 import com.loopers.domain.like.ProductLikeModel;
 import com.loopers.domain.like.ProductLikeService;
@@ -43,14 +43,14 @@ class LikeFacadeTest {
         @Test
         void toggleLike_whenLike_addsLikeAndIncreasesCount() {
             // arrange
-            LikeCommand.Toggle command = new LikeCommand.Toggle(LIKE, 1L, 2L);
+            LikeCriteria.Toggle criteria = new LikeCriteria.Toggle(LIKE, 1L, 2L);
             ProductModel product = ProductModel.create(
                 BrandModel.create("Nike"), "에어맥스", 150000, 100
             );
             when(productService.getById(2L)).thenReturn(product);
 
             // act
-            likeFacade.toggleLike(command);
+            likeFacade.toggleLike(criteria);
 
             // assert
             verify(productService).getById(2L);
@@ -62,7 +62,7 @@ class LikeFacadeTest {
         @Test
         void toggleLike_whenUnlike_removesLikeAndDecreasesCount() {
             // arrange
-            LikeCommand.Toggle command = new LikeCommand.Toggle(UNLIKE, 1L, 2L);
+            LikeCriteria.Toggle criteria = new LikeCriteria.Toggle(UNLIKE, 1L, 2L);
             ProductModel product = ProductModel.create(
                 BrandModel.create("Nike"), "에어맥스", 150000, 100
             );
@@ -70,7 +70,7 @@ class LikeFacadeTest {
             when(productService.getById(2L)).thenReturn(product);
 
             // act
-            likeFacade.toggleLike(command);
+            likeFacade.toggleLike(criteria);
 
             // assert
             verify(productService).getById(2L);
@@ -83,9 +83,9 @@ class LikeFacadeTest {
     @Nested
     class GetLikesByUserId {
 
-        @DisplayName("사용자의 좋아요 목록을 조회하면, LikeInfo 목록을 반환한다.")
+        @DisplayName("사용자의 좋아요 목록을 조회하면, LikeResult 목록을 반환한다.")
         @Test
-        void getLikesByUserId_returnsLikeInfoList() {
+        void getLikesByUserId_returnsLikeResultList() {
             // arrange
             Long userId = 1L;
             List<ProductLikeModel> likes = List.of(
@@ -97,7 +97,7 @@ class LikeFacadeTest {
             when(productService.existsById(20L)).thenReturn(true);
 
             // act
-            List<LikeInfo> result = likeFacade.getMyLikedProducts(userId);
+            List<LikeResult> result = likeFacade.getMyLikedProducts(userId);
 
             // assert
             assertThat(result).hasSize(2);
@@ -117,7 +117,7 @@ class LikeFacadeTest {
             when(productService.existsById(20L)).thenReturn(false);
 
             // act
-            List<LikeInfo> result = likeFacade.getMyLikedProducts(userId);
+            List<LikeResult> result = likeFacade.getMyLikedProducts(userId);
 
             // assert
             assertThat(result).hasSize(1);
