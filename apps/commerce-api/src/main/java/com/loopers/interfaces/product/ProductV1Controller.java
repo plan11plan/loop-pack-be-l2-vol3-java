@@ -27,8 +27,8 @@ public class ProductV1Controller implements ProductV1ApiSpec {
     ) {
         PageRequest pageRequest = PageRequest.of(page, size, toSort(sort));
         Page<ProductResult> productInfoPage = brandId != null
-            ? productFacade.getActiveProductsByBrandId(brandId, pageRequest)
-            : productFacade.getActiveProducts(pageRequest);
+            ? productFacade.getProductsWithActiveBrandByBrandId(brandId, pageRequest)
+            : productFacade.getProductsWithActiveBrand(pageRequest);
 
         ProductV1Dto.ListResponse listResponse = new ProductV1Dto.ListResponse(
             productInfoPage.getNumber(),

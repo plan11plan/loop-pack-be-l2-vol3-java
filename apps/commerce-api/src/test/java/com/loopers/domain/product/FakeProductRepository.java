@@ -78,7 +78,7 @@ public class FakeProductRepository implements ProductRepository {
     }
 
     @Override
-    public Page<ProductModel> findAllActive(Pageable pageable) {
+    public Page<ProductModel> findAllWithActiveBrand(Pageable pageable) {
         List<ProductModel> activeModels = store.values().stream()
             .filter(product -> product.getDeletedAt() == null)
             .filter(product -> product.getBrand().getDeletedAt() == null)
@@ -95,7 +95,7 @@ public class FakeProductRepository implements ProductRepository {
     }
 
     @Override
-    public Page<ProductModel> findAllActiveByBrandId(Long brandId, Pageable pageable) {
+    public Page<ProductModel> findAllWithActiveBrandByBrandId(Long brandId, Pageable pageable) {
         List<ProductModel> filtered = store.values().stream()
             .filter(product -> product.getDeletedAt() == null)
             .filter(product -> product.getBrand().getDeletedAt() == null)

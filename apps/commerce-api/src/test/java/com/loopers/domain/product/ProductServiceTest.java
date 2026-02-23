@@ -205,19 +205,19 @@ class ProductServiceTest {
         }
     }
 
-    @DisplayName("브랜드 삭제 시 상품을 일괄 soft delete할 때, ")
+    @DisplayName("브랜드별 상품을 일괄 삭제할 때, ")
     @Nested
-    class SoftDeleteByBrandId {
+    class DeleteAllByBrandId {
 
-        @DisplayName("해당 브랜드의 모든 상품이 soft delete된다.")
+        @DisplayName("해당 브랜드의 모든 상품이 삭제된다.")
         @Test
-        void softDeleteByBrandId_whenProductsExist() {
+        void deleteAllByBrandId_whenProductsExist() {
             // arrange
             productService.register(brand, "에어맥스", 150000, 100);
             productService.register(brand, "에어포스", 120000, 50);
 
             // act
-            productService.softDeleteByBrandId(brand.getId());
+            productService.deleteAllByBrandId(brand.getId());
 
             // assert
             Page<ProductModel> result = productService.getAll(PageRequest.of(0, 20));

@@ -37,7 +37,7 @@ public class BrandFacade {
     @Transactional
     public void deleteBrand(Long id) {
         brandService.delete(id);
-        productService.softDeleteByBrandId(id);
+        productService.deleteAllByBrandId(id);
     }
 
     @Transactional(readOnly = true)

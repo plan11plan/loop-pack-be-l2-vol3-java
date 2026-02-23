@@ -52,12 +52,12 @@ public class ProductFacade {
     }
 
     @Transactional(readOnly = true)
-    public Page<ProductResult> getActiveProducts(Pageable pageable) {
-        return productService.getAllActive(pageable).map(ProductResult::from);
+    public Page<ProductResult> getProductsWithActiveBrand(Pageable pageable) {
+        return productService.getAllWithActiveBrand(pageable).map(ProductResult::from);
     }
 
     @Transactional(readOnly = true)
-    public Page<ProductResult> getActiveProductsByBrandId(Long brandId, Pageable pageable) {
-        return productService.getAllActiveByBrandId(brandId, pageable).map(ProductResult::from);
+    public Page<ProductResult> getProductsWithActiveBrandByBrandId(Long brandId, Pageable pageable) {
+        return productService.getAllWithActiveBrandByBrandId(brandId, pageable).map(ProductResult::from);
     }
 }

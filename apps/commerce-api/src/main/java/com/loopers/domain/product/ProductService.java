@@ -49,7 +49,7 @@ public class ProductService {
     }
 
     @Transactional
-    public void softDeleteByBrandId(Long brandId) {
+    public void deleteAllByBrandId(Long brandId) {
         List<ProductModel> products = productRepository.findAllByBrandId(brandId);
         products.forEach(ProductModel::delete);
     }
@@ -60,12 +60,12 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
-    public Page<ProductModel> getAllActive(Pageable pageable) {
-        return productRepository.findAllActive(pageable);
+    public Page<ProductModel> getAllWithActiveBrand(Pageable pageable) {
+        return productRepository.findAllWithActiveBrand(pageable);
     }
 
     @Transactional(readOnly = true)
-    public Page<ProductModel> getAllActiveByBrandId(Long brandId, Pageable pageable) {
-        return productRepository.findAllActiveByBrandId(brandId, pageable);
+    public Page<ProductModel> getAllWithActiveBrandByBrandId(Long brandId, Pageable pageable) {
+        return productRepository.findAllWithActiveBrandByBrandId(brandId, pageable);
     }
 }
