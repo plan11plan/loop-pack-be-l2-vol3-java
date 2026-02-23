@@ -319,7 +319,7 @@ public class Promotion {
 
 // 3. 외부 의존 → Domain Service
 public class OrderService {
-    public Order create(OrderMemberData member, List<OrderProductData> products) {
+    public Order create(OrderMemberCommand member, List<OrderProductCommand> products) {
         validateOrderLimit(member);  // 회원 등급별 주문 한도 — 타 도메인 데이터 필요
         // ...
     }

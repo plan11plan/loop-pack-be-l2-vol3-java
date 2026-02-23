@@ -26,7 +26,7 @@ com.loopers/
 │   └── like/                       ← 좋아요 Controller, Request/Response DTO
 │
 ├── application/                    ← Application 계층
-│   ├── order/                      ← 주문 Facade, Command/Query/Info/Result DTO
+│   ├── order/                      ← 주문 Facade, Criteria/Result DTO
 │   ├── product/
 │   └── like/
 │
@@ -78,9 +78,8 @@ application/
 └── order/
     ├── OrderFacade.java
     └── dto/
-        ├── OrderCommand.java               ← Inner Class: Create, Update ...
-        ├── OrderQuery.java                 ← Inner Class: Detail, Search ...
-        ├── OrderInfo.java                  ← 단일 도메인 응답
+        ├── OrderCriteria.java              ← Inner Class: Create, Detail ...
+        ├── OrderResult.java                ← 유스케이스 결과
         └── OrderDetailResult.java          ← 다중 도메인 조합 응답 (필요 시)
 ```
 
@@ -96,8 +95,8 @@ domain/
     ├── OrderRepository.java                ← Repository 인터페이스
     ├── OrderErrorCode.java                 ← 도메인 에러코드
     └── dto/                                ← 도메인 DTO (필요 시)
-        ├── OrderProductData.java           ← 타 도메인 정보 명세
-        └── OrderMemberData.java
+        ├── OrderProductCommand.java        ← 타 도메인 정보 명세
+        └── OrderMemberCommand.java
 ```
 
 ### infrastructure/ — 풀 구조
@@ -124,7 +123,7 @@ application/
 └── wishlist/
     ├── WishlistFacade.java
     └── dto/
-        └── WishlistInfo.java
+        └── WishlistResult.java
 
 domain/
 └── wishlist/
@@ -191,10 +190,9 @@ support에 넣으면 안 되는 것:
 | 클래스 | 네이밍 | 예시 |
 |--------|--------|------|
 | Facade | `{Domain}Facade` | `OrderFacade` |
-| Command DTO | `{Domain}Command.{Action}` | `OrderCommand.Create` |
-| Query DTO | `{Domain}Query.{Action}` | `OrderQuery.Search` |
-| Info DTO | `{Domain}Info` | `OrderInfo` |
-| Result DTO | `{Domain}{Detail}Result` | `OrderDetailResult` |
+| Criteria DTO | `{Domain}Criteria.{Action}` | `OrderCriteria.Create` |
+| Result DTO | `{Domain}Result` | `OrderResult` |
+| 조합 Result DTO | `{Domain}{Detail}Result` | `OrderDetailResult` |
 
 ### domain/{domain}/
 
@@ -205,7 +203,7 @@ support에 넣으면 안 되는 것:
 | Repository (인터페이스) | `{Domain}Repository` | `OrderRepository` |
 | ErrorCode | `{Domain}ErrorCode` | `OrderErrorCode` |
 | VO / enum | 의미에 맞게 | `OrderStatus`, `Money` |
-| Data DTO | `{Target}Data` | `OrderProductData` |
+| Command DTO | `{Target}Command` | `OrderProductCommand` |
 
 ### infrastructure/{domain}/
 
@@ -232,7 +230,7 @@ interfaces → application → domain ← infrastructure
 
 - 도메인 간 **Entity 직접 참조 금지**
 - Application 계층(Facade)에서 타 도메인의 Domain Service를 호출하여 조합한다
-- 필요 시 Domain의 Data DTO로 정보를 전달한다
+- 필요 시 Domain의 Command DTO로 정보를 전달한다
 
 ```java
 // ✅ Application에서 타 도메인 Service 호출

@@ -24,7 +24,7 @@ com.loopers/
 ├── interfaces/                   ← Controller, ApiSpec, Request/Response DTO
 │   ├── api/                      ← 공통 (ApiResponse, ControllerAdvice)
 │   └── {domain}/                 ← 도메인별 Controller, DTO
-├── application/                  ← Facade, Command/Query/Info/Result DTO
+├── application/                  ← Facade, Criteria/Result DTO
 │   └── {domain}/
 ├── domain/                       ← Entity, VO, Service, Repository(I/F), ErrorCode
 │   └── {domain}/
@@ -54,8 +54,8 @@ ApiResponse.failValidation(code, message, fieldErrors)       // Validation 에�
 | 계층 | 요청 | 응답 |
 |------|------|------|
 | **Interface** | `~Request` | `~Response` |
-| **Application** | `~Command` / `~Query` | `~Info` (단일) / `~Result` (조합) |
-| **Domain** | `~Data` | **Entity** 또는 `~Info` |
+| **Application** | `~Criteria` | `~Result` |
+| **Domain** | `~Command` | **Entity** 또는 `~Info` |
 
 **테스트**
 
@@ -165,7 +165,7 @@ ApiResponse.failValidation(code, message, fieldErrors)       // Validation 에�
 - ErrorType → ErrorCode 전환, CoreException/ApiControllerAdvice/ApiResponse 수정
 
 **DTO** → `references/common/dto-convention.md`
-- DTO 신규 생성, 계층 간 전달 객체, 변환 메서드(toCommand, from), record Inner Class
+- DTO 신규 생성, 계층 간 전달 객체, 변환 메서드(toCriteria, toCommand, from), record Inner Class
 
 **테스트** → `references/common/test-convention.md`
 - 테스트 클래스 생성, 네이밍, 단위/통합/E2E 구분, Fake vs Mockito, DB 정리

@@ -292,7 +292,7 @@ class OrderFacadeTest {
         when(orderService.create(any())).thenReturn(order);
 
         // act
-        OrderDetailResult result = orderFacade.createOrder(command);
+        OrderDetailResult result = orderFacade.createOrder(criteria);
 
         // assert
         assertThat(result).isNotNull();
