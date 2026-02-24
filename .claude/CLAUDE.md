@@ -43,6 +43,14 @@ supports/
 - 코딩 컨벤션: `.claude/skills/project-convention/` 참조 (코드 작성 시 해당 스킬의 references/ 하위 문서를 반드시 Read 도구로 읽을 것)
 - 커밋 규칙: `.claude/skills/commit-convention/` 참조
 
+### 코드 스타일 핵심 (매 작업 시 준수)
+
+- 1회용 변수는 인라인 (2회 이상 참조 시에만 변수 추출)
+- 메서드 체이닝 줄바꿈: 8-space continuation indent
+- 닫는 괄호: 마지막 인자에 붙임 (별도 줄 금지)
+- 컨텍스트가 길어질수록 컨벤션 누락 가능성 증가 → 코드 작성 전 관련 컨벤션 문서를 반드시 다시 Read할 것
+- **기능 완료 후 커밋 전**: `.claude/agents/convention-review/AGENT.md`를 읽고 서브 에이전트(Sonnet) 리뷰를 실행할 것
+
 ### 설계 문서
 
 기능 개발 시 해당 도메인의 설계 문서를 **먼저 읽고** 시작한다.
