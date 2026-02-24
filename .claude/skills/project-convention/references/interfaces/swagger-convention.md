@@ -22,7 +22,7 @@ Controller에 Swagger 어노테이션을 직접 달지 않는다. **ApiSpec 인�
 interfaces/
 └── user/
     ├── UserV1ApiSpec.java              ← Swagger 어노테이션 (인터페이스)
-    ├── UserController.java             ← implements UserV1ApiSpec
+    ├── UserV1Controller.java           ← implements UserV1ApiSpec
     └── dto/
         └── UserV1Dto.java
 ```
@@ -77,22 +77,22 @@ ApiSpec 인터페이스는 **Controller와 같은 패키지**에 둔다.
 interfaces/
 ├── user/
 │   ├── UserV1ApiSpec.java
-│   ├── UserController.java
+│   ├── UserV1Controller.java
 │   └── dto/
 │       └── UserV1Dto.java
 │
 ├── product/
 │   ├── ProductV1ApiSpec.java
 │   ├── AdminProductV1ApiSpec.java
-│   ├── ProductController.java
-│   ├── AdminProductController.java
+│   ├── ProductV1Controller.java
+│   ├── AdminProductV1Controller.java
 │   └── dto/
 │       ├── ProductV1Dto.java
 │       └── AdminProductV1Dto.java
 │
 └── like/
     ├── LikeV1ApiSpec.java
-    ├── LikeController.java
+    ├── LikeV1Controller.java
     └── dto/
         └── LikeV1Dto.java
 ```
@@ -217,7 +217,7 @@ ApiResponse<AdminProductV1Dto.DetailResponse> create(
 @RestController
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
-public class UserController implements UserV1ApiSpec {
+public class UserV1Controller implements UserV1ApiSpec {
 
     private final UserFacade userFacade;
 
@@ -255,7 +255,7 @@ public class UserController implements UserV1ApiSpec {
 @RestController
 @RequestMapping("/api-admin/v1/products")
 @RequiredArgsConstructor
-public class AdminProductController implements AdminProductV1ApiSpec {
+public class AdminProductV1Controller implements AdminProductV1ApiSpec {
 
     private final ProductFacade productFacade;
 

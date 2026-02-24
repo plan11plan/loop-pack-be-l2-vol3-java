@@ -114,25 +114,24 @@ GET /api/v1/products  body: { "brandId": 1 }                ❌
 | 상황 | 상태 코드 | 응답 Body |
 |------|----------|----------|
 | 조회 성공 | **200 OK** | `ApiResponse.success(data)` |
-| 생성 성공 | **201 Created** | `ApiResponse.success(data)` |
+| 생성 성공 | **200 OK** | `ApiResponse.success(data)` |
 | 수정 성공 | **200 OK** | `ApiResponse.success(data)` 또는 `ApiResponse.success()` |
 | 삭제 성공 | **200 OK** | `ApiResponse.success()` |
 
-생성(POST)만 **201**로 구분한다. 삭제에 204(No Content)를 쓰지 않는 이유는 `ApiResponse` 래퍼를 일관되게 유지하기 위함이다 — 204는 body가 비어야 하므로 `ApiResponse` 포맷과 충돌한다.
+모든 성공 응답은 **200 OK**로 통일한다. `ApiResponse` 래퍼가 `meta.result = SUCCESS/FAIL`로 성공/실패를 명확히 구분하므로, HTTP 상태 코드를 세분화할 실익이 없다. 상태 코드를 개발자가 매번 기억하고 관리해야 하는 부담도 제거된다. 삭제에 204(No Content)를 쓰지 않는 이유는 `ApiResponse` 래퍼를 일관되게 유지하기 위함이다 — 204는 body가 비어야 하므로 `ApiResponse` 포맷과 충돌한다.
 
 ```java
 // Controller 예시
 @PostMapping
-public ResponseEntity<ApiResponse<ProductDetailResponse>> create(...) {
+public ApiResponse<ProductDetailResponse> create(...) {
     ProductInfo info = productFacade.create(request.toCommand());
-    return ResponseEntity.status(HttpStatus.CREATED)
-            .body(ApiResponse.success(ProductDetailResponse.from(info)));
+    return ApiResponse.success(ProductDetailResponse.from(info));
 }
 
 @DeleteMapping("/{productId}")
-public ResponseEntity<ApiResponse<Object>> delete(...) {
+public ApiResponse<Object> delete(...) {
     productFacade.delete(productId);
-    return ResponseEntity.ok(ApiResponse.success());
+    return ApiResponse.success();
 }
 ```
 
@@ -301,8 +300,8 @@ GET /api/v1/orders?startAt=2025-01-01&endAt=2025-01-31
 ```
 interfaces/
 └── product/
-    ├── ProductController.java            ← /api/v1/products (고객)
-    ├── AdminProductController.java       ← /api-admin/v1/products (Admin)
+    ├── ProductV1Controller.java          ← /api/v1/products (고객)
+    ├── AdminProductV1Controller.java     ← /api-admin/v1/products (Admin)
     └── dto/
         ├── ProductDto.java               ← 고객용 Request/Response
         └── AdminProductDto.java          ← Admin용 Request/Response
@@ -312,13 +311,15 @@ interfaces/
 
 | 대상 | 네이밍 | RequestMapping |
 |------|--------|----------------|
-| 고객 | `{Domain}Controller` | `@RequestMapping("/api/v1/{resources}")` |
-| Admin | `Admin{Domain}Controller` | `@RequestMapping("/api-admin/v1/{resources}")` |
+| 고객 | `{Domain}V1Controller` | `@RequestMapping("/api/v1/{resources}")` |
+| Admin | `Admin{Domain}V1Controller` | `@RequestMapping("/api-admin/v1/{resources}")` |
+
+Controller 이름에 **V1**을 포함한다. URL에 `/api/v1`이 명시되어 있으므로, V2 API 추가 시 `{Domain}V2Controller`로 자연스럽게 확장된다. ApiSpec 인터페이스(`{Domain}V1ApiSpec`)와 네이밍이 일관된다.
 
 ```java
 @RestController
 @RequestMapping("/api/v1/products")
-public class ProductController {
+public class ProductV1Controller {
     private final ProductFacade productFacade;
 
     @GetMapping("/{productId}")
@@ -327,7 +328,7 @@ public class ProductController {
 
 @RestController
 @RequestMapping("/api-admin/v1/products")
-public class AdminProductController {
+public class AdminProductV1Controller {
     private final ProductFacade productFacade;
 
     @GetMapping("/{productId}")
@@ -341,12 +342,12 @@ public class AdminProductController {
 
 ```
 // 초기 — Facade 공유
-ProductController       → ProductFacade
-AdminProductController  → ProductFacade
+ProductV1Controller       → ProductFacade
+AdminProductV1Controller  → ProductFacade
 
 // Admin 로직이 커지면 — Facade 분리
-ProductController       → ProductFacade
-AdminProductController  → AdminProductFacade
+ProductV1Controller       → ProductFacade
+AdminProductV1Controller  → AdminProductFacade
 ```
 
 분리 시점: Admin 전용 메서드가 Facade의 절반 이상을 차지하거나, Admin만의 복잡한 유스케이스가 생길 때.
@@ -427,7 +428,7 @@ DELETE 성공 시 `data: null`로 반환한다.
 **HTTP 메서드/상태 코드**
 - [ ] GET 조회, POST 생성, PUT 수정, DELETE 삭제를 지키는가?
 - [ ] GET 요청에 Body가 없는가?
-- [ ] 생성 성공은 201, 나머지 성공은 200인가?
+- [ ] 모든 성공 응답이 200인가? (`@ResponseStatus`, `ResponseEntity` 불필요)
 - [ ] 에러 응답이 200이 아닌 ErrorCode.getStatus() 기준인가?
 
 **쿼리 파라미터**
@@ -437,7 +438,7 @@ DELETE 성공 시 `data: null`로 반환한다.
 
 **Controller 분리**
 - [ ] 고객/Admin Controller가 분리되어 있는가?
-- [ ] Admin Controller 네이밍이 `Admin{Domain}Controller`인가?
+- [ ] Controller 네이밍이 `{Domain}V1Controller` / `Admin{Domain}V1Controller`인가?
 - [ ] 고객/Admin DTO가 분리되어 있는가?
 - [ ] Controller가 핵심 리소스의 도메인 패키지에 배치되어 있는가?
 

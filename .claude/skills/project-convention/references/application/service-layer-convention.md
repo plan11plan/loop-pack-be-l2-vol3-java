@@ -149,12 +149,29 @@ public class OrderFacade {
 - DTO 변환 (Info → Response 등) → Facade 또는 Interface 계층
 - Entity 자기 필드만으로 완결되는 로직 → Entity 메서드
 
-### CUD 메서드는 void를 반환한다
+### CUD 메서드의 반환 규칙
 
-Domain Service의 생성/수정/삭제(CUD) 메서드는 **void**를 반환한다. 상위 계층(Facade)에서 필요하면 별도 조회 메서드를 호출한다.
+Domain Service의 생성/수정/삭제(CUD) 메서드는 **기본적으로 void**를 반환한다. 명령과 조회를 분리하여 메서드의 의도를 명확하게 한다.
 
-- YAGNI: 반환값이 필요할 때 추가하면 된다
-- 명령과 조회를 분리하여 메서드의 의도가 명확해진다
+**Entity 반환이 허용되는 경우:**
+- Facade에서 생성된 Entity의 **ID나 상태를 즉시 사용**해야 할 때 (예: 생성 후 하위 엔티티에 ID 전달, 응답 반환)
+- **별도 조회가 비효율적**일 때 (예: save() 직후 동일 Entity를 다시 findById()하는 것은 불필요)
+
+```java
+// ✅ Entity 반환 — 생성 후 ID/상태를 Facade에서 즉시 사용
+@Transactional
+public Order create(OrderMemberCommand member, List<OrderProductCommand> products) {
+    Order order = Order.create(member.memberId(), products);
+    return orderRepository.save(order);  // 생성된 ID를 Facade에서 활용
+}
+
+// ✅ void — 상태 변경 후 반환할 필요 없음
+@Transactional
+public void cancel(Long orderId) {
+    Order order = getOrder(orderId);
+    order.cancel();
+}
+```
 
 ### 예시
 
@@ -165,12 +182,12 @@ public class OrderService {
     private final OrderRepository orderRepository;
 
     @Transactional
-    public void create(OrderMemberCommand member, List<OrderProductCommand> products) {
+    public Order create(OrderMemberCommand member, List<OrderProductCommand> products) {
         List<OrderLine> lines = products.stream()
             .map(p -> OrderLine.create(p.productId(), p.name(), p.price()))
             .toList();
         Order order = Order.create(member.memberId(), lines);
-        orderRepository.save(order);
+        return orderRepository.save(order);
     }
 
     @Transactional

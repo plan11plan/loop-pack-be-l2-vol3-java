@@ -52,7 +52,11 @@ public interface OrderRepository {
 **금지:**
 - `JpaRepository` 상속
 - Spring 어노테이션 (`@Repository`, `@Query` 등)
-- `Pageable`, `Page` 등 Spring Data 타입
+
+**예외 허용 — `Page`, `Pageable`:**
+- `Page`와 `Pageable`은 단순 데이터 구조(페이지네이션 메타정보)에 가까워 도메인 오염이 적다
+- 별도 래퍼를 만들면 RepositoryImpl에서 매번 변환 보일러플레이트가 발생하므로, 실용성을 우선한다
+- domain Repository 인터페이스에서 `Page`, `Pageable`을 직접 사용할 수 있다
 
 ### JpaRepository 인터페이스
 
