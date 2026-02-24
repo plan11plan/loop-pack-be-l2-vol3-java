@@ -42,11 +42,11 @@ public class LikeV1Controller implements LikeV1ApiSpec {
         @Login LoginUser loginUser
     ) {
         List<LikeResult> results = likeFacade.getMyLikedProducts(loginUser.id());
-        LikeV1Dto.ListResponse listResponse = new LikeV1Dto.ListResponse(
-            results.stream()
-                .map(LikeV1Dto.ListResponse.ListItem::from)
-                .toList()
-        );
-        return ApiResponse.success(listResponse);
+
+        return ApiResponse.success(
+                new LikeV1Dto.ListResponse(
+                        results.stream()
+                                .map(LikeV1Dto.ListResponse.ListItem::from)
+                                .toList()));
     }
 }

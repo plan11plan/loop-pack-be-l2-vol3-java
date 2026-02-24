@@ -11,11 +11,10 @@ public record UserResult(
 ) {
     public static UserResult from(UserModel model) {
         return new UserResult(
-            model.getId(),
-            model.getLoginId().getValue(),
-            model.getName().getValue(),
-            model.getBirthDate().toDateString(),
-            model.getEmail().getMail()
-        );
+                model.getId(),
+                model.getLoginId().getValue(),
+                model.getName().getValue(),
+                model.getBirthDate().toDateString(),
+                model.getEmail().getMail());
     }
 }

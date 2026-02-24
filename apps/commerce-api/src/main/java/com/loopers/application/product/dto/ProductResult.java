@@ -16,15 +16,14 @@ public record ProductResult(
 ) {
     public static ProductResult from(ProductModel model) {
         return new ProductResult(
-            model.getId(),
-            model.getBrand().getId(),
-            model.getBrand().getName(),
-            model.getName(),
-            model.getPrice().getValue(),
-            model.getStock().getValue(),
-            model.getCreatedAt(),
-            model.getUpdatedAt(),
-            model.getDeletedAt()
-        );
+                model.getId(),
+                model.getBrand().getId(),
+                model.getBrand().getName(),
+                model.getName(),
+                model.getPrice().getValue(),
+                model.getStock().getValue(),
+                model.getCreatedAt(),
+                model.getUpdatedAt(),
+                model.getDeletedAt());
     }
 }

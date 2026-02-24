@@ -18,8 +18,7 @@ public class BrandService {
             throw new CoreException(BrandErrorCode.DUPLICATE_NAME);
         }
 
-        BrandModel brandModel = BrandModel.create(name);
-        brandRepository.save(brandModel);
+        brandRepository.save(BrandModel.create(name));
     }
 
     @Transactional(readOnly = true)

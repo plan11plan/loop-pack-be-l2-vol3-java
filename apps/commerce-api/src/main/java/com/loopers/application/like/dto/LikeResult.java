@@ -12,6 +12,6 @@ public record LikeResult(Long id, Long userId, Long productId, ZonedDateTime cre
         return models.stream()
                 .map(model ->
                         new LikeResult(model.getId(), model.getUserId(), model.getProductId(), model.getCreatedAt()))
-                        .toList();
+                .toList();
     }
 }

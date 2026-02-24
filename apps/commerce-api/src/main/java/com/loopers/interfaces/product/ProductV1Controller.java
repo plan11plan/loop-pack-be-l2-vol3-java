@@ -30,16 +30,15 @@ public class ProductV1Controller implements ProductV1ApiSpec {
             ? productFacade.getProductsWithActiveBrandByBrandId(brandId, pageRequest)
             : productFacade.getProductsWithActiveBrand(pageRequest);
 
-        ProductV1Dto.ListResponse listResponse = new ProductV1Dto.ListResponse(
-            productInfoPage.getNumber(),
-            productInfoPage.getSize(),
-            productInfoPage.getTotalElements(),
-            productInfoPage.getTotalPages(),
-            productInfoPage.getContent().stream()
-                .map(ProductV1Dto.ListResponse.ListItem::from)
-                .toList()
-        );
-        return ApiResponse.success(listResponse);
+        return ApiResponse.success(
+                new ProductV1Dto.ListResponse(
+                        productInfoPage.getNumber(),
+                        productInfoPage.getSize(),
+                        productInfoPage.getTotalElements(),
+                        productInfoPage.getTotalPages(),
+                        productInfoPage.getContent().stream()
+                                .map(ProductV1Dto.ListResponse.ListItem::from)
+                                .toList()));
     }
 
     @GetMapping("/{productId}")

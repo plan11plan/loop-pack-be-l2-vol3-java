@@ -37,16 +37,15 @@ public class AdminProductV1Controller implements AdminProductV1ApiSpec {
             ? productFacade.getProductsByBrandId(brandId, PageRequest.of(page, size))
             : productFacade.getProducts(PageRequest.of(page, size));
 
-        AdminProductV1Dto.ListResponse listResponse = new AdminProductV1Dto.ListResponse(
-            productInfoPage.getNumber(),
-            productInfoPage.getSize(),
-            productInfoPage.getTotalElements(),
-            productInfoPage.getTotalPages(),
-            productInfoPage.getContent().stream()
-                .map(AdminProductV1Dto.ListResponse.ListItem::from)
-                .toList()
-        );
-        return ApiResponse.success(listResponse);
+        return ApiResponse.success(
+                new AdminProductV1Dto.ListResponse(
+                        productInfoPage.getNumber(),
+                        productInfoPage.getSize(),
+                        productInfoPage.getTotalElements(),
+                        productInfoPage.getTotalPages(),
+                        productInfoPage.getContent().stream()
+                                .map(AdminProductV1Dto.ListResponse.ListItem::from)
+                                .toList()));
     }
 
     @GetMapping("/{productId}")

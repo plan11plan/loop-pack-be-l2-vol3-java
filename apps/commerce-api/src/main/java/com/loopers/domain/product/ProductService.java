@@ -16,8 +16,7 @@ public class ProductService {
 
     @Transactional
     public void register(BrandModel brand, String name, int price, int stock) {
-        ProductModel productModel = ProductModel.create(brand, name, price, stock);
-        productRepository.save(productModel);
+        productRepository.save(ProductModel.create(brand, name, price, stock));
     }
 
     @Transactional(readOnly = true)

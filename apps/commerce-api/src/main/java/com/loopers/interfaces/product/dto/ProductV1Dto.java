@@ -15,9 +15,8 @@ public class ProductV1Dto {
     ) {
         public static DetailResponse from(ProductResult info) {
             return new DetailResponse(
-                info.id(), info.brandId(), info.brandName(),
-                info.name(), info.price(), info.stock()
-            );
+                    info.id(), info.brandId(), info.brandName(),
+                    info.name(), info.price(), info.stock());
         }
     }
 
@@ -37,9 +36,8 @@ public class ProductV1Dto {
         ) {
             public static ListItem from(ProductResult info) {
                 return new ListItem(
-                    info.id(), info.brandId(), info.brandName(),
-                    info.name(), info.price()
-                );
+                        info.id(), info.brandId(), info.brandName(),
+                        info.name(), info.price());
             }
         }
     }

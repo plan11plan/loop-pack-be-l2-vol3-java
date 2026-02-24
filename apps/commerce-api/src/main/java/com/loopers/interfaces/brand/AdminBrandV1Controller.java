@@ -33,16 +33,15 @@ public class AdminBrandV1Controller implements AdminBrandV1ApiSpec {
         @RequestParam(defaultValue = "20") int size
     ) {
         Page<BrandResult> brandInfoPage = brandFacade.getBrands(PageRequest.of(page, size));
-        AdminBrandV1Dto.ListResponse listResponse = new AdminBrandV1Dto.ListResponse(
-            brandInfoPage.getNumber(),
-            brandInfoPage.getSize(),
-            brandInfoPage.getTotalElements(),
-            brandInfoPage.getTotalPages(),
-            brandInfoPage.getContent().stream()
-                .map(AdminBrandV1Dto.ListResponse.ListItem::from)
-                .toList()
-        );
-        return ApiResponse.success(listResponse);
+        return ApiResponse.success(
+                new AdminBrandV1Dto.ListResponse(
+                        brandInfoPage.getNumber(),
+                        brandInfoPage.getSize(),
+                        brandInfoPage.getTotalElements(),
+                        brandInfoPage.getTotalPages(),
+                        brandInfoPage.getContent().stream()
+                                .map(AdminBrandV1Dto.ListResponse.ListItem::from)
+                                .toList()));
     }
 
     @GetMapping("/{brandId}")

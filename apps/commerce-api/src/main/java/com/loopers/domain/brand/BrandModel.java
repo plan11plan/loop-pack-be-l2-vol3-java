@@ -27,8 +27,7 @@ public class BrandModel extends BaseEntity {
 
     public static BrandModel create(String name) {
         validateName(name);
-        BrandModel model = new BrandModel(name);
-        return model;
+        return new BrandModel(name);
     }
 
     // === 도메인 로직 === //

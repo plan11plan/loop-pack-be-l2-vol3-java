@@ -48,12 +48,11 @@ public class UserV1Dto {
     ) {
         public static SignupResponse from(UserResult info) {
             return new SignupResponse(
-                info.id(),
-                info.loginId(),
-                maskName(info.name()),
-                info.birthDate(),
-                info.email()
-            );
+                    info.id(),
+                    info.loginId(),
+                    maskName(info.name()),
+                    info.birthDate(),
+                    info.email());
         }
     }
 
@@ -65,11 +64,10 @@ public class UserV1Dto {
     ) {
         public static MyInfoResponse from(UserResult info) {
             return new MyInfoResponse(
-                info.loginId(),
-                maskName(info.name()),
-                info.birthDate(),
-                info.email()
-            );
+                    info.loginId(),
+                    maskName(info.name()),
+                    info.birthDate(),
+                    info.email());
         }
     }
 
