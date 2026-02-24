@@ -22,8 +22,8 @@ public class OrderService {
         validateItems(command.items());
 
         int totalPrice = command.items().stream()
-            .mapToInt(item -> item.orderPrice() * item.quantity())
-            .sum();
+                .mapToInt(item -> item.orderPrice() * item.quantity())
+                .sum();
 
         OrderModel savedOrder = orderRepository.save(
                 OrderModel.create(command.userId(), totalPrice));
@@ -45,7 +45,7 @@ public class OrderService {
     @Transactional(readOnly = true)
     public OrderModel getById(Long id) {
         return orderRepository.findById(id)
-            .orElseThrow(() -> new CoreException(OrderErrorCode.NOT_FOUND));
+                .orElseThrow(() -> new CoreException(OrderErrorCode.NOT_FOUND));
     }
 
     @Transactional(readOnly = true)

@@ -28,38 +28,37 @@ public class OrderFacade {
     @Transactional
     public OrderResult.OrderSummary createOrder(Long userId, OrderCriteria.Create criteria) {
         List<Long> productIds = criteria.items().stream()
-            .map(OrderCriteria.Create.CreateItem::productId)
-            .toList();
+                .map(OrderCriteria.Create.CreateItem::productId)
+                .toList();
 
-        Map<Long, ProductModel> productMap = productService.getAllByIds(productIds).stream()
-            .collect(Collectors.toMap(ProductModel::getId, Function.identity()));
+        Map<Long, ProductModel> productMap =
+                productService.getAllByIds(productIds).stream()
+                        .collect(Collectors.toMap(ProductModel::getId, Function.identity()));
 
         List<OrderCommand.Create.CreateItem> commandItems = criteria.items().stream()
-            .map(item -> {
-                ProductModel product = productMap.get(item.productId());
-                product.validatePrice(item.expectedPrice());
-                product.decreaseStock(item.quantity());
-                return new OrderCommand.Create.CreateItem(
-                    item.productId(),
-                    product.getPrice().getValue(),
-                    item.quantity(),
-                    product.getName(),
-                    product.getBrand().getName()
-                );
-            })
-            .toList();
+                .map(item -> {
+                    ProductModel product = productMap.get(item.productId());
+                    product.validatePrice(item.expectedPrice());
+                    product.decreaseStock(item.quantity());
+                    return new OrderCommand.Create.CreateItem(
+                            item.productId(),
+                            product.getPrice().getValue(),
+                            item.quantity(),
+                            product.getName(),
+                            product.getBrand().getName());
+                })
+                .toList();
 
-        OrderCommand.Create command = new OrderCommand.Create(userId, commandItems);
-        OrderModel order = orderService.createOrder(command);
-        return OrderResult.OrderSummary.from(order);
+        return OrderResult.OrderSummary.from(
+                orderService.createOrder(
+                        new OrderCommand.Create(userId, commandItems)));
     }
 
     @Transactional(readOnly = true)
     public List<OrderResult.OrderSummary> getMyOrders(Long userId, OrderCriteria.ListByDate criteria) {
-        List<OrderModel> orders = orderService.getOrdersByUserIdAndPeriod(userId, criteria.startAt(), criteria.endAt());
-        return orders.stream()
-            .map(OrderResult.OrderSummary::from)
-            .toList();
+        return orderService.getOrdersByUserIdAndPeriod(userId, criteria.startAt(), criteria.endAt()).stream()
+                .map(OrderResult.OrderSummary::from)
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -72,7 +71,7 @@ public class OrderFacade {
     @Transactional(readOnly = true)
     public Page<OrderResult.OrderSummary> getAllOrders(Pageable pageable) {
         return orderService.getAllOrders(pageable)
-            .map(OrderResult.OrderSummary::from);
+                .map(OrderResult.OrderSummary::from);
     }
 
     @Transactional(readOnly = true)
