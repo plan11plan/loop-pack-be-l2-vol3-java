@@ -11,11 +11,12 @@
 
 ### 예외 및 정책
 
-- **좋아요 수: Product.likeCount 캐시** — Like 엔티티가 원본 데이터, Product.likeCount는 조회 성능을 위한 파생값(derived data). 찜/취소 시 원자적 증감.
-- **API 방식: 엔드포인트 분리** — POST/DELETE 엔드포인트를 분리하고, Facade도 like/unlike 메서드를 각각 제공. 409/404 없음.
+- **좋아요 수: COUNT(*) 실시간 쿼리** — likes 테이블에서 COUNT(*)로 조회. Product 엔티티에 캐시 필드를 두지 않는다.
+- **API 방식: 엔드포인트 분리** — POST/DELETE 엔드포인트를 분리하고, Facade도 like/unlike 메서드를 각각 제공.
+- **중복 방어: 이중 방어** — 애플리케이션 레벨 중복 체크(1차) + DB UNIQUE 제약(2차). 중복 시 CONFLICT 예외.
 - **회원당 상품당 1개** — userId + productId DB 유니크 제약. 동시성(더블클릭) 시에도 중복 방지.
 - **삭제된 상품/브랜드의 좋아요** — 목록 조회 시 필터링으로 제외.
-- **상품 검증 항상 수행** — 등록/취소 모두 ProductService로 상품 존재 + 삭제 여부 확인.
+- **상품 검증** — 등록 시에만 ProductService로 상품 존재 확인. 취소 시에는 Like 도메인 내에서 처리.
 - **참조 방식** — 모두 ID 참조 (userId, productId).
 - **물리 삭제(Hard Delete)** — 이력 불필요. UNIQUE 제약과 충돌 방지.
 
@@ -37,21 +38,21 @@
 [기능 흐름 - 등록 (POST)]
 1. 회원이 productId로 좋아요 등록을 요청한다
 2. 해당 상품이 존재하는지 확인한다 (삭제된 상품 불가)
-3. 좋아요를 저장한다
-4. 상품의 likeCount를 증가시킨다
+3. 중복 좋아요인지 확인한다
+4. 좋아요를 저장한다
 
 [기능 흐름 - 취소 (DELETE)]
 1. 회원이 productId로 좋아요 취소를 요청한다
-2. 해당 상품이 존재하는지 확인한다 (삭제된 상품 불가)
+2. 좋아요 기록을 조회한다
 3. 좋아요를 삭제한다
-4. 상품의 likeCount를 감소시킨다
 
 [예외]
-- productId에 해당하는 상품이 없거나 삭제된 경우 404 반환
+- 등록 시: 상품이 없거나 삭제된 경우 404, 이미 좋아요한 경우 409
+- 취소 시: 좋아요 기록이 없는 경우 404
 
 [조건]
 - 로그인한 회원만 가능
-- 회원당 상품당 1개만 저장 (유니크 제약)
+- 회원당 상품당 1개만 저장 (애플리케이션 체크 + DB 유니크 제약)
 ```
 
 **UC-L02: 내가 좋아요한 상품 목록 조회**
@@ -73,7 +74,7 @@
 
 ## 시퀀스 다이어그램: 좋아요 등록/취소
 
-> 좋아요는 **Product 검증 + Like 등록/취소 + likeCount 갱신**을 조율해야 하므로 Facade가 필요하다.
+> 좋아요 등록은 **Product 존재 확인 + Like 등록**을 조율해야 하므로 Facade가 필요하다.
 
 ```mermaid
 sequenceDiagram
@@ -89,11 +90,9 @@ sequenceDiagram
     LC->>LF: like(userId, productId)
 
     Note over LF: @Transactional
-    LF->>PS: getById(productId)
-    PS-->>LF: ProductModel
-
+    LF->>PS: validateExists(productId)
     LF->>LS: like(userId, productId)
-    LF->>LF: product.addLikeCount()
+    LS-->>LS: 중복 체크 후 저장
 ```
 
 ```mermaid
@@ -102,7 +101,6 @@ sequenceDiagram
 
     participant LC as LikeController
     participant LF as LikeFacade
-    participant PS as ProductService
     participant LS as LikeService
 
     Note left of LC: DELETE /products/{id}/likes
@@ -110,11 +108,8 @@ sequenceDiagram
     LC->>LF: unlike(userId, productId)
 
     Note over LF: @Transactional
-    LF->>PS: getById(productId)
-    PS-->>LF: ProductModel
-
     LF->>LS: unlike(userId, productId)
-    LF->>LF: product.subtractLikeCount()
+    LS-->>LS: 조회 후 삭제
 ```
 
 ---
@@ -167,9 +162,8 @@ erDiagram
 
 | 대상 | 방식 | 이유 |
 |---|---|---|
-| likes | DB UNIQUE 제약 | 더블클릭 시 중복 INSERT 방지. 비관적/분산 락은 과도함 |
-| products.like_count | 원자적 UPDATE (`SET like_count = like_count + 1`) | 경합이 심하지 않으므로 비관적 락은 과도함 |
+| likes | 애플리케이션 중복 체크(1차) + DB UNIQUE 제약(2차) | 이중 방어. 더블클릭 시에도 중복 INSERT 방지 |
 
 ### 참조 무결성 검증 (애플리케이션 레벨)
 
-- 좋아요 토글 시 — product_id가 유효한(삭제되지 않은) 상품인지 확인
+- 좋아요 등록 시 — product_id가 유효한(삭제되지 않은) 상품인지 확인
