@@ -61,6 +61,12 @@ public class ProductModel extends BaseEntity {
         this.stock = new Stock(stock);
     }
 
+    public void validatePrice(int expectedPrice) {
+        if (expectedPrice != this.price.getValue()) {
+            throw new CoreException(ProductErrorCode.PRICE_MISMATCH);
+        }
+    }
+
     public void decreaseStock(int quantity) {
         this.stock.deduct(quantity);
     }
