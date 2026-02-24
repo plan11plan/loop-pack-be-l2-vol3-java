@@ -29,7 +29,6 @@ class ProductModelTest {
             assertThat(product.getName()).isEqualTo("에어맥스");
             assertThat(product.getPrice().getValue()).isEqualTo(150000);
             assertThat(product.getStock().getValue()).isEqualTo(100);
-            assertThat(product.getLikeCount()).isEqualTo(0);
             assertThat(product.getBrand().getName()).isEqualTo("Nike");
         }
 
@@ -168,52 +167,6 @@ class ProductModelTest {
 
             // act & assert
             assertThat(product.isSoldOut()).isFalse();
-        }
-    }
-
-    @DisplayName("좋아요 수를 변경할 때, ")
-    @Nested
-    class LikeCount {
-
-        @DisplayName("addLikeCount() 호출 시 1 증가한다.")
-        @Test
-        void addLikeCount() {
-            // arrange
-            ProductModel product = ProductModel.create(createBrand(), "에어맥스", 150000, 100);
-
-            // act
-            product.addLikeCount();
-
-            // assert
-            assertThat(product.getLikeCount()).isEqualTo(1);
-        }
-
-        @DisplayName("subtractLikeCount() 호출 시 1 감소한다.")
-        @Test
-        void subtractLikeCount() {
-            // arrange
-            ProductModel product = ProductModel.create(createBrand(), "에어맥스", 150000, 100);
-            product.addLikeCount();
-            product.addLikeCount();
-
-            // act
-            product.subtractLikeCount();
-
-            // assert
-            assertThat(product.getLikeCount()).isEqualTo(1);
-        }
-
-        @DisplayName("좋아요 수가 0일 때 subtractLikeCount() 호출 시 0을 유지한다.")
-        @Test
-        void subtractLikeCount_whenZero() {
-            // arrange
-            ProductModel product = ProductModel.create(createBrand(), "에어맥스", 150000, 100);
-
-            // act
-            product.subtractLikeCount();
-
-            // assert
-            assertThat(product.getLikeCount()).isEqualTo(0);
         }
     }
 

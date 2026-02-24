@@ -183,8 +183,7 @@ class ProductV1ApiE2ETest {
                 () -> assertThat(response.getBody().data().brandName()).isEqualTo("나이키"),
                 () -> assertThat(response.getBody().data().name()).isEqualTo("에어맥스"),
                 () -> assertThat(response.getBody().data().price()).isEqualTo(150000),
-                () -> assertThat(response.getBody().data().stock()).isEqualTo(100),
-                () -> assertThat(response.getBody().data().likeCount()).isEqualTo(0)
+                () -> assertThat(response.getBody().data().stock()).isEqualTo(100)
             );
         }
 

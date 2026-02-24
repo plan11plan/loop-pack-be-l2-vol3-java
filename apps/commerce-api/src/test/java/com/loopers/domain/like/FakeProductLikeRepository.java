@@ -44,4 +44,11 @@ public class FakeProductLikeRepository implements ProductLikeRepository {
             .filter(like -> like.getUserId().equals(userId))
             .toList();
     }
+
+    @Override
+    public long countByProductId(Long productId) {
+        return store.values().stream()
+            .filter(like -> like.getProductId().equals(productId))
+            .count();
+    }
 }

@@ -1,7 +1,9 @@
 package com.loopers.domain.like;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.loopers.support.error.CoreException;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -32,6 +34,18 @@ class ProductLikeServiceTest {
             // assert
             assertThat(productLikeRepository.findByUserIdAndProductId(1L, 2L)).isPresent();
         }
+
+        @DisplayName("이미 좋아요한 상품이면 CONFLICT 예외가 발생한다.")
+        @Test
+        void like_whenAlreadyLiked_throwsConflict() {
+            // arrange
+            productLikeService.like(1L, 2L);
+
+            // act & assert
+            assertThatThrownBy(() -> productLikeService.like(1L, 2L))
+                .isInstanceOf(CoreException.class)
+                .hasMessageContaining("이미 좋아요한 상품입니다");
+        }
     }
 
     @DisplayName("좋아요를 취소할 때, ")
@@ -49,6 +63,15 @@ class ProductLikeServiceTest {
 
             // assert
             assertThat(productLikeRepository.findByUserIdAndProductId(1L, 2L)).isEmpty();
+        }
+
+        @DisplayName("좋아요 기록이 없으면 NOT_FOUND 예외가 발생한다.")
+        @Test
+        void unlike_whenNotExists_throwsNotFound() {
+            // act & assert
+            assertThatThrownBy(() -> productLikeService.unlike(1L, 2L))
+                .isInstanceOf(CoreException.class)
+                .hasMessageContaining("좋아요 기록이 없습니다");
         }
     }
 
@@ -103,6 +126,25 @@ class ProductLikeServiceTest {
 
             // assert
             assertThat(result).isEmpty();
+        }
+    }
+
+    @DisplayName("좋아요 수를 조회할 때, ")
+    @Nested
+    class CountLikes {
+
+        @DisplayName("상품의 좋아요 수를 반환한다.")
+        @Test
+        void countLikes_returnsCount() {
+            // arrange
+            productLikeRepository.save(ProductLikeModel.create(1L, 10L));
+            productLikeRepository.save(ProductLikeModel.create(2L, 10L));
+            productLikeRepository.save(ProductLikeModel.create(3L, 20L));
+
+            // act & assert
+            assertThat(productLikeService.countLikes(10L)).isEqualTo(2);
+            assertThat(productLikeService.countLikes(20L)).isEqualTo(1);
+            assertThat(productLikeService.countLikes(99L)).isEqualTo(0);
         }
     }
 }

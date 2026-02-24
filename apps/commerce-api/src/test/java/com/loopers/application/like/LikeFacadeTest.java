@@ -5,10 +5,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.loopers.application.like.dto.LikeResult;
-import com.loopers.domain.brand.BrandModel;
 import com.loopers.domain.like.ProductLikeModel;
 import com.loopers.domain.like.ProductLikeService;
-import com.loopers.domain.product.ProductModel;
 import com.loopers.domain.product.ProductService;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -36,22 +34,15 @@ class LikeFacadeTest {
     @Nested
     class Like {
 
-        @DisplayName("상품을 검증하고 like를 호출하고 likeCount를 증가시킨다.")
+        @DisplayName("상품 존재를 검증하고 like를 호출한다.")
         @Test
-        void like_addsLikeAndIncreasesCount() {
-            // arrange
-            ProductModel product = ProductModel.create(
-                BrandModel.create("Nike"), "에어맥스", 150000, 100
-            );
-            when(productService.getById(2L)).thenReturn(product);
-
+        void like_validatesProductAndCallsLike() {
             // act
             likeFacade.like(1L, 2L);
 
             // assert
-            verify(productService).getById(2L);
+            verify(productService).validateExists(2L);
             verify(productLikeService).like(1L, 2L);
-            assertThat(product.getLikeCount()).isEqualTo(1);
         }
     }
 
@@ -59,23 +50,14 @@ class LikeFacadeTest {
     @Nested
     class Unlike {
 
-        @DisplayName("상품을 검증하고 unlike를 호출하고 likeCount를 감소시킨다.")
+        @DisplayName("unlike를 호출한다.")
         @Test
-        void unlike_removesLikeAndDecreasesCount() {
-            // arrange
-            ProductModel product = ProductModel.create(
-                BrandModel.create("Nike"), "에어맥스", 150000, 100
-            );
-            product.addLikeCount(); // likeCount = 1
-            when(productService.getById(2L)).thenReturn(product);
-
+        void unlike_callsUnlike() {
             // act
             likeFacade.unlike(1L, 2L);
 
             // assert
-            verify(productService).getById(2L);
             verify(productLikeService).unlike(1L, 2L);
-            assertThat(product.getLikeCount()).isEqualTo(0);
         }
     }
 
