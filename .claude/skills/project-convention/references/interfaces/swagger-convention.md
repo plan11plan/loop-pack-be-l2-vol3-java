@@ -322,8 +322,6 @@ public record DetailResponse(
     Long id,
     String name,
     int price,
-    @Schema(description = "좋아요 수")
-    int likeCount,
     @Schema(description = "생성일시", example = "2025-01-15T10:30:00+09:00")
     ZonedDateTime createdAt
 ) {

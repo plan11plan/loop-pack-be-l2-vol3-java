@@ -260,7 +260,6 @@ private OrderSpecifier<?> buildOrderSpecifier(String sort, QProduct product) {
 
     return switch (sort) {
         case "price_asc" -> product.price.asc();
-        case "likes_desc" -> product.likeCount.desc();
         default -> product.createdAt.desc();  // latest
     };
 }
