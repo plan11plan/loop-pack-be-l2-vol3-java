@@ -20,7 +20,7 @@ class ProductSnapshotTest {
         @Test
         void create_withValidValues() {
             // act
-            ProductSnapshot snapshot = new ProductSnapshot("상품A", "브랜드A");
+            ProductSnapshot snapshot = ProductSnapshot.of("상품A", "브랜드A");
 
             // assert
             assertAll(
@@ -33,7 +33,7 @@ class ProductSnapshotTest {
         @Test
         void create_withNullProductName_throwsException() {
             // act & assert
-            assertThatThrownBy(() -> new ProductSnapshot(null, "브랜드A"))
+            assertThatThrownBy(() -> ProductSnapshot.of(null, "브랜드A"))
                 .isInstanceOf(CoreException.class);
         }
 
@@ -41,7 +41,7 @@ class ProductSnapshotTest {
         @Test
         void create_withNullBrandName_throwsException() {
             // act & assert
-            assertThatThrownBy(() -> new ProductSnapshot("상품A", null))
+            assertThatThrownBy(() -> ProductSnapshot.of("상품A", null))
                 .isInstanceOf(CoreException.class);
         }
     }

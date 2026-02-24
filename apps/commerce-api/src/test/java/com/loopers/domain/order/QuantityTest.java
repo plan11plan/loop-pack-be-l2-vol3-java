@@ -19,7 +19,7 @@ class QuantityTest {
         @Test
         void create_withValidValue() {
             // act
-            Quantity quantity = new Quantity(1);
+            Quantity quantity = Quantity.of(1);
 
             // assert
             assertThat(quantity.getValue()).isEqualTo(1);
@@ -29,7 +29,7 @@ class QuantityTest {
         @Test
         void create_withZero_throwsException() {
             // act & assert
-            assertThatThrownBy(() -> new Quantity(0))
+            assertThatThrownBy(() -> Quantity.of(0))
                 .isInstanceOf(CoreException.class);
         }
 
@@ -37,7 +37,7 @@ class QuantityTest {
         @Test
         void create_withNegative_throwsException() {
             // act & assert
-            assertThatThrownBy(() -> new Quantity(-1))
+            assertThatThrownBy(() -> Quantity.of(-1))
                 .isInstanceOf(CoreException.class);
         }
     }
