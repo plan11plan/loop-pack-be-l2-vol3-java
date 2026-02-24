@@ -25,6 +25,15 @@ public class ProductService {
             .orElseThrow(() -> new CoreException(ProductErrorCode.NOT_FOUND));
     }
 
+    @Transactional(readOnly = true)
+    public List<ProductModel> getAllByIds(List<Long> ids) {
+        List<ProductModel> products = productRepository.findAllByIdIn(ids);
+        if (products.size() != ids.size()) {
+            throw new CoreException(ProductErrorCode.NOT_FOUND);
+        }
+        return products;
+    }
+
     @Transactional
     public void update(Long id, String name, int price, int stock) {
         ProductModel productModel = getById(id);

@@ -78,6 +78,14 @@ public class FakeProductRepository implements ProductRepository {
     }
 
     @Override
+    public List<ProductModel> findAllByIdIn(List<Long> ids) {
+        return store.values().stream()
+            .filter(product -> product.getDeletedAt() == null)
+            .filter(product -> ids.contains(product.getId()))
+            .toList();
+    }
+
+    @Override
     public Page<ProductModel> findAllWithActiveBrand(Pageable pageable) {
         List<ProductModel> activeModels = store.values().stream()
             .filter(product -> product.getDeletedAt() == null)

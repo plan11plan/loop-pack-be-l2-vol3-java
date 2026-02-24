@@ -40,6 +40,11 @@ public class ProductRepositoryImpl implements ProductRepository {
     }
 
     @Override
+    public List<ProductModel> findAllByIdIn(List<Long> ids) {
+        return productJpaRepository.findAllByIdInAndDeletedAtIsNull(ids);
+    }
+
+    @Override
     public Page<ProductModel> findAllWithActiveBrand(Pageable pageable) {
         return productJpaRepository.findAllByDeletedAtIsNullAndBrandDeletedAtIsNull(pageable);
     }
