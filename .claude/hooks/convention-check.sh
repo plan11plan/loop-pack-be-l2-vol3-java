@@ -228,6 +228,22 @@ for ENTITY_FILE in $(grep -rl "^@Entity" "$SRC/domain/" 2>/dev/null); do
 done
 
 # ============================================================================
+# 규칙 12: Facade에 private 메서드 금지
+# 출처: service-layer-convention.md § 2. Facade에 넣지 않는 것
+# ============================================================================
+
+for FACADE_FILE in $(find "$SRC/application/" -name "*Facade.java" 2>/dev/null); do
+  PRIVATE_METHODS=$(grep -n "private .*(.*)" "$FACADE_FILE" 2>/dev/null \
+    | grep -v "private final\|private static final" || true)
+  if [ -n "$PRIVATE_METHODS" ]; then
+    ERRORS+="[위반] Facade에 private 메서드 금지: $(basename $FACADE_FILE)\n"
+    ERRORS+="  → $PRIVATE_METHODS\n"
+    ERRORS+="  → private 메서드가 필요하면 Domain Service 또는 Entity로 이동할 것\n"
+    ERRORS+="  → 참고: service-layer-convention.md § 2. Facade에 넣지 않는 것\n\n"
+  fi
+done
+
+# ============================================================================
 # 결과 출력
 # ============================================================================
 
