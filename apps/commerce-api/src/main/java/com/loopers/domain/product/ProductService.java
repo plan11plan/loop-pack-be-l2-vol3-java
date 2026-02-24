@@ -60,6 +60,13 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
+    public void validateExists(Long id) {
+        if (!existsById(id)) {
+            throw new CoreException(ProductErrorCode.NOT_FOUND);
+        }
+    }
+
+    @Transactional(readOnly = true)
     public Page<ProductModel> getAllWithActiveBrand(Pageable pageable) {
         return productRepository.findAllWithActiveBrand(pageable);
     }

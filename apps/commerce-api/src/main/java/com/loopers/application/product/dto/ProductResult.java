@@ -10,7 +10,6 @@ public record ProductResult(
     String name,
     int price,
     int stock,
-    int likeCount,
     ZonedDateTime createdAt,
     ZonedDateTime updatedAt,
     ZonedDateTime deletedAt
@@ -23,7 +22,6 @@ public record ProductResult(
             model.getName(),
             model.getPrice().getValue(),
             model.getStock().getValue(),
-            model.getLikeCount(),
             model.getCreatedAt(),
             model.getUpdatedAt(),
             model.getDeletedAt()

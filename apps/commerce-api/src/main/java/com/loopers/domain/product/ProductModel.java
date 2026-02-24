@@ -16,8 +16,6 @@ import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.ColumnDefault;
-
 @Getter
 @Entity
 @Table(name = "products")
@@ -38,10 +36,6 @@ public class ProductModel extends BaseEntity {
     @Embedded
     @AttributeOverride(name = "value", column = @Column(name = "stock", nullable = false))
     private Stock stock;
-
-    @Column(name = "like_count", nullable = false)
-    @ColumnDefault("0")
-    private int likeCount = 0;
 
     // === 생성 === //
 
@@ -73,16 +67,6 @@ public class ProductModel extends BaseEntity {
 
     public boolean isSoldOut() {
         return this.stock.getValue() == 0;
-    }
-
-    public void addLikeCount() {
-        this.likeCount++;
-    }
-
-    public void subtractLikeCount() {
-        if (this.likeCount > 0) {
-            this.likeCount--;
-        }
     }
 
     // === 검증 === //

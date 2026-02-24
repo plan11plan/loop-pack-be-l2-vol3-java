@@ -16,7 +16,7 @@ public interface ProductV1ApiSpec {
     ApiResponse<ProductV1Dto.ListResponse> list(
         @Parameter(description = "브랜드 ID (선택)", example = "1")
         Long brandId,
-        @Parameter(description = "정렬 기준: latest / price_asc / likes_desc", example = "latest")
+        @Parameter(description = "정렬 기준: latest / price_asc", example = "latest")
         String sort,
         @Parameter(description = "페이지 번호 (0부터 시작)", example = "0")
         int page,

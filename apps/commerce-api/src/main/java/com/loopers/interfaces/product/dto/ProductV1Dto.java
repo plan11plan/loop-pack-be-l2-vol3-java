@@ -11,13 +11,12 @@ public class ProductV1Dto {
         String brandName,
         String name,
         int price,
-        int stock,
-        int likeCount
+        int stock
     ) {
         public static DetailResponse from(ProductResult info) {
             return new DetailResponse(
                 info.id(), info.brandId(), info.brandName(),
-                info.name(), info.price(), info.stock(), info.likeCount()
+                info.name(), info.price(), info.stock()
             );
         }
     }
@@ -34,13 +33,12 @@ public class ProductV1Dto {
             Long brandId,
             String brandName,
             String name,
-            int price,
-            int likeCount
+            int price
         ) {
             public static ListItem from(ProductResult info) {
                 return new ListItem(
                     info.id(), info.brandId(), info.brandName(),
-                    info.name(), info.price(), info.likeCount()
+                    info.name(), info.price()
                 );
             }
         }

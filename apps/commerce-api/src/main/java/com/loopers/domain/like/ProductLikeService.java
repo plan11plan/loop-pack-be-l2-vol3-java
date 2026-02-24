@@ -14,13 +14,16 @@ public class ProductLikeService {
 
     @Transactional
     public void like(Long userId, Long productId) {
+        if (productLikeRepository.findByUserIdAndProductId(userId, productId).isPresent()) {
+            throw new CoreException(ErrorType.CONFLICT, "이미 좋아요한 상품입니다");
+        }
         productLikeRepository.save(ProductLikeModel.create(userId, productId));
     }
 
     @Transactional
     public void unlike(Long userId, Long productId) {
         ProductLikeModel like = productLikeRepository.findByUserIdAndProductId(userId, productId)
-            .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND_DATA));
+            .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "좋아요 기록이 없습니다"));
         productLikeRepository.delete(like);
     }
 
@@ -32,5 +35,10 @@ public class ProductLikeService {
     @Transactional(readOnly = true)
     public List<ProductLikeModel> getLikesByUserId(Long userId) {
         return productLikeRepository.findAllByUserId(userId);
+    }
+
+    @Transactional(readOnly = true)
+    public long countLikes(Long productId) {
+        return productLikeRepository.countByProductId(productId);
     }
 }

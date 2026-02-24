@@ -52,7 +52,6 @@ public class AdminProductV1Dto {
         String name,
         int price,
         int stock,
-        int likeCount,
         ZonedDateTime createdAt,
         ZonedDateTime updatedAt,
         ZonedDateTime deletedAt
@@ -60,7 +59,7 @@ public class AdminProductV1Dto {
         public static DetailResponse from(ProductResult info) {
             return new DetailResponse(
                 info.id(), info.brandId(), info.brandName(),
-                info.name(), info.price(), info.stock(), info.likeCount(),
+                info.name(), info.price(), info.stock(),
                 info.createdAt(), info.updatedAt(), info.deletedAt()
             );
         }
@@ -80,7 +79,6 @@ public class AdminProductV1Dto {
             String name,
             int price,
             int stock,
-            int likeCount,
             ZonedDateTime createdAt,
             ZonedDateTime updatedAt,
             ZonedDateTime deletedAt
@@ -88,7 +86,7 @@ public class AdminProductV1Dto {
             public static ListItem from(ProductResult info) {
                 return new ListItem(
                     info.id(), info.brandId(), info.brandName(),
-                    info.name(), info.price(), info.stock(), info.likeCount(),
+                    info.name(), info.price(), info.stock(),
                     info.createdAt(), info.updatedAt(), info.deletedAt()
                 );
             }

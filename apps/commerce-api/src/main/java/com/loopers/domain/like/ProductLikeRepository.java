@@ -11,4 +11,6 @@ public interface ProductLikeRepository {
     void delete(ProductLikeModel productLike);
 
     List<ProductLikeModel> findAllByUserId(Long userId);
+
+    long countByProductId(Long productId);
 }

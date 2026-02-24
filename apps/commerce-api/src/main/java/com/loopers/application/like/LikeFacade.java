@@ -2,7 +2,6 @@ package com.loopers.application.like;
 
 import com.loopers.application.like.dto.LikeResult;
 import com.loopers.domain.like.ProductLikeService;
-import com.loopers.domain.product.ProductModel;
 import com.loopers.domain.product.ProductService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -17,16 +16,13 @@ public class LikeFacade {
 
     @Transactional
     public void like(Long userId, Long productId) {
-        ProductModel product = productService.getById(productId);
+        productService.validateExists(productId);
         productLikeService.like(userId, productId);
-        product.addLikeCount();
     }
 
     @Transactional
     public void unlike(Long userId, Long productId) {
-        ProductModel product = productService.getById(productId);
         productLikeService.unlike(userId, productId);
-        product.subtractLikeCount();
     }
 
     @Transactional(readOnly = true)

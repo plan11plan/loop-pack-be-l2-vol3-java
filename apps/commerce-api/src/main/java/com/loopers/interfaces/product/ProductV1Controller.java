@@ -54,7 +54,6 @@ public class ProductV1Controller implements ProductV1ApiSpec {
     private Sort toSort(String sort) {
         return switch (sort) {
             case "price_asc" -> Sort.by(Sort.Direction.ASC, "price.value");
-            case "likes_desc" -> Sort.by(Sort.Direction.DESC, "likeCount");
             default -> Sort.by(Sort.Direction.DESC, "createdAt");
         };
     }
