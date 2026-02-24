@@ -26,8 +26,10 @@ public class AuthFilter extends OncePerRequestFilter {
     private static final String HEADER_LOGIN_PW = "X-Loopers-LoginPw";
     private static final Set<String> AUTH_REQUIRED_URLS = Set.of(
         "/api/v1/users/me",
-        "/api/v1/users/password"
+        "/api/v1/users/password",
+        "/api/v1/users/me/likes"
     );
+    private static final String AUTH_REQUIRED_SUFFIX = "/likes";
 
     private final AuthenticationService authenticationService;
     private final ObjectMapper objectMapper;
@@ -65,7 +67,8 @@ public class AuthFilter extends OncePerRequestFilter {
     }
 
     private boolean requiresAuth(String uri) {
-        return AUTH_REQUIRED_URLS.contains(uri);
+        return AUTH_REQUIRED_URLS.contains(uri)
+            || (uri.startsWith("/api/v1/products/") && uri.endsWith(AUTH_REQUIRED_SUFFIX));
     }
 
     private void writeUnauthorizedResponse(HttpServletResponse response, String message) throws IOException {
