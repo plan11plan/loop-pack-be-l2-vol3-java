@@ -49,12 +49,11 @@ public class OrderItemModel extends BaseEntity {
         validateOrderId(orderId);
         validateProductId(productId);
         return new OrderItemModel(
-            orderId,
-            productId,
-            new Money(orderPrice),
-            new Quantity(quantity),
-            new ProductSnapshot(productName, brandName)
-        );
+                orderId,
+                productId,
+                Money.of(orderPrice),
+                Quantity.of(quantity),
+                ProductSnapshot.of(productName, brandName));
     }
 
     private static void validateOrderId(Long orderId) {

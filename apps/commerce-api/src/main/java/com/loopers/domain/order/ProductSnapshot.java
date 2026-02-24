@@ -4,11 +4,14 @@ import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
+import lombok.AccessLevel;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Getter
 @Embeddable
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @EqualsAndHashCode
 public class ProductSnapshot {
 
@@ -18,12 +21,14 @@ public class ProductSnapshot {
     @Column(name = "brand_name", nullable = false)
     private String brandName;
 
-    protected ProductSnapshot() {}
-
-    public ProductSnapshot(String productName, String brandName) {
+    private ProductSnapshot(String productName, String brandName) {
         validate(productName, brandName);
         this.productName = productName;
         this.brandName = brandName;
+    }
+
+    public static ProductSnapshot of(String productName, String brandName) {
+        return new ProductSnapshot(productName, brandName);
     }
 
     private void validate(String productName, String brandName) {

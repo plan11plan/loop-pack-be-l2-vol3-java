@@ -39,7 +39,7 @@ public class OrderModel extends BaseEntity {
 
     public static OrderModel create(Long userId, int totalPrice) {
         validateUserId(userId);
-        return new OrderModel(userId, new Money(totalPrice), OrderStatus.ORDERED);
+        return new OrderModel(userId, Money.of(totalPrice), OrderStatus.ORDERED);
     }
 
     public void validateOwner(Long userId) {
