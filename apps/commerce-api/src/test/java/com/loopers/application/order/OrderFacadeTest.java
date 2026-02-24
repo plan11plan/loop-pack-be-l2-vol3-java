@@ -196,7 +196,7 @@ class OrderFacadeTest {
             OrderModel order = OrderModel.create(1L, 50000);
             OrderItemModel item = OrderItemModel.create(1L, 10L, 25000, 2, "상품A", "브랜드A");
 
-            when(orderService.getById(1L)).thenReturn(order);
+            when(orderService.getByIdAndUserId(1L, 1L)).thenReturn(order);
             when(orderService.getOrderItemsByOrderId(1L)).thenReturn(List.of(item));
 
             // act
@@ -214,8 +214,8 @@ class OrderFacadeTest {
         @Test
         void getMyOrderDetail_notOwner_throwsException() {
             // arrange
-            OrderModel order = OrderModel.create(2L, 50000);
-            when(orderService.getById(1L)).thenReturn(order);
+            when(orderService.getByIdAndUserId(1L, 1L))
+                .thenThrow(new CoreException(OrderErrorCode.FORBIDDEN));
 
             // act & assert
             assertThatThrownBy(() -> orderFacade.getMyOrderDetail(1L, 1L))
