@@ -2,6 +2,8 @@ package com.loopers.domain.brand;
 
 import com.loopers.support.error.CoreException;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -55,6 +57,19 @@ public class BrandService {
     @Transactional(readOnly = true)
     public List<BrandModel> getAllByIds(List<Long> ids) {
         return brandRepository.findAllByIdIn(ids);
+    }
+
+    @Transactional(readOnly = true)
+    public Map<Long, String> getNameMapByIds(List<Long> ids) {
+        return brandRepository.findAllByIdIn(ids).stream()
+                .collect(Collectors.toMap(BrandModel::getId, BrandModel::getName));
+    }
+
+    @Transactional(readOnly = true)
+    public Map<Long, String> getActiveNameMapByIds(List<Long> ids) {
+        return brandRepository.findAllByIdIn(ids).stream()
+                .filter(brand -> brand.getDeletedAt() == null)
+                .collect(Collectors.toMap(BrandModel::getId, BrandModel::getName));
     }
 
     @Transactional(readOnly = true)

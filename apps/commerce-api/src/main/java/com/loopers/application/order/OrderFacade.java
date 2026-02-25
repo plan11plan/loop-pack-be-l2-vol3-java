@@ -2,7 +2,6 @@ package com.loopers.application.order;
 
 import com.loopers.application.order.dto.OrderCriteria;
 import com.loopers.application.order.dto.OrderResult;
-import com.loopers.domain.brand.BrandModel;
 import com.loopers.domain.brand.BrandService;
 import com.loopers.domain.order.OrderService;
 import com.loopers.domain.order.dto.OrderCommand;
@@ -35,28 +34,29 @@ public class OrderFacade {
         Map<Long, ProductModel> productMap = products.stream()
                 .collect(Collectors.toMap(ProductModel::getId, Function.identity()));
 
-        List<Long> brandIds = products.stream()
-                .map(ProductModel::getBrandId)
-                .distinct()
-                .toList();
-        Map<Long, String> brandNameMap = brandService.getAllByIds(brandIds).stream()
-                .collect(Collectors.toMap(BrandModel::getId, BrandModel::getName));
+        Map<Long, String> brandNameMap = brandService.getNameMapByIds(
+                products.stream()
+                        .map(ProductModel::getBrandId)
+                        .distinct()
+                        .toList());
 
         return OrderResult.OrderSummary.from(
                 orderService.createOrder(
-                        new OrderCommand.Create(userId, criteria.items().stream()
-                                .map(item -> {
-                                    ProductModel product = productMap.get(item.productId());
-                                    product.validateExpectedPrice(item.expectedPrice());
-                                    product.decreaseStock(item.quantity());
-                                    return new OrderCommand.Create.CreateItem(
-                                            item.productId(),
-                                            product.getPrice(),
-                                            item.quantity(),
-                                            product.getName(),
-                                            brandNameMap.get(product.getBrandId()));
-                                })
-                                .toList())));
+                        new OrderCommand.Create(
+                                userId,
+                                criteria.items().stream()
+                                        .map(item -> {
+                                            ProductModel product = productMap.get(item.productId());
+                                            product.validateExpectedPrice(item.expectedPrice());
+                                            product.decreaseStock(item.quantity());
+                                            return new OrderCommand.Create.CreateItem(
+                                                    item.productId(),
+                                                    product.getPrice(),
+                                                    item.quantity(),
+                                                    product.getName(),
+                                                    brandNameMap.get(product.getBrandId()));
+                                        })
+                                        .toList())));
     }
 
     @Transactional(readOnly = true)

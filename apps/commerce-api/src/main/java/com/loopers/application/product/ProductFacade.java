@@ -6,9 +6,7 @@ import com.loopers.domain.brand.BrandModel;
 import com.loopers.domain.brand.BrandService;
 import com.loopers.domain.product.ProductModel;
 import com.loopers.domain.product.ProductService;
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -48,7 +46,11 @@ public class ProductFacade {
     @Transactional(readOnly = true)
     public Page<ProductResult> getProducts(Pageable pageable) {
         Page<ProductModel> products = productService.getAll(pageable);
-        Map<Long, String> brandNameMap = getBrandNameMap(products.getContent());
+        Map<Long, String> brandNameMap = brandService.getNameMapByIds(
+                products.getContent().stream()
+                        .map(ProductModel::getBrandId)
+                        .distinct()
+                        .toList());
         return products.map(product -> ProductResult.of(product, brandNameMap.get(product.getBrandId())));
     }
 
@@ -62,7 +64,11 @@ public class ProductFacade {
     @Transactional(readOnly = true)
     public Page<ProductResult> getProductsWithActiveBrand(Pageable pageable) {
         Page<ProductModel> products = productService.getAll(pageable);
-        Map<Long, String> brandNameMap = getActiveBrandNameMap(products.getContent());
+        Map<Long, String> brandNameMap = brandService.getActiveNameMapByIds(
+                products.getContent().stream()
+                        .map(ProductModel::getBrandId)
+                        .distinct()
+                        .toList());
         return products.map(product -> ProductResult.of(product, brandNameMap.get(product.getBrandId())));
     }
 
@@ -71,24 +77,5 @@ public class ProductFacade {
         BrandModel brand = brandService.getById(brandId);
         return productService.getAllByBrandId(brandId, pageable)
                 .map(product -> ProductResult.of(product, brand.getName()));
-    }
-
-    private Map<Long, String> getBrandNameMap(List<ProductModel> products) {
-        List<Long> brandIds = products.stream()
-                .map(ProductModel::getBrandId)
-                .distinct()
-                .toList();
-        return brandService.getAllByIds(brandIds).stream()
-                .collect(Collectors.toMap(BrandModel::getId, BrandModel::getName));
-    }
-
-    private Map<Long, String> getActiveBrandNameMap(List<ProductModel> products) {
-        List<Long> brandIds = products.stream()
-                .map(ProductModel::getBrandId)
-                .distinct()
-                .toList();
-        return brandService.getAllByIds(brandIds).stream()
-                .filter(brand -> brand.getDeletedAt() == null)
-                .collect(Collectors.toMap(BrandModel::getId, BrandModel::getName));
     }
 }
