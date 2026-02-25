@@ -25,7 +25,7 @@ class OrderModelTest {
             // assert
             assertAll(
                 () -> assertThat(order.getUserId()).isEqualTo(1L),
-                () -> assertThat(order.getTotalPrice().getValue()).isEqualTo(50000),
+                () -> assertThat(order.getTotalPrice()).isEqualTo(50000),
                 () -> assertThat(order.getStatus()).isEqualTo(OrderStatus.ORDERED)
             );
         }

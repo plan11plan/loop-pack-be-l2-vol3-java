@@ -10,12 +10,12 @@ public class FakeUserRepository implements UserRepository {
 
     @Override
     public UserModel save(UserModel userModel) {
-        store.put(userModel.getLoginId().getValue(), userModel);
+        store.put(userModel.getLoginId(), userModel);
         return userModel;
     }
 
     @Override
-    public Optional<UserModel> find(LoginId loginId) {
-        return Optional.ofNullable(store.get(loginId.getValue()));
+    public Optional<UserModel> findByLoginId(String loginId) {
+        return Optional.ofNullable(store.get(loginId));
     }
 }

@@ -47,7 +47,7 @@ class OrderServiceTest {
             assertAll(
                 () -> assertThat(order.getId()).isNotEqualTo(0L),
                 () -> assertThat(order.getUserId()).isEqualTo(1L),
-                () -> assertThat(order.getTotalPrice().getValue()).isEqualTo(50000),
+                () -> assertThat(order.getTotalPrice()).isEqualTo(50000),
                 () -> assertThat(order.getStatus()).isEqualTo(OrderStatus.ORDERED)
             );
         }
@@ -187,7 +187,7 @@ class OrderServiceTest {
 
             // assert
             assertThat(items).hasSize(1);
-            assertThat(items.get(0).getProductSnapshot().getProductName()).isEqualTo("상품A");
+            assertThat(items.get(0).getProductName()).isEqualTo("상품A");
         }
     }
 

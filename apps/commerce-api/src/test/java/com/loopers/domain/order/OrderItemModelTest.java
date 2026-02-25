@@ -26,10 +26,10 @@ class OrderItemModelTest {
             assertAll(
                 () -> assertThat(orderItem.getOrderId()).isEqualTo(1L),
                 () -> assertThat(orderItem.getProductId()).isEqualTo(10L),
-                () -> assertThat(orderItem.getOrderPrice().getValue()).isEqualTo(25000),
-                () -> assertThat(orderItem.getQuantity().getValue()).isEqualTo(2),
-                () -> assertThat(orderItem.getProductSnapshot().getProductName()).isEqualTo("상품A"),
-                () -> assertThat(orderItem.getProductSnapshot().getBrandName()).isEqualTo("브랜드A")
+                () -> assertThat(orderItem.getOrderPrice()).isEqualTo(25000),
+                () -> assertThat(orderItem.getQuantity()).isEqualTo(2),
+                () -> assertThat(orderItem.getProductName()).isEqualTo("상품A"),
+                () -> assertThat(orderItem.getBrandName()).isEqualTo("브랜드A")
             );
         }
 

@@ -2,7 +2,6 @@ package com.loopers.interfaces.auth;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -10,9 +9,6 @@ import static org.mockito.Mockito.when;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.loopers.domain.user.AuthenticationService;
 import com.loopers.domain.user.UserModel;
-import com.loopers.domain.user.LoginId;
-import com.loopers.domain.user.Name;
-import com.loopers.domain.user.PasswordEncoder;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import jakarta.servlet.FilterChain;
@@ -55,10 +51,8 @@ class AuthFilterTest {
         request.addHeader("X-Loopers-LoginPw", "Test1234!");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
-        PasswordEncoder encoder = mock(PasswordEncoder.class);
-        when(encoder.encode("Test1234!")).thenReturn("encoded");
         UserModel userModel = UserModel.create(
-            "testuser1", "Test1234!", encoder, "홍길동", LocalDate.of(1990, 1, 15), "test@example.com"
+            "testuser1", "encoded", "홍길동", LocalDate.of(1990, 1, 15), "test@example.com"
         );
         when(authenticationService.authenticate("testuser1", "Test1234!")).thenReturn(userModel);
 

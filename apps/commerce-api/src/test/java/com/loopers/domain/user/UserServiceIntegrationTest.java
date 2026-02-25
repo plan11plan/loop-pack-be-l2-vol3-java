@@ -67,10 +67,10 @@ public class UserServiceIntegrationTest {
                 // assert
                 assertAll(
                         () -> assertThat(result).isNotNull(),
-                        () -> assertThat(result.getLoginId().getValue()).isEqualTo(loginId),
-                        () -> assertThat(result.getName().getValue()).isEqualTo(name),
-                        () -> assertThat(result.getBirthDate().toDateString()).isEqualTo(birthDate),
-                        () -> assertThat(result.getEmail().getMail()).isEqualTo(email)
+                        () -> assertThat(result.getLoginId()).isEqualTo(loginId),
+                        () -> assertThat(result.getName()).isEqualTo(name),
+                        () -> assertThat(result.getBirthDateString()).isEqualTo(birthDate),
+                        () -> assertThat(result.getEmail()).isEqualTo(email)
                 );
             }
 
@@ -82,7 +82,7 @@ public class UserServiceIntegrationTest {
 
                 // assert
                 UserModel savedUser = userJpaRepository.findById(result.getId()).orElseThrow();
-                String savedPassword = savedUser.getPassword().getValue();
+                String savedPassword = savedUser.getPassword();
                 assertAll(
                         () -> assertThat(savedPassword).isNotEqualTo(rawPassword),
                         () -> assertThat(savedPassword).startsWith("$2a$"),
@@ -98,7 +98,7 @@ public class UserServiceIntegrationTest {
 
                 // assert
                 UserModel savedUser = userJpaRepository.findById(result.getId()).orElseThrow();
-                String savedPassword = savedUser.getPassword().getValue();
+                String savedPassword = savedUser.getPassword();
                 assertAll(
                         () -> assertThat(savedPassword).isNotEqualTo(rawPassword),
                         () -> assertThat(savedPassword).startsWith("$2a$"),
@@ -122,10 +122,10 @@ public class UserServiceIntegrationTest {
             // assert
             assertAll(
                 () -> assertThat(result).isNotNull(),
-                () -> assertThat(result.getLoginId().getValue()).isEqualTo(loginId),
-                () -> assertThat(result.getName().getValue()).isEqualTo(name),
-                () -> assertThat(result.getBirthDate().toDateString()).isEqualTo(birthDate),
-                () -> assertThat(result.getEmail().getMail()).isEqualTo(email)
+                () -> assertThat(result.getLoginId()).isEqualTo(loginId),
+                () -> assertThat(result.getName()).isEqualTo(name),
+                () -> assertThat(result.getBirthDateString()).isEqualTo(birthDate),
+                () -> assertThat(result.getEmail()).isEqualTo(email)
             );
         }
 
@@ -156,7 +156,7 @@ public class UserServiceIntegrationTest {
             // assert
             UserModel updatedUser = userService.getByLoginId(loginId);
             UserModel savedUser = userJpaRepository.findById(updatedUser.getId()).orElseThrow();
-            String savedPassword = savedUser.getPassword().getValue();
+            String savedPassword = savedUser.getPassword();
             assertAll(
                     () -> assertThat(savedPassword).isNotEqualTo(rawPassword),
                     () -> assertThat(savedPassword).isNotEqualTo(newRawPassword),

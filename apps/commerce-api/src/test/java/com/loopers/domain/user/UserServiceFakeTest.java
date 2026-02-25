@@ -47,11 +47,11 @@ class UserServiceFakeTest {
 
             // assert
             assertThat(result).isNotNull();
-            assertThat(result.getLoginId().getValue()).isEqualTo(loginId);
+            assertThat(result.getLoginId()).isEqualTo(loginId);
 
             // 암호화 검증은 repository를 통해 직접 확인
-            UserModel saved = userRepository.find(new LoginId(loginId)).orElseThrow();
-            assertThat(saved.getPassword().getValue()).isEqualTo("ENCODED_Test1234!@#");
+            UserModel saved = userRepository.findByLoginId(loginId).orElseThrow();
+            assertThat(saved.getPassword()).isEqualTo("ENCODED_Test1234!@#");
         }
 
         @Test
@@ -65,6 +65,24 @@ class UserServiceFakeTest {
                 userService.signup(loginId, "Other123!@#", name, birthDate, email)
             ).isInstanceOf(CoreException.class)
              .hasMessageContaining("이미 존재하는 아이디입니다.");
+        }
+
+        @Test
+        @DisplayName("비밀번호 형식이 올바르지 않으면 예외가 발생한다.")
+        void signup_비밀번호_형식_오류() {
+            assertThatThrownBy(() ->
+                userService.signup(loginId, "short", name, birthDate, email)
+            ).isInstanceOf(CoreException.class)
+             .hasMessageContaining("비밀번호는 8~16자의 영문 대소문자, 숫자, 특수문자 조합이어야 합니다.");
+        }
+
+        @Test
+        @DisplayName("비밀번호에 생년월일이 포함되면 예외가 발생한다.")
+        void signup_비밀번호에_생년월일_포함() {
+            assertThatThrownBy(() ->
+                userService.signup(loginId, "Pw19900115!", name, birthDate, email)
+            ).isInstanceOf(CoreException.class)
+             .hasMessageContaining("생년월일은 비밀번호 내에 포함될 수 없습니다.");
         }
     }
 
@@ -82,8 +100,8 @@ class UserServiceFakeTest {
             userService.changePassword(loginId, rawPassword, "NewPass123!@");
 
             // assert
-            UserModel updated = userRepository.find(new LoginId(loginId)).orElseThrow();
-            assertThat(updated.getPassword().getValue()).isEqualTo("ENCODED_NewPass123!@");
+            UserModel updated = userRepository.findByLoginId(loginId).orElseThrow();
+            assertThat(updated.getPassword()).isEqualTo("ENCODED_NewPass123!@");
         }
 
         @Test
@@ -110,6 +128,19 @@ class UserServiceFakeTest {
                 userService.changePassword(loginId, rawPassword, rawPassword)
             ).isInstanceOf(CoreException.class)
              .hasMessageContaining("현재 사용 중인 비밀번호는 사용할 수 없습니다.");
+        }
+
+        @Test
+        @DisplayName("새 비밀번호에 생년월일이 포함되면 예외가 발생한다.")
+        void changePassword_새비밀번호에_생년월일_포함() {
+            // arrange
+            userService.signup(loginId, rawPassword, name, birthDate, email);
+
+            // act & assert
+            assertThatThrownBy(() ->
+                userService.changePassword(loginId, rawPassword, "Pw19900115!")
+            ).isInstanceOf(CoreException.class)
+             .hasMessageContaining("생년월일은 비밀번호 내에 포함될 수 없습니다.");
         }
     }
 }

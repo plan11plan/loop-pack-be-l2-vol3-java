@@ -112,8 +112,8 @@ class ProductServiceTest {
             // assert
             ProductModel updated = productService.getById(savedId);
             assertThat(updated.getName()).isEqualTo("에어포스");
-            assertThat(updated.getPrice().getValue()).isEqualTo(120000);
-            assertThat(updated.getStock().getValue()).isEqualTo(50);
+            assertThat(updated.getPrice()).isEqualTo(120000);
+            assertThat(updated.getStock()).isEqualTo(50);
         }
 
         @DisplayName("존재하지 않는 상품이면 NOT_FOUND 예외가 발생한다.")

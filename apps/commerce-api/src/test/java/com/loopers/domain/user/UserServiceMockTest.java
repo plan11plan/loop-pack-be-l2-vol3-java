@@ -3,6 +3,7 @@ package com.loopers.domain.user;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -54,7 +55,7 @@ class UserServiceMockTest {
         @DisplayName("성공")
         void signup_성공() {
             // arrange
-            when(userRepository.find(any(LoginId.class))).thenReturn(Optional.empty());
+            when(userRepository.findByLoginId(anyString())).thenReturn(Optional.empty());
             when(passwordEncoder.encode("Test1234!@#")).thenReturn("$2a$10$encodedHash");
             when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -63,7 +64,7 @@ class UserServiceMockTest {
 
             // assert
             assertThat(result).isNotNull();
-            assertThat(result.getLoginId().getValue()).isEqualTo(loginId);
+            assertThat(result.getLoginId()).isEqualTo(loginId);
         }
 
         @Test
@@ -71,7 +72,7 @@ class UserServiceMockTest {
         void signup_중복아이디_예외() {
             // arrange
             UserModel existingUser = createTestUser("$2a$10$existingHash");
-            when(userRepository.find(any(LoginId.class))).thenReturn(Optional.of(existingUser));
+            when(userRepository.findByLoginId(anyString())).thenReturn(Optional.of(existingUser));
 
             // act & assert
             assertThatThrownBy(() ->
@@ -91,7 +92,7 @@ class UserServiceMockTest {
             // arrange
             UserModel existingUser = createTestUser("$2a$10$encodedOldHash");
 
-            when(userRepository.find(any(LoginId.class)))
+            when(userRepository.findByLoginId(anyString()))
                 .thenReturn(Optional.of(existingUser));
             when(passwordEncoder.matches("Test1234!@#", "$2a$10$encodedOldHash"))
                 .thenReturn(true);
@@ -115,7 +116,7 @@ class UserServiceMockTest {
             // arrange
             UserModel existingUser = createTestUser("$2a$10$encodedOldHash");
 
-            when(userRepository.find(any(LoginId.class)))
+            when(userRepository.findByLoginId(anyString()))
                 .thenReturn(Optional.of(existingUser));
             when(passwordEncoder.matches("Wrong123!@#", "$2a$10$encodedOldHash"))
                 .thenReturn(false);
@@ -131,13 +132,6 @@ class UserServiceMockTest {
     // --- 헬퍼 ---
 
     private UserModel createTestUser(String encodedPassword) {
-        PasswordEncoder fixedEncoder = new PasswordEncoder() {
-            @Override public String encode(String rawPassword) { return encodedPassword; }
-            @Override public boolean matches(String rawPassword, String encoded) { return false; }
-        };
-        return UserModel.create(
-            loginId, rawPassword, fixedEncoder,
-            name, LocalDate.of(1990, 1, 15), email
-        );
+        return UserModel.create(loginId, encodedPassword, name, LocalDate.of(1990, 1, 15), email);
     }
 }

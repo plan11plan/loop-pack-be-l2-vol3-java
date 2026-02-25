@@ -27,8 +27,8 @@ class ProductModelTest {
 
             // assert
             assertThat(product.getName()).isEqualTo("에어맥스");
-            assertThat(product.getPrice().getValue()).isEqualTo(150000);
-            assertThat(product.getStock().getValue()).isEqualTo(100);
+            assertThat(product.getPrice()).isEqualTo(150000);
+            assertThat(product.getStock()).isEqualTo(100);
             assertThat(product.getBrand().getName()).isEqualTo("Nike");
         }
 
@@ -98,8 +98,8 @@ class ProductModelTest {
 
             // assert
             assertThat(product.getName()).isEqualTo("에어포스");
-            assertThat(product.getPrice().getValue()).isEqualTo(120000);
-            assertThat(product.getStock().getValue()).isEqualTo(50);
+            assertThat(product.getPrice()).isEqualTo(120000);
+            assertThat(product.getStock()).isEqualTo(50);
         }
 
         @DisplayName("상품명이 null이면 예외가 발생한다.")
@@ -129,7 +129,7 @@ class ProductModelTest {
             product.decreaseStock(3);
 
             // assert
-            assertThat(product.getStock().getValue()).isEqualTo(7);
+            assertThat(product.getStock()).isEqualTo(7);
         }
 
         @DisplayName("재고가 부족하면 예외가 발생한다.")
