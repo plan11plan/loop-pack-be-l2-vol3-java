@@ -3,7 +3,6 @@ package com.loopers.domain.product;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.loopers.domain.brand.BrandModel;
 import com.loopers.support.error.CoreException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -16,25 +15,14 @@ class ProductServiceTest {
 
     private ProductService productService;
     private FakeProductRepository productRepository;
-    private BrandModel brand;
+
+    private static final Long BRAND_ID = 1L;
+    private static final Long BRAND_ID_2 = 2L;
 
     @BeforeEach
     void setUp() {
         productRepository = new FakeProductRepository();
         productService = new ProductService(productRepository);
-        brand = createBrandWithId("Nike", 1L);
-    }
-
-    private BrandModel createBrandWithId(String name, Long id) {
-        BrandModel brandModel = BrandModel.create(name);
-        try {
-            var idField = brandModel.getClass().getSuperclass().getDeclaredField("id");
-            idField.setAccessible(true);
-            idField.set(brandModel, id);
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            throw new RuntimeException(e);
-        }
-        return brandModel;
     }
 
     @DisplayName("상품을 등록할 때, ")
@@ -45,7 +33,7 @@ class ProductServiceTest {
         @Test
         void register_whenValidValues() {
             // act
-            productService.register(brand, "에어맥스", 150000, 100);
+            productService.register(BRAND_ID, "에어맥스", 150000, 100);
 
             // assert
             Page<ProductModel> all = productRepository.findAll(PageRequest.of(0, 20));
@@ -62,7 +50,7 @@ class ProductServiceTest {
         @Test
         void getById_whenExists() {
             // arrange
-            productService.register(brand, "에어맥스", 150000, 100);
+            productService.register(BRAND_ID, "에어맥스", 150000, 100);
             Long savedId = productRepository.findAll(PageRequest.of(0, 20)).getContent().get(0).getId();
 
             // act
@@ -84,7 +72,7 @@ class ProductServiceTest {
         @Test
         void getById_whenDeleted() {
             // arrange
-            productService.register(brand, "에어맥스", 150000, 100);
+            productService.register(BRAND_ID, "에어맥스", 150000, 100);
             Long savedId = productRepository.findAll(PageRequest.of(0, 20)).getContent().get(0).getId();
             productService.delete(savedId);
 
@@ -103,7 +91,7 @@ class ProductServiceTest {
         @Test
         void update_whenValidValues() {
             // arrange
-            productService.register(brand, "에어맥스", 150000, 100);
+            productService.register(BRAND_ID, "에어맥스", 150000, 100);
             Long savedId = productRepository.findAll(PageRequest.of(0, 20)).getContent().get(0).getId();
 
             // act
@@ -133,7 +121,7 @@ class ProductServiceTest {
         @Test
         void delete_whenExists() {
             // arrange
-            productService.register(brand, "에어맥스", 150000, 100);
+            productService.register(BRAND_ID, "에어맥스", 150000, 100);
             Long savedId = productRepository.findAll(PageRequest.of(0, 20)).getContent().get(0).getId();
 
             // act
@@ -154,9 +142,9 @@ class ProductServiceTest {
         @Test
         void getAll_whenProductsExist() {
             // arrange
-            productService.register(brand, "에어맥스", 150000, 100);
-            productService.register(brand, "에어포스", 120000, 50);
-            productService.register(brand, "조던1", 200000, 30);
+            productService.register(BRAND_ID, "에어맥스", 150000, 100);
+            productService.register(BRAND_ID, "에어포스", 120000, 50);
+            productService.register(BRAND_ID, "조던1", 200000, 30);
 
             // act
             Page<ProductModel> result = productService.getAll(PageRequest.of(0, 2));
@@ -171,8 +159,8 @@ class ProductServiceTest {
         @Test
         void getAll_excludesDeletedProducts() {
             // arrange
-            productService.register(brand, "에어맥스", 150000, 100);
-            productService.register(brand, "에어포스", 120000, 50);
+            productService.register(BRAND_ID, "에어맥스", 150000, 100);
+            productService.register(BRAND_ID, "에어포스", 120000, 50);
             Long firstId = productRepository.findAll(PageRequest.of(0, 20)).getContent().get(0).getId();
             productService.delete(firstId);
 
@@ -192,12 +180,11 @@ class ProductServiceTest {
         @Test
         void getAllByBrandId_whenExists() {
             // arrange
-            BrandModel adidasBrand = createBrandWithId("Adidas", 2L);
-            productService.register(brand, "에어맥스", 150000, 100);
-            productService.register(adidasBrand, "울트라부스트", 180000, 80);
+            productService.register(BRAND_ID, "에어맥스", 150000, 100);
+            productService.register(BRAND_ID_2, "울트라부스트", 180000, 80);
 
             // act
-            Page<ProductModel> result = productService.getAllByBrandId(1L, PageRequest.of(0, 20));
+            Page<ProductModel> result = productService.getAllByBrandId(BRAND_ID, PageRequest.of(0, 20));
 
             // assert
             assertThat(result.getTotalElements()).isEqualTo(1);
@@ -213,11 +200,11 @@ class ProductServiceTest {
         @Test
         void deleteAllByBrandId_whenProductsExist() {
             // arrange
-            productService.register(brand, "에어맥스", 150000, 100);
-            productService.register(brand, "에어포스", 120000, 50);
+            productService.register(BRAND_ID, "에어맥스", 150000, 100);
+            productService.register(BRAND_ID, "에어포스", 120000, 50);
 
             // act
-            productService.deleteAllByBrandId(brand.getId());
+            productService.deleteAllByBrandId(BRAND_ID);
 
             // assert
             Page<ProductModel> result = productService.getAll(PageRequest.of(0, 20));

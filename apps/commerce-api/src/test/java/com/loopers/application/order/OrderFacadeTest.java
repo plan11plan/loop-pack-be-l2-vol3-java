@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 import com.loopers.application.order.dto.OrderCriteria;
 import com.loopers.application.order.dto.OrderResult;
 import com.loopers.domain.brand.BrandModel;
+import com.loopers.domain.brand.BrandService;
 import com.loopers.domain.order.OrderErrorCode;
 import com.loopers.domain.order.OrderItemModel;
 import com.loopers.domain.order.OrderModel;
@@ -41,13 +42,16 @@ class OrderFacadeTest {
     private ProductService productService;
 
     @Mock
+    private BrandService brandService;
+
+    @Mock
     private OrderService orderService;
 
     @InjectMocks
     private OrderFacade orderFacade;
 
-    private ProductModel createProductWithId(BrandModel brand, String name, int price, int stock, Long id) {
-        ProductModel product = ProductModel.create(brand, name, price, stock);
+    private ProductModel createProductWithId(Long brandId, String name, int price, int stock, Long id) {
+        ProductModel product = ProductModel.create(brandId, name, price, stock);
         try {
             var idField = product.getClass().getSuperclass().getDeclaredField("id");
             idField.setAccessible(true);
@@ -58,6 +62,18 @@ class OrderFacadeTest {
         return product;
     }
 
+    private BrandModel createBrandWithId(String name, Long id) {
+        BrandModel brand = BrandModel.create(name);
+        try {
+            var idField = brand.getClass().getSuperclass().getDeclaredField("id");
+            idField.setAccessible(true);
+            idField.set(brand, id);
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
+        return brand;
+    }
+
     @DisplayName("주문 생성 (UC-O01)")
     @Nested
     class CreateOrder {
@@ -66,10 +82,12 @@ class OrderFacadeTest {
         @Test
         void createOrder_success() {
             // arrange
-            BrandModel brand = BrandModel.create("브랜드A");
-            ProductModel product = createProductWithId(brand, "상품A", 25000, 100, 10L);
+            Long brandId = 1L;
+            ProductModel product = createProductWithId(brandId, "상품A", 25000, 100, 10L);
+            BrandModel brand = createBrandWithId("브랜드A", brandId);
 
             when(productService.getAllByIds(List.of(10L))).thenReturn(List.of(product));
+            when(brandService.getAllByIds(List.of(brandId))).thenReturn(List.of(brand));
 
             OrderModel order = OrderModel.create(1L, 25000);
             when(orderService.createOrder(any(OrderCommand.Create.class))).thenReturn(order);
@@ -84,6 +102,7 @@ class OrderFacadeTest {
             // assert
             assertAll(
                 () -> verify(productService).getAllByIds(List.of(10L)),
+                () -> verify(brandService).getAllByIds(List.of(brandId)),
                 () -> verify(orderService).createOrder(any(OrderCommand.Create.class)),
                 () -> assertThat(result.totalPrice()).isEqualTo(25000)
             );
@@ -124,10 +143,12 @@ class OrderFacadeTest {
         @Test
         void createOrder_priceMismatch_throwsException() {
             // arrange
-            BrandModel brand = BrandModel.create("브랜드A");
-            ProductModel product = createProductWithId(brand, "상품A", 25000, 100, 10L);
+            Long brandId = 1L;
+            ProductModel product = createProductWithId(brandId, "상품A", 25000, 100, 10L);
+            BrandModel brand = createBrandWithId("브랜드A", brandId);
 
             when(productService.getAllByIds(List.of(10L))).thenReturn(List.of(product));
+            when(brandService.getAllByIds(List.of(brandId))).thenReturn(List.of(brand));
 
             OrderCriteria.Create criteria = new OrderCriteria.Create(List.of(
                 new OrderCriteria.Create.CreateItem(10L, 1, 30000)
@@ -142,10 +163,12 @@ class OrderFacadeTest {
         @Test
         void createOrder_insufficientStock_throwsException() {
             // arrange
-            BrandModel brand = BrandModel.create("브랜드A");
-            ProductModel product = createProductWithId(brand, "상품A", 25000, 1, 10L);
+            Long brandId = 1L;
+            ProductModel product = createProductWithId(brandId, "상품A", 25000, 1, 10L);
+            BrandModel brand = createBrandWithId("브랜드A", brandId);
 
             when(productService.getAllByIds(List.of(10L))).thenReturn(List.of(product));
+            when(brandService.getAllByIds(List.of(brandId))).thenReturn(List.of(brand));
 
             OrderCriteria.Create criteria = new OrderCriteria.Create(List.of(
                 new OrderCriteria.Create.CreateItem(10L, 100, 25000)

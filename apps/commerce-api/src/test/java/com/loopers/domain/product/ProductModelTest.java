@@ -3,7 +3,6 @@ package com.loopers.domain.product;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.loopers.domain.brand.BrandModel;
 import com.loopers.support.error.CoreException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -11,9 +10,7 @@ import org.junit.jupiter.api.Test;
 
 class ProductModelTest {
 
-    private BrandModel createBrand() {
-        return BrandModel.create("Nike");
-    }
+    private static final Long BRAND_ID = 1L;
 
     @DisplayName("상품을 생성할 때, ")
     @Nested
@@ -23,27 +20,27 @@ class ProductModelTest {
         @Test
         void create_whenValidValues() {
             // act
-            ProductModel product = ProductModel.create(createBrand(), "에어맥스", 150000, 100);
+            ProductModel product = ProductModel.create(BRAND_ID, "에어맥스", 150000, 100);
 
             // assert
+            assertThat(product.getBrandId()).isEqualTo(BRAND_ID);
             assertThat(product.getName()).isEqualTo("에어맥스");
             assertThat(product.getPrice()).isEqualTo(150000);
             assertThat(product.getStock()).isEqualTo(100);
-            assertThat(product.getBrand().getName()).isEqualTo("Nike");
         }
 
-        @DisplayName("브랜드가 null이면 예외가 발생한다.")
+        @DisplayName("브랜드 ID가 null이면 예외가 발생한다.")
         @Test
-        void create_whenBrandIsNull() {
+        void create_whenBrandIdIsNull() {
             assertThatThrownBy(() -> ProductModel.create(null, "에어맥스", 150000, 100))
                 .isInstanceOf(CoreException.class)
-                .hasMessageContaining("브랜드는 필수값입니다.");
+                .hasMessageContaining("브랜드 ID는 필수값입니다.");
         }
 
         @DisplayName("상품명이 null이면 예외가 발생한다.")
         @Test
         void create_whenNameIsNull() {
-            assertThatThrownBy(() -> ProductModel.create(createBrand(), null, 150000, 100))
+            assertThatThrownBy(() -> ProductModel.create(BRAND_ID, null, 150000, 100))
                 .isInstanceOf(CoreException.class)
                 .hasMessageContaining("상품명은 필수값입니다.");
         }
@@ -51,7 +48,7 @@ class ProductModelTest {
         @DisplayName("상품명이 빈 문자열이면 예외가 발생한다.")
         @Test
         void create_whenNameIsBlank() {
-            assertThatThrownBy(() -> ProductModel.create(createBrand(), "  ", 150000, 100))
+            assertThatThrownBy(() -> ProductModel.create(BRAND_ID, "  ", 150000, 100))
                 .isInstanceOf(CoreException.class)
                 .hasMessageContaining("상품명은 필수값입니다.");
         }
@@ -61,7 +58,7 @@ class ProductModelTest {
         void create_whenNameTooLong() {
             String longName = "a".repeat(100);
 
-            assertThatThrownBy(() -> ProductModel.create(createBrand(), longName, 150000, 100))
+            assertThatThrownBy(() -> ProductModel.create(BRAND_ID, longName, 150000, 100))
                 .isInstanceOf(CoreException.class)
                 .hasMessageContaining("상품명은 99자 이하여야 합니다.");
         }
@@ -69,7 +66,7 @@ class ProductModelTest {
         @DisplayName("가격이 음수이면 예외가 발생한다.")
         @Test
         void create_whenPriceIsNegative() {
-            assertThatThrownBy(() -> ProductModel.create(createBrand(), "에어맥스", -1, 100))
+            assertThatThrownBy(() -> ProductModel.create(BRAND_ID, "에어맥스", -1, 100))
                 .isInstanceOf(CoreException.class)
                 .hasMessageContaining("가격은 0 이상이어야 합니다.");
         }
@@ -77,7 +74,7 @@ class ProductModelTest {
         @DisplayName("재고가 음수이면 예외가 발생한다.")
         @Test
         void create_whenStockIsNegative() {
-            assertThatThrownBy(() -> ProductModel.create(createBrand(), "에어맥스", 150000, -1))
+            assertThatThrownBy(() -> ProductModel.create(BRAND_ID, "에어맥스", 150000, -1))
                 .isInstanceOf(CoreException.class)
                 .hasMessageContaining("재고는 0 이상이어야 합니다.");
         }
@@ -91,7 +88,7 @@ class ProductModelTest {
         @Test
         void update_whenValidValues() {
             // arrange
-            ProductModel product = ProductModel.create(createBrand(), "에어맥스", 150000, 100);
+            ProductModel product = ProductModel.create(BRAND_ID, "에어맥스", 150000, 100);
 
             // act
             product.update("에어포스", 120000, 50);
@@ -106,7 +103,7 @@ class ProductModelTest {
         @Test
         void update_whenNameIsNull() {
             // arrange
-            ProductModel product = ProductModel.create(createBrand(), "에어맥스", 150000, 100);
+            ProductModel product = ProductModel.create(BRAND_ID, "에어맥스", 150000, 100);
 
             // act & assert
             assertThatThrownBy(() -> product.update(null, 120000, 50))
@@ -123,7 +120,7 @@ class ProductModelTest {
         @Test
         void decreaseStock_whenEnough() {
             // arrange
-            ProductModel product = ProductModel.create(createBrand(), "에어맥스", 150000, 10);
+            ProductModel product = ProductModel.create(BRAND_ID, "에어맥스", 150000, 10);
 
             // act
             product.decreaseStock(3);
@@ -136,7 +133,7 @@ class ProductModelTest {
         @Test
         void decreaseStock_whenInsufficient() {
             // arrange
-            ProductModel product = ProductModel.create(createBrand(), "에어맥스", 150000, 5);
+            ProductModel product = ProductModel.create(BRAND_ID, "에어맥스", 150000, 5);
 
             // act & assert
             assertThatThrownBy(() -> product.decreaseStock(6))
@@ -153,7 +150,7 @@ class ProductModelTest {
         @Test
         void isSoldOut_whenStockIsZero() {
             // arrange
-            ProductModel product = ProductModel.create(createBrand(), "에어맥스", 150000, 0);
+            ProductModel product = ProductModel.create(BRAND_ID, "에어맥스", 150000, 0);
 
             // act & assert
             assertThat(product.isSoldOut()).isTrue();
@@ -163,7 +160,7 @@ class ProductModelTest {
         @Test
         void isSoldOut_whenStockExists() {
             // arrange
-            ProductModel product = ProductModel.create(createBrand(), "에어맥스", 150000, 1);
+            ProductModel product = ProductModel.create(BRAND_ID, "에어맥스", 150000, 1);
 
             // act & assert
             assertThat(product.isSoldOut()).isFalse();
@@ -178,7 +175,7 @@ class ProductModelTest {
         @Test
         void delete_whenCalled() {
             // arrange
-            ProductModel product = ProductModel.create(createBrand(), "에어맥스", 150000, 100);
+            ProductModel product = ProductModel.create(BRAND_ID, "에어맥스", 150000, 100);
 
             // act
             product.delete();

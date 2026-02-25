@@ -73,7 +73,7 @@ class LikeV1ApiE2ETest {
 
         // 브랜드 및 상품 등록
         BrandModel brand = brandJpaRepository.save(BrandModel.create("나이키"));
-        ProductModel product = productJpaRepository.save(ProductModel.create(brand, "에어맥스", 150000, 100));
+        ProductModel product = productJpaRepository.save(ProductModel.create(brand.getId(), "에어맥스", 150000, 100));
         productId = product.getId();
     }
 

@@ -59,4 +59,12 @@ public class FakeBrandRepository implements BrandRepository {
 
         return new PageImpl<>(pageContent, pageable, activeModels.size());
     }
+
+    @Override
+    public List<BrandModel> findAllByIdIn(List<Long> ids) {
+        return store.values().stream()
+            .filter(brand -> brand.getDeletedAt() == null)
+            .filter(brand -> ids.contains(brand.getId()))
+            .toList();
+    }
 }

@@ -61,7 +61,7 @@ class ProductV1ApiE2ETest {
     }
 
     private ProductModel saveProduct(String name, int price, int stock) {
-        ProductModel product = ProductModel.create(savedBrand, name, price, stock);
+        ProductModel product = ProductModel.create(savedBrand.getId(), name, price, stock);
         return productJpaRepository.save(product);
     }
 
@@ -99,7 +99,7 @@ class ProductV1ApiE2ETest {
             BrandModel adidas = brandJpaRepository.findByNameAndDeletedAtIsNull("아디다스").get();
 
             saveProduct("에어맥스", 150000, 100);
-            productJpaRepository.save(ProductModel.create(adidas, "울트라부스트", 180000, 80));
+            productJpaRepository.save(ProductModel.create(adidas.getId(), "울트라부스트", 180000, 80));
 
             // act
             ParameterizedTypeReference<ApiResponse<ProductV1Dto.ListResponse>> responseType = new ParameterizedTypeReference<>() {};

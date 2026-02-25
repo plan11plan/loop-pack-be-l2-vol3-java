@@ -56,7 +56,7 @@ public class FakeProductRepository implements ProductRepository {
     public Page<ProductModel> findAllByBrandId(Long brandId, Pageable pageable) {
         List<ProductModel> filtered = store.values().stream()
             .filter(product -> product.getDeletedAt() == null)
-            .filter(product -> product.getBrand().getId().equals(brandId))
+            .filter(product -> product.getBrandId().equals(brandId))
             .toList();
 
         int start = (int) pageable.getOffset();
@@ -73,7 +73,7 @@ public class FakeProductRepository implements ProductRepository {
     public List<ProductModel> findAllByBrandId(Long brandId) {
         return store.values().stream()
             .filter(product -> product.getDeletedAt() == null)
-            .filter(product -> product.getBrand().getId().equals(brandId))
+            .filter(product -> product.getBrandId().equals(brandId))
             .toList();
     }
 
@@ -85,38 +85,4 @@ public class FakeProductRepository implements ProductRepository {
             .toList();
     }
 
-    @Override
-    public Page<ProductModel> findAllWithActiveBrand(Pageable pageable) {
-        List<ProductModel> activeModels = store.values().stream()
-            .filter(product -> product.getDeletedAt() == null)
-            .filter(product -> product.getBrand().getDeletedAt() == null)
-            .toList();
-
-        int start = (int) pageable.getOffset();
-        int end = Math.min(start + pageable.getPageSize(), activeModels.size());
-
-        List<ProductModel> pageContent = start >= activeModels.size()
-            ? new ArrayList<>()
-            : activeModels.subList(start, end);
-
-        return new PageImpl<>(pageContent, pageable, activeModels.size());
-    }
-
-    @Override
-    public Page<ProductModel> findAllWithActiveBrandByBrandId(Long brandId, Pageable pageable) {
-        List<ProductModel> filtered = store.values().stream()
-            .filter(product -> product.getDeletedAt() == null)
-            .filter(product -> product.getBrand().getDeletedAt() == null)
-            .filter(product -> product.getBrand().getId().equals(brandId))
-            .toList();
-
-        int start = (int) pageable.getOffset();
-        int end = Math.min(start + pageable.getPageSize(), filtered.size());
-
-        List<ProductModel> pageContent = start >= filtered.size()
-            ? new ArrayList<>()
-            : filtered.subList(start, end);
-
-        return new PageImpl<>(pageContent, pageable, filtered.size());
-    }
 }
