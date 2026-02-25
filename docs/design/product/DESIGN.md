@@ -15,7 +15,7 @@
 - **재고: Product 필드로 관리** — 별도 Stock 도메인 분리 없이 Product 엔티티의 stock 필드로 관리. 등록/수정 시 재고 설정, 주문 시 차감.
 - **고객 vs Admin 응답 차이** — 고객에게는 기본 정보만, Admin에게는 관리 정보 추가 제공
 - **soft delete된 상품** — 고객 조회 불가 (404 반환)
-- **Brand → Product 참조** — 객체참조 + FK 없음. `@ManyToOne` + `ConstraintMode.NO_CONSTRAINT`. `product.getBrand().getName()` 접근 가능.
+- **Brand → Product 참조** — ID 참조 (`Long brandId`). 도메인 간 패키지 격벽을 위해 객체참조 대신 ID 참조. Brand 정보가 필요할 때는 Application 계층(Facade)에서 BrandService를 통해 조합.
 - **Product.likeCount 캐시 필드** — 찜 수 조회 성능을 위해 Product에 likeCount 캐싱. 찜/취소 시 원자적 증감.
 - **독립 Aggregate Root** — Brand와 Product는 별도 Aggregate Root.
 
@@ -125,7 +125,7 @@
 ```mermaid
 classDiagram
     class Product {
-        Brand brand
+        Long brandId
         String name
         int price
         int stock
@@ -140,14 +140,14 @@ classDiagram
         +isDeleted() boolean
     }
 
-    Product "*" --> "1" Brand : 객체참조 (FK 없음)
+    Product "*" --> "1" Brand : ID 참조 (brandId)
 ```
 
 ### 비즈니스 규칙
 
 | 메서드 | 비즈니스 규칙 |
 |---|---|
-| create(brand, name, price, stock) | 가격 0 이상, 재고 0 이상 검증 (Entity 내부 validatePriceRange, validateStockRange) |
+| create(brandId, name, price, stock) | 가격 0 이상, 재고 0 이상 검증 (Entity 내부 validatePriceRange, validateStockRange) |
 | decreaseStock(int) | 재고 부족 시 CoreException(BAD_REQUEST). Entity 도메인 메서드에서 직접 처리 |
 | validateExpectedPrice(int) | 주문 시 기대 가격과 현재 가격 비교. 불일치 시 예외 |
 | isSoldOut() | stock이 0인지 확인. "품절"의 정의를 캡슐화 |

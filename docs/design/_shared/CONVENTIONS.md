@@ -25,9 +25,30 @@ SSENSE와 같은 하이패션 이커머스 플랫폼. Spring Boot 3.4.4, Java 21
   - FK의 문제: 잠금 전파(데드락 위험), 삭제 순서 강제, 테이블 간 결합
 - **DB 유니크 제약 사용** — 테이블 내부 제약은 사용한다. 동시성(더블클릭 등) 시 중복 방지.
 - **참조 방식**
-  - 같은 도메인 (Brand → Product): 객체참조 + FK 없음 (`@ManyToOne` + `ConstraintMode.NO_CONSTRAINT`)
-  - 다른 도메인 간: ID 참조 (`private Long userId` 등)
+  - 도메인 간: ID 참조 (`private Long brandId`, `private Long userId` 등). 도메인 패키지 간 격벽 유지
+  - 같은 도메인 내부 (Order ↔ OrderItem): 양방향 매핑 허용 기준에 따라 결정
 - **Aggregate** — 각 도메인은 독립 Aggregate Root. `@OneToMany` 사용하지 않음. Aggregate 규칙은 Service에서 `@Transactional`로 관리.
+
+### 도메인 간 의존 규칙
+
+도메인 패키지 간 의존은 기본적으로 **단방향**만 허용한다. 허용된 방향은 아래 표에 명시한다.
+
+| From → To | 방향 | 허용 레이어 | 사유 |
+|-----------|------|------------|------|
+| Product → Brand | 단방향 | Domain (ID 참조), Application (Service 호출) | 상품은 브랜드에 생명주기 종속 |
+| Brand → Product | 역방향 금지 | Application Facade에서만 조율 | BrandFacade가 ProductService를 호출하여 연쇄 삭제 처리 |
+| Order → Product | 단방향 | Application (Service 호출, 스냅샷 조회) | 주문 시 상품 정보 스냅샷. Domain에서는 ID 참조만 |
+
+**원칙:**
+- Domain 레이어에서 다른 도메인을 참조할 때는 ID 참조만 허용 (객체참조 금지)
+- 역방향이 필요한 조율(브랜드 삭제 시 상품 연쇄 삭제 등)은 Application 레이어(Facade)에서 처리
+- 순환 의존이 발생하면 이벤트 기반 분리를 검토
+
+**양방향 매핑 허용 기준:**
+
+같은 도메인 내에서 트랜잭션 일관성·생명주기 종속·독립 변경 가능성을 따졌을 때 양방향이 더 자연스러운 경우 `@OneToMany` 양방향 매핑을 허용한다. 예: Order ↔ OrderItem처럼 루트 엔티티를 기준으로 비즈니스가 동작하고, 항상 루트를 통해 하위 엔티티에 접근하는 구조.
+
+JPA 양방향 매핑에 따르는 추가 UPDATE 쿼리 등 성능 오버헤드는 객체 그래프 탐색의 편리함과 트레이드오프로 감안한다. 단, 쿼리 최적화(fetch join, batch size 등)는 별도로 고려한다.
 
 ---
 

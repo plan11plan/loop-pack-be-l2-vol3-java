@@ -112,7 +112,7 @@ classDiagram
     }
 
     class Product {
-        Brand brand
+        Long brandId
         String name
         int price
         int stock
@@ -164,7 +164,7 @@ classDiagram
         ORDERED
     }
 
-    Product "*" --> "1" Brand : 객체참조 (FK 없음)
+    Product "*" --> "1" Brand : ID 참조 (brandId)
     ProductLike "*" --> "1" User : userId
     ProductLike "*" --> "1" Product : productId
     CartItem "*" --> "1" User : userId
@@ -181,7 +181,7 @@ classDiagram
 
 | 관계 | 카디널리티 | 참조 방식 | 비고 |
 |---|---|---|---|
-| Brand → Product | 1 : N | 객체참조 + FK 없음 | `@ManyToOne` + `ConstraintMode.NO_CONSTRAINT` |
+| Brand → Product | 1 : N | ID 참조 (brandId) | 도메인 간 패키지 격벽 유지 |
 | User → ProductLike | 1 : N | ID 참조 (userId) | UNIQUE(userId, productId) |
 | Product → ProductLike | 1 : N | ID 참조 (productId) | 교차 테이블 |
 | User → CartItem | 1 : N | ID 참조 (userId) | UNIQUE(userId, productId) |

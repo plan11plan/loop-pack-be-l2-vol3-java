@@ -22,7 +22,7 @@
 - **브랜드명 중복 불가** — 동일한 브랜드명이 이미 존재하면 등록/수정 실패 (409 Conflict)
 - **고객 vs Admin 응답 차이** — 고객에게는 기본 정보만, Admin에게는 등록일/수정일/삭제 여부 등 관리 정보 추가 제공
 - **soft delete된 브랜드** — 고객 조회 불가 (404 반환)
-- **Brand → Product 참조** — 객체참조 + FK 없음. `@ManyToOne` + `ConstraintMode.NO_CONSTRAINT`
+- **Brand → Product 참조** — ID 참조 (`Long brandId`). 도메인 간 패키지 격벽 유지를 위해 객체참조 대신 ID 참조
 - **독립 Aggregate Root** — Brand와 Product는 별도 Aggregate Root. 브랜드 삭제 → 상품 soft delete는 Facade에서 조율.
 
 ### API
