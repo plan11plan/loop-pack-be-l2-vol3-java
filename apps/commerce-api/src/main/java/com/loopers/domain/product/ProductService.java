@@ -1,6 +1,5 @@
 package com.loopers.domain.product;
 
-import com.loopers.domain.brand.BrandModel;
 import com.loopers.support.error.CoreException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -15,8 +14,8 @@ public class ProductService {
     private final ProductRepository productRepository;
 
     @Transactional
-    public void register(BrandModel brand, String name, int price, int stock) {
-        productRepository.save(ProductModel.create(brand, name, price, stock));
+    public void register(Long brandId, String name, int price, int stock) {
+        productRepository.save(ProductModel.create(brandId, name, price, stock));
     }
 
     @Transactional(readOnly = true)
@@ -74,13 +73,4 @@ public class ProductService {
         }
     }
 
-    @Transactional(readOnly = true)
-    public Page<ProductModel> getAllWithActiveBrand(Pageable pageable) {
-        return productRepository.findAllWithActiveBrand(pageable);
-    }
-
-    @Transactional(readOnly = true)
-    public Page<ProductModel> getAllWithActiveBrandByBrandId(Long brandId, Pageable pageable) {
-        return productRepository.findAllWithActiveBrandByBrandId(brandId, pageable);
-    }
 }

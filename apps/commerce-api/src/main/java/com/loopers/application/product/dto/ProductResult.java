@@ -14,11 +14,11 @@ public record ProductResult(
     ZonedDateTime updatedAt,
     ZonedDateTime deletedAt
 ) {
-    public static ProductResult from(ProductModel model) {
+    public static ProductResult of(ProductModel model, String brandName) {
         return new ProductResult(
                 model.getId(),
-                model.getBrand().getId(),
-                model.getBrand().getName(),
+                model.getBrandId(),
+                brandName,
                 model.getName(),
                 model.getPrice(),
                 model.getStock(),

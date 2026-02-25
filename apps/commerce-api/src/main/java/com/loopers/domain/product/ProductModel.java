@@ -1,15 +1,10 @@
 package com.loopers.domain.product;
 
 import com.loopers.domain.BaseEntity;
-import com.loopers.domain.brand.BrandModel;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.ForeignKey;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -21,9 +16,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ProductModel extends BaseEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "brand_id", nullable = false, foreignKey = @ForeignKey(value = jakarta.persistence.ConstraintMode.NO_CONSTRAINT))
-    private BrandModel brand;
+    @Column(name = "brand_id", nullable = false)
+    private Long brandId;
 
     @Column(name = "name", nullable = false)
     private String name;
@@ -36,19 +30,19 @@ public class ProductModel extends BaseEntity {
 
     // === 생성 === //
 
-    private ProductModel(BrandModel brand, String name, int price, int stock) {
-        this.brand = brand;
+    private ProductModel(Long brandId, String name, int price, int stock) {
+        this.brandId = brandId;
         this.name = name;
         this.price = price;
         this.stock = stock;
     }
 
-    public static ProductModel create(BrandModel brand, String name, int price, int stock) {
-        validateBrand(brand);
+    public static ProductModel create(Long brandId, String name, int price, int stock) {
+        validateBrandId(brandId);
         validateName(name);
         validatePriceRange(price);
         validateStockRange(stock);
-        return new ProductModel(brand, name, price, stock);
+        return new ProductModel(brandId, name, price, stock);
     }
 
     // === 도메인 로직 === //
@@ -84,9 +78,9 @@ public class ProductModel extends BaseEntity {
 
     // === 검증 === //
 
-    private static void validateBrand(BrandModel brand) {
-        if (brand == null) {
-            throw new CoreException(ErrorType.BAD_REQUEST, "브랜드는 필수값입니다.");
+    private static void validateBrandId(Long brandId) {
+        if (brandId == null) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "브랜드 ID는 필수값입니다.");
         }
     }
 

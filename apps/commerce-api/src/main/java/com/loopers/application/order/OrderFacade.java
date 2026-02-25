@@ -2,6 +2,8 @@ package com.loopers.application.order;
 
 import com.loopers.application.order.dto.OrderCriteria;
 import com.loopers.application.order.dto.OrderResult;
+import com.loopers.domain.brand.BrandModel;
+import com.loopers.domain.brand.BrandService;
 import com.loopers.domain.order.OrderService;
 import com.loopers.domain.order.dto.OrderCommand;
 import com.loopers.domain.product.ProductModel;
@@ -21,15 +23,24 @@ import org.springframework.transaction.annotation.Transactional;
 public class OrderFacade {
 
     private final ProductService productService;
+    private final BrandService brandService;
     private final OrderService orderService;
 
     @Transactional
     public OrderResult.OrderSummary createOrder(Long userId, OrderCriteria.Create criteria) {
-        Map<Long, ProductModel> productMap =
-                productService.getAllByIds(criteria.items().stream()
-                                .map(OrderCriteria.Create.CreateItem::productId)
-                                .toList()).stream()
-                        .collect(Collectors.toMap(ProductModel::getId, Function.identity()));
+        List<ProductModel> products = productService.getAllByIds(criteria.items().stream()
+                .map(OrderCriteria.Create.CreateItem::productId)
+                .toList());
+
+        Map<Long, ProductModel> productMap = products.stream()
+                .collect(Collectors.toMap(ProductModel::getId, Function.identity()));
+
+        List<Long> brandIds = products.stream()
+                .map(ProductModel::getBrandId)
+                .distinct()
+                .toList();
+        Map<Long, String> brandNameMap = brandService.getAllByIds(brandIds).stream()
+                .collect(Collectors.toMap(BrandModel::getId, BrandModel::getName));
 
         return OrderResult.OrderSummary.from(
                 orderService.createOrder(
@@ -43,7 +54,7 @@ public class OrderFacade {
                                             product.getPrice(),
                                             item.quantity(),
                                             product.getName(),
-                                            product.getBrand().getName());
+                                            brandNameMap.get(product.getBrandId()));
                                 })
                                 .toList())));
     }

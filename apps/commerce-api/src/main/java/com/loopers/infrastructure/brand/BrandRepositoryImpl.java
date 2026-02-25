@@ -2,6 +2,7 @@ package com.loopers.infrastructure.brand;
 
 import com.loopers.domain.brand.BrandModel;
 import com.loopers.domain.brand.BrandRepository;
+import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -31,5 +32,10 @@ public class BrandRepositoryImpl implements BrandRepository {
     @Override
     public Page<BrandModel> findAll(Pageable pageable) {
         return brandJpaRepository.findAllByDeletedAtIsNull(pageable);
+    }
+
+    @Override
+    public List<BrandModel> findAllByIdIn(List<Long> ids) {
+        return brandJpaRepository.findAllByIdInAndDeletedAtIsNull(ids);
     }
 }

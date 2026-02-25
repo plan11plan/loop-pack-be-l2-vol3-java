@@ -1,6 +1,7 @@
 package com.loopers.domain.brand;
 
 import com.loopers.support.error.CoreException;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -49,5 +50,15 @@ public class BrandService {
     @Transactional(readOnly = true)
     public Page<BrandModel> getAll(Pageable pageable) {
         return brandRepository.findAll(pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public List<BrandModel> getAllByIds(List<Long> ids) {
+        return brandRepository.findAllByIdIn(ids);
+    }
+
+    @Transactional(readOnly = true)
+    public void validateExists(Long id) {
+        getById(id);
     }
 }
