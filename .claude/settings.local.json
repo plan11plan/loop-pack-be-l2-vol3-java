@@ -48,7 +48,10 @@
       "WebFetch(domain:medium.com)",
       "Bash(source:*)",
       "Bash(sdk use java:*)",
-      "Bash(JAVA_HOME=/Users/jins/Library/Java/JavaVirtualMachines/corretto-21.0.4/Contents/Home ./gradlew:*)"
+      "Bash(JAVA_HOME=/Users/jins/Library/Java/JavaVirtualMachines/corretto-21.0.4/Contents/Home ./gradlew:*)",
+      "mcp__claude_ai_Notion__notion-search",
+      "mcp__claude_ai_Notion__notion-fetch",
+      "mcp__claude_ai_Notion__notion-create-pages"
     ],
     "deny": [],
     "ask": []
