@@ -127,11 +127,12 @@ classDiagram
     class Product {
         Brand brand
         String name
-        Money price
-        Stock stock
+        int price
+        int stock
         int likeCount
-        +update(String, Money, Stock) void
+        +update(String, int, int) void
         +decreaseStock(int) void
+        +validateExpectedPrice(int) void
         +isSoldOut() boolean
         +addLikeCount() void
         +subtractLikeCount() void
@@ -142,20 +143,13 @@ classDiagram
     Product "*" --> "1" Brand : 객체참조 (FK 없음)
 ```
 
-### Value Object
-
-| VO | 검증/행위 | 비즈니스 규칙 |
-|---|---|---|
-| Money | validate() | 0 이상이어야 함 |
-| Stock | validate() | 0 이상이어야 함 |
-| Stock | deduct(quantity) | 재고 부족 시 CoreException(BAD_REQUEST) |
-| Stock | hasEnough(quantity) | 재고가 요청 수량 이상인지 확인 |
-
 ### 비즈니스 규칙
 
 | 메서드 | 비즈니스 규칙 |
 |---|---|
-| decreaseStock(int) | 재고 부족 시 CoreException(BAD_REQUEST). Stock VO에 위임 |
+| create(brand, name, price, stock) | 가격 0 이상, 재고 0 이상 검증 (Entity 내부 validatePriceRange, validateStockRange) |
+| decreaseStock(int) | 재고 부족 시 CoreException(BAD_REQUEST). Entity 도메인 메서드에서 직접 처리 |
+| validateExpectedPrice(int) | 주문 시 기대 가격과 현재 가격 비교. 불일치 시 예외 |
 | isSoldOut() | stock이 0인지 확인. "품절"의 정의를 캡슐화 |
 | addLikeCount() / subtractLikeCount() | 찜 등록/취소 시 likeCount 원자적 증감 |
 | softDelete() / isDeleted() | deleted_at 설정 |

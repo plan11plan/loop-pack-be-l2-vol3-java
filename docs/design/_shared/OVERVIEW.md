@@ -98,11 +98,11 @@ erDiagram
 ```mermaid
 classDiagram
     class User {
-        LoginId loginId
-        Password password
-        UserName name
+        String loginId
+        String password
+        String name
         LocalDate birthDate
-        Email email
+        String email
     }
 
     class Brand {
@@ -114,8 +114,8 @@ classDiagram
     class Product {
         Brand brand
         String name
-        Money price
-        Stock stock
+        int price
+        int stock
         int likeCount
         +decreaseStock(int) void
         +isSoldOut() boolean
@@ -132,7 +132,7 @@ classDiagram
     class CartItem {
         Long userId
         Long productId
-        Quantity quantity
+        int quantity
         +addQuantity(int) void
         +updateQuantity(int) void
     }
@@ -146,23 +146,17 @@ classDiagram
 
     class Order {
         Long userId
-        Money totalPrice
+        int totalPrice
         OrderStatus status
     }
 
     class OrderItem {
         Long orderId
         Long productId
-        Money orderPrice
-        Quantity quantity
-        ProductSnapshot snapshot
-    }
-
-    class ProductSnapshot {
-        <<Embeddable>>
+        int orderPrice
+        int quantity
         String productName
         String brandName
-        String imageUrl
     }
 
     class OrderStatus {
@@ -178,7 +172,6 @@ classDiagram
     Cart o-- CartItem : 일급 컬렉션
     Order "*" --> "1" User : userId
     OrderItem "*" --> "1" Order : orderId
-    OrderItem *-- ProductSnapshot : @Embedded
     Order --> OrderStatus
 ```
 
@@ -195,7 +188,7 @@ classDiagram
 | Product → CartItem | 1 : N | ID 참조 (productId) | 가격 저장 안 함 |
 | User → Order | 1 : N | ID 참조 (userId) | UserSnapshot 불필요 |
 | Order → OrderItem | 1 : N | ID 참조 (orderId) | @OneToMany 미사용 |
-| OrderItem → ProductSnapshot | 1 : 1 | @Embedded | 주문 시점 스냅샷 |
+| OrderItem | - | 직접 필드 (productName, brandName) | 주문 시점 스냅샷 |
 
 ---
 

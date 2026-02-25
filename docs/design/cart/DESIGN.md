@@ -136,7 +136,7 @@ classDiagram
     class CartItem {
         Long userId
         Long productId
-        Quantity quantity
+        int quantity
         +addQuantity(int) void
         +updateQuantity(int) void
     }
@@ -154,19 +154,12 @@ classDiagram
     Cart o-- CartItem : 일급 컬렉션
 ```
 
-### Value Object
-
-| VO | 검증/행위 | 비즈니스 규칙 |
-|---|---|---|
-| Quantity | validate() | 1 이상 99 이하 |
-| Quantity | add(amount) | 수량 합산, 결과가 99를 초과하면 예외 |
-
 ### 비즈니스 규칙
 
 | 엔티티 | 메서드 | 비즈니스 규칙 |
 |---|---|---|
-| CartItem | addQuantity(int) | 이미 담긴 상품 → 수량 합산. 99 초과 시 예외 |
-| CartItem | updateQuantity(int) | 수량 변경. 1~99 범위 검증 |
+| CartItem | addQuantity(int) | 이미 담긴 상품 → 수량 합산. 99 초과 시 예외. Entity 내부에서 범위 검증 |
+| CartItem | updateQuantity(int) | 수량 변경. 1~99 범위를 Entity 내부에서 검증 |
 | Cart | getTotalPrice() | 일급 컬렉션. 장바구니 전체 가격 계산 (Product 현재 가격 기준) |
 | Cart | selectItems(List) | 선택한 항목만 추출 (장바구니에서 부분 주문 시) |
 

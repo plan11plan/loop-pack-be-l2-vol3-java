@@ -21,7 +21,7 @@
 - **동시성 이슈** — 추후 비관적 락 또는 낙관적 락으로 해결 예정.
 - **가격 변동 검증** — 주문 시점에 클라이언트가 보낸 expectedPrice와 Product의 현재 가격을 비교. 불일치 시 주문 실패 ("가격이 변경되었습니다"). 하이패션 고가 상품의 가격 분쟁 방지.
 - **두 가지 주문 경로** — 바로구매(상품 페이지에서 직접)와 장바구니 주문. Order 도메인은 출처를 모르고, Facade가 경로를 조율. 주문 로직은 단일.
-- **스냅샷 구조** — OrderItem에 @Embedded ProductSnapshot (productName, brandName, imageUrl 등). productId는 별도 유지 (재구매, 통계용, FK 아님).
+- **스냅샷 구조** — OrderItem에 직접 필드로 저장 (productName, brandName). productId는 별도 유지 (재구매, 통계용, FK 아님). VO(@Embeddable)를 사용하지 않고 Entity 필드로 직접 관리.
 - **Order ↔ OrderItem** — ID 참조 (orderId). @OneToMany 미사용. 같은 Aggregate이지만 프로젝트 전체 ID 참조 패턴과 일관성 유지.
 
 ### API
@@ -143,23 +143,17 @@ sequenceDiagram
 classDiagram
     class Order {
         Long userId
-        Money totalPrice
+        int totalPrice
         OrderStatus status
     }
 
     class OrderItem {
         Long orderId
         Long productId
-        Money orderPrice
-        Quantity quantity
-        ProductSnapshot snapshot
-    }
-
-    class ProductSnapshot {
-        <<Embeddable>>
+        int orderPrice
+        int quantity
         String productName
         String brandName
-        String imageUrl
     }
 
     class OrderStatus {
@@ -169,7 +163,6 @@ classDiagram
 
     Order "*" --> "1" User : userId
     OrderItem "*" --> "1" Order : orderId
-    OrderItem *-- ProductSnapshot : @Embedded
     Order --> OrderStatus
 ```
 
@@ -177,7 +170,7 @@ classDiagram
 
 | 엔티티 | 메서드 | 비즈니스 규칙 |
 |---|---|---|
-| OrderItem | createSnapshot(Product, int) | 정적 팩토리. 주문 시점 Product 정보를 ProductSnapshot으로 복사 |
+| OrderItem | create(orderId, productId, orderPrice, quantity, productName, brandName) | 정적 팩토리. 주문 시점 상품 정보를 직접 필드로 저장 |
 
 ### 관계 정리
 
@@ -185,7 +178,7 @@ classDiagram
 |---|---|---|
 | User → Order | ID 참조 (userId) | UserSnapshot 불필요 |
 | Order → OrderItem | ID 참조 (orderId) | @OneToMany 미사용. 같은 Aggregate이지만 ID 참조 |
-| OrderItem → ProductSnapshot | @Embedded | 주문 시점 상품 정보 스냅샷 |
+| OrderItem 스냅샷 필드 | 직접 필드 (productName, brandName) | 주문 시점 상품 정보를 Entity 필드로 직접 저장 |
 | OrderItem.productId | ID 유지 (FK 아님) | 재구매, 통계 분석을 위한 데이터 연결용 |
 
 ---
