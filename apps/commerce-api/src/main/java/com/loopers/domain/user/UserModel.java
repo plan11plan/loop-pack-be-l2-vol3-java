@@ -3,12 +3,12 @@ package com.loopers.domain.user;
 import com.loopers.domain.BaseEntity;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
-import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
-import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.regex.Pattern;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -19,58 +19,92 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class UserModel extends BaseEntity {
 
-    @Embedded
-    @AttributeOverride(name = "value", column = @Column(name = "login_id"))
-    private LoginId loginId;
+    @Column(name = "login_id")
+    private String loginId;
 
-    @Embedded
-    @AttributeOverride(name = "value", column = @Column(name = "password"))
-    private EncryptedPassword password;
+    @Column(name = "password")
+    private String password;
 
-    @Embedded
-    @AttributeOverride(name = "name", column = @Column(name = "name"))
-    private Name name;
+    @Column(name = "name")
+    private String name;
 
-    @Embedded
-    @AttributeOverride(name = "birthDate", column = @Column(name = "birth_date"))
-    private BirthDate birthDate;
+    @Column(name = "birth_date")
+    private LocalDate birthDate;
 
-    @Embedded
-    @AttributeOverride(name = "mail", column = @Column(name = "email"))
-    private Email email;
+    @Column(name = "email")
+    private String email;
 
     // === 생성 === //
 
-    public static UserModel create(String loginId, String rawPassword, PasswordEncoder encoder,
+    private UserModel(String loginId, String password, String name, LocalDate birthDate, String email) {
+        this.loginId = loginId;
+        this.password = password;
+        this.name = name;
+        this.birthDate = birthDate;
+        this.email = email;
+    }
+
+    public static UserModel create(String loginId, String encryptedPassword,
                                    String name, LocalDate birthDate, String email) {
-        UserModel model = new UserModel();
-        model.loginId = new LoginId(loginId);
-        model.name = new Name(name);
-        model.birthDate = new BirthDate(birthDate);
-        model.email = new Email(email);
-        model.validateBirthDateNotInPassword(rawPassword, model.birthDate);
-        model.password = EncryptedPassword.of(rawPassword, encoder);
-        return model;
+        validateLoginId(loginId);
+        validateName(name);
+        validateBirthDate(birthDate);
+        validateEmail(email);
+        return new UserModel(loginId, encryptedPassword, name, birthDate, email);
     }
 
     // === 도메인 로직 === //
 
-    public void changePassword(String rawCurrentPassword, String rawNewPassword, PasswordEncoder encoder) {
-        if (!this.password.matches(rawCurrentPassword, encoder)) {
-            throw new CoreException(ErrorType.BAD_REQUEST, "현재 비밀번호가 일치하지 않습니다.");
-        }
-        if (this.password.matches(rawNewPassword, encoder)) {
-            throw new CoreException(ErrorType.BAD_REQUEST, "현재 사용 중인 비밀번호는 사용할 수 없습니다.");
-        }
-        validateBirthDateNotInPassword(rawNewPassword, this.birthDate);
-        this.password = EncryptedPassword.of(rawNewPassword, encoder);
+    public void changePassword(String newEncryptedPassword) {
+        this.password = newEncryptedPassword;
+    }
+
+    public String getBirthDateString() {
+        return birthDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
     }
 
     // === 검증 === //
 
-    private void validateBirthDateNotInPassword(String rawPassword, BirthDate birthDate) {
-        if (rawPassword != null && rawPassword.contains(birthDate.toDateString())) {
-            throw new CoreException(ErrorType.BAD_REQUEST, "생년월일은 비밀번호 내에 포함될 수 없습니다.");
+    private static final Pattern LOGIN_ID_PATTERN = Pattern.compile("^[a-zA-Z0-9]*$");
+    private static final Pattern EMAIL_PATTERN =
+            Pattern.compile("^[A-Za-z0-9+_.-]+@([A-Za-z0-9-]+\\.)+[A-Za-z]{2,}$");
+
+    private static void validateLoginId(String loginId) {
+        if (loginId == null || loginId.isBlank()) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "로그인 ID는 비어있을 수 없습니다.");
+        }
+        if (loginId.length() < 4 || loginId.length() > 12) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "로그인 ID는 4자에서 12자 사이여야 합니다.");
+        }
+        if (!LOGIN_ID_PATTERN.matcher(loginId).matches()) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "로그인 ID는 영문과 숫자만 허용됩니다.");
+        }
+    }
+
+    private static void validateName(String name) {
+        if (name == null || name.isBlank()) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "이름은 비어있을 수 없습니다.");
+        }
+        if (name.length() < 2 || name.length() > 10) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "유효하지 않은 이름 길이입니다.");
+        }
+    }
+
+    private static void validateBirthDate(LocalDate birthDate) {
+        if (birthDate == null) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "생년월일은 필수 입력값입니다.");
+        }
+        if (birthDate.isAfter(LocalDate.now())) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "생년월일은 과거 날짜여야 합니다.");
+        }
+    }
+
+    private static void validateEmail(String email) {
+        if (email == null || email.isBlank()) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "이메일은 비어있을 수 없습니다.");
+        }
+        if (!EMAIL_PATTERN.matcher(email).matches()) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "이메일 형식이 올바르지 않습니다.");
         }
     }
 }

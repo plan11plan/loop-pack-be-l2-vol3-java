@@ -1,6 +1,5 @@
 package com.loopers.infrastructure.user;
 
-import com.loopers.domain.user.LoginId;
 import com.loopers.domain.user.UserModel;
 import com.loopers.domain.user.UserRepository;
 import java.util.Optional;
@@ -18,7 +17,7 @@ public class UserRepositoryImpl implements UserRepository {
     }
 
     @Override
-    public Optional<UserModel> find(LoginId loginId) {
+    public Optional<UserModel> findByLoginId(String loginId) {
         return userJpaRepository.findByLoginIdAndDeletedAtIsNull(loginId);
     }
 }

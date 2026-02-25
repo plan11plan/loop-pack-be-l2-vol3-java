@@ -4,9 +4,7 @@ import com.loopers.domain.BaseEntity;
 import com.loopers.domain.brand.BrandModel;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
-import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.Column;
-import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.ForeignKey;
@@ -16,6 +14,7 @@ import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
 @Getter
 @Entity
 @Table(name = "products")
@@ -29,17 +28,15 @@ public class ProductModel extends BaseEntity {
     @Column(name = "name", nullable = false)
     private String name;
 
-    @Embedded
-    @AttributeOverride(name = "value", column = @Column(name = "price", nullable = false))
-    private Money price;
+    @Column(name = "price", nullable = false)
+    private int price;
 
-    @Embedded
-    @AttributeOverride(name = "value", column = @Column(name = "stock", nullable = false))
-    private Stock stock;
+    @Column(name = "stock", nullable = false)
+    private int stock;
 
     // === 생성 === //
 
-    private ProductModel(BrandModel brand, String name, Money price, Stock stock) {
+    private ProductModel(BrandModel brand, String name, int price, int stock) {
         this.brand = brand;
         this.name = name;
         this.price = price;
@@ -49,30 +46,40 @@ public class ProductModel extends BaseEntity {
     public static ProductModel create(BrandModel brand, String name, int price, int stock) {
         validateBrand(brand);
         validateName(name);
-        return new ProductModel(brand, name, new Money(price), new Stock(stock));
+        validatePriceRange(price);
+        validateStockRange(stock);
+        return new ProductModel(brand, name, price, stock);
     }
 
     // === 도메인 로직 === //
 
     public void update(String name, int price, int stock) {
         validateName(name);
+        validatePriceRange(price);
+        validateStockRange(stock);
         this.name = name;
-        this.price = new Money(price);
-        this.stock = new Stock(stock);
+        this.price = price;
+        this.stock = stock;
     }
 
-    public void validatePrice(int expectedPrice) {
-        if (expectedPrice != this.price.getValue()) {
+    public void validateExpectedPrice(int expectedPrice) {
+        if (expectedPrice != this.price) {
             throw new CoreException(ProductErrorCode.PRICE_MISMATCH);
         }
     }
 
     public void decreaseStock(int quantity) {
-        this.stock.deduct(quantity);
+        if (quantity < 1) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "차감 수량은 1 이상이어야 합니다.");
+        }
+        if (this.stock < quantity) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "재고가 부족합니다.");
+        }
+        this.stock -= quantity;
     }
 
     public boolean isSoldOut() {
-        return this.stock.getValue() == 0;
+        return this.stock == 0;
     }
 
     // === 검증 === //
@@ -89,6 +96,18 @@ public class ProductModel extends BaseEntity {
         }
         if (name.length() > 99) {
             throw new CoreException(ErrorType.BAD_REQUEST, "상품명은 99자 이하여야 합니다.");
+        }
+    }
+
+    private static void validatePriceRange(int price) {
+        if (price < 0) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "가격은 0 이상이어야 합니다.");
+        }
+    }
+
+    private static void validateStockRange(int stock) {
+        if (stock < 0) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "재고는 0 이상이어야 합니다.");
         }
     }
 }

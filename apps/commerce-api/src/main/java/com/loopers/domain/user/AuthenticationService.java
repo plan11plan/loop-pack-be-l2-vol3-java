@@ -13,10 +13,10 @@ public class AuthenticationService {
     private final PasswordEncoder passwordEncoder;
 
     public UserModel authenticate(String loginIdValue, String rawPassword) {
-        UserModel user = userRepository.find(new LoginId(loginIdValue))
-            .orElseThrow(() -> new CoreException(ErrorType.UNAUTHORIZED, "로그인 ID 또는 비밀번호가 일치하지 않습니다."));
+        UserModel user = userRepository.findByLoginId(loginIdValue)
+                .orElseThrow(() -> new CoreException(ErrorType.UNAUTHORIZED, "로그인 ID 또는 비밀번호가 일치하지 않습니다."));
 
-        if (!user.getPassword().matches(rawPassword, passwordEncoder)) {
+        if (!passwordEncoder.matches(rawPassword, user.getPassword())) {
             throw new CoreException(ErrorType.UNAUTHORIZED, "로그인 ID 또는 비밀번호가 일치하지 않습니다.");
         }
 

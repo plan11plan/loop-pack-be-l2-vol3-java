@@ -52,13 +52,9 @@ public class AuthFilter extends OncePerRequestFilter {
         }
 
         try {
-            UserModel authenticatedUser = authenticationService.authenticate(loginId, password);
-            LoginUser loginUser = new LoginUser(
-                authenticatedUser.getId(),
-                authenticatedUser.getLoginId().getValue(),
-                authenticatedUser.getName().getValue()
-            );
-            request.setAttribute("loginUser", loginUser);
+            UserModel user = authenticationService.authenticate(loginId, password);
+            request.setAttribute("loginUser",
+                    new LoginUser(user.getId(), user.getLoginId(), user.getName()));
             filterChain.doFilter(request, response);
         } catch (CoreException e) {
             writeUnauthorizedResponse(response,

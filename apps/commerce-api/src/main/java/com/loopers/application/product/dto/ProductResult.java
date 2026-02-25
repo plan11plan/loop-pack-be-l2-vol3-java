@@ -20,8 +20,8 @@ public record ProductResult(
                 model.getBrand().getId(),
                 model.getBrand().getName(),
                 model.getName(),
-                model.getPrice().getValue(),
-                model.getStock().getValue(),
+                model.getPrice(),
+                model.getStock(),
                 model.getCreatedAt(),
                 model.getUpdatedAt(),
                 model.getDeletedAt());

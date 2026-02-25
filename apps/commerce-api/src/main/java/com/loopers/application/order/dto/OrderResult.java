@@ -16,7 +16,7 @@ public class OrderResult {
         public static OrderSummary from(OrderModel model) {
             return new OrderSummary(
                     model.getId(),
-                    model.getTotalPrice().getValue(),
+                    model.getTotalPrice(),
                     model.getStatus().name(),
                     model.getCreatedAt());
         }
@@ -34,7 +34,7 @@ public class OrderResult {
             return new OrderDetail(
                     model.getId(),
                     model.getUserId(),
-                    model.getTotalPrice().getValue(),
+                    model.getTotalPrice(),
                     model.getStatus().name(),
                     model.getCreatedAt(),
                     items.stream().map(OrderItemDetail::from).toList());
@@ -53,10 +53,10 @@ public class OrderResult {
             return new OrderItemDetail(
                     model.getId(),
                     model.getProductId(),
-                    model.getProductSnapshot().getProductName(),
-                    model.getProductSnapshot().getBrandName(),
-                    model.getOrderPrice().getValue(),
-                    model.getQuantity().getValue());
+                    model.getProductName(),
+                    model.getBrandName(),
+                    model.getOrderPrice(),
+                    model.getQuantity());
         }
     }
 }

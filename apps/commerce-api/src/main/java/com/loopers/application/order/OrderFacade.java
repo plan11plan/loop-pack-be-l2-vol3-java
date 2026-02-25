@@ -2,8 +2,6 @@ package com.loopers.application.order;
 
 import com.loopers.application.order.dto.OrderCriteria;
 import com.loopers.application.order.dto.OrderResult;
-import com.loopers.domain.order.OrderItemModel;
-import com.loopers.domain.order.OrderModel;
 import com.loopers.domain.order.OrderService;
 import com.loopers.domain.order.dto.OrderCommand;
 import com.loopers.domain.product.ProductModel;
@@ -27,31 +25,27 @@ public class OrderFacade {
 
     @Transactional
     public OrderResult.OrderSummary createOrder(Long userId, OrderCriteria.Create criteria) {
-        List<Long> productIds = criteria.items().stream()
-                .map(OrderCriteria.Create.CreateItem::productId)
-                .toList();
-
         Map<Long, ProductModel> productMap =
-                productService.getAllByIds(productIds).stream()
+                productService.getAllByIds(criteria.items().stream()
+                                .map(OrderCriteria.Create.CreateItem::productId)
+                                .toList()).stream()
                         .collect(Collectors.toMap(ProductModel::getId, Function.identity()));
-
-        List<OrderCommand.Create.CreateItem> commandItems = criteria.items().stream()
-                .map(item -> {
-                    ProductModel product = productMap.get(item.productId());
-                    product.validatePrice(item.expectedPrice());
-                    product.decreaseStock(item.quantity());
-                    return new OrderCommand.Create.CreateItem(
-                            item.productId(),
-                            product.getPrice().getValue(),
-                            item.quantity(),
-                            product.getName(),
-                            product.getBrand().getName());
-                })
-                .toList();
 
         return OrderResult.OrderSummary.from(
                 orderService.createOrder(
-                        new OrderCommand.Create(userId, commandItems)));
+                        new OrderCommand.Create(userId, criteria.items().stream()
+                                .map(item -> {
+                                    ProductModel product = productMap.get(item.productId());
+                                    product.validateExpectedPrice(item.expectedPrice());
+                                    product.decreaseStock(item.quantity());
+                                    return new OrderCommand.Create.CreateItem(
+                                            item.productId(),
+                                            product.getPrice(),
+                                            item.quantity(),
+                                            product.getName(),
+                                            product.getBrand().getName());
+                                })
+                                .toList())));
     }
 
     @Transactional(readOnly = true)
@@ -63,9 +57,9 @@ public class OrderFacade {
 
     @Transactional(readOnly = true)
     public OrderResult.OrderDetail getMyOrderDetail(Long userId, Long orderId) {
-        OrderModel order = orderService.getByIdAndUserId(orderId, userId);
-        List<OrderItemModel> items = orderService.getOrderItemsByOrderId(orderId);
-        return OrderResult.OrderDetail.from(order, items);
+        return OrderResult.OrderDetail.from(
+                orderService.getByIdAndUserId(orderId, userId),
+                orderService.getOrderItemsByOrderId(orderId));
     }
 
     @Transactional(readOnly = true)
@@ -76,9 +70,9 @@ public class OrderFacade {
 
     @Transactional(readOnly = true)
     public OrderResult.OrderDetail getOrderDetail(Long orderId) {
-        OrderModel order = orderService.getById(orderId);
-        List<OrderItemModel> items = orderService.getOrderItemsByOrderId(orderId);
-        return OrderResult.OrderDetail.from(order, items);
+        return OrderResult.OrderDetail.from(
+                orderService.getById(orderId),
+                orderService.getOrderItemsByOrderId(orderId));
     }
 
 }
