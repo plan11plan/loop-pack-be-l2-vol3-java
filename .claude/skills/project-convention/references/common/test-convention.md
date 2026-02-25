@@ -32,18 +32,18 @@
 
 | 항목 | 내용 |
 |------|------|
-| 대상 | Entity, VO, Domain Service |
+| 대상 | Entity, Domain Service |
 | 환경 | **Spring 없이 순수 JVM** |
 | 테스트 더블 | **Fake 우선**, 필요 시 Mockito |
 | 속도 | 빠름 (ms 단위) |
 | 비중 | 가장 많이 작성 |
 
 ```java
-class NameTest {
+class UserModelTest {
     @Test
-    void createName_whenValidNameProvided() {
-        Name name = new Name("홍길동");
-        assertThat(name.getValue()).isEqualTo("홍길동");
+    void create_whenAllDataProvided() {
+        UserModel user = UserModel.create("testuser", "encPw", "홍길동", LocalDate.of(2000, 1, 1), "test@email.com");
+        assertThat(user.getName()).isEqualTo("홍길동");
     }
 }
 ```
@@ -101,35 +101,31 @@ class UserV1ApiE2ETest {
 ```java
 class UserModelTest {
 
-    // 공통 픽스처는 @BeforeEach에서 초기화
-    @BeforeEach
-    void setUp() {
-        encoder = new FakePasswordEncoder();
-        validLoginId = new LoginId("testuser123");
-        // ...
-    }
-
     @DisplayName("유저 모델을 생성할 때, ")
     @Nested
     class Create {
 
         @DisplayName("모든 필드가 주어지면, 정상적으로 생성된다.")
         @Test
-        void createUserModel_whenAllDataProvided() {
+        void create_whenAllDataProvided() {
             // act
-            UserModel user = new UserModel(...);
+            UserModel user = UserModel.create(
+                    "testuser123", "encryptedPw", "홍길동",
+                    LocalDate.of(2000, 1, 1), "test@email.com");
 
             // assert
             assertAll(
-                    () -> assertThat(user.getLoginId()).isEqualTo(validLoginId),
-                    () -> assertThat(user.getName()).isEqualTo(validName)
+                    () -> assertThat(user.getLoginId()).isEqualTo("testuser123"),
+                    () -> assertThat(user.getName()).isEqualTo("홍길동")
             );
         }
 
         @DisplayName("로그인 ID가 누락되면 예외가 발생한다.")
         @Test
-        void createUserModel_whenLoginIdIsNull() {
-            assertThatThrownBy(() -> new UserModel(null, ...))
+        void create_whenLoginIdIsNull() {
+            assertThatThrownBy(() -> UserModel.create(
+                    null, "encryptedPw", "홍길동",
+                    LocalDate.of(2000, 1, 1), "test@email.com"))
                 .isInstanceOf(CoreException.class);
         }
     }
@@ -165,8 +161,10 @@ void createOrder_whenAllDataProvided() {
 
 ```java
 @Test
-void createName_whenNameIsNull() {
-    assertThatThrownBy(() -> new Name(null))
+void create_whenNameIsNull() {
+    assertThatThrownBy(() -> UserModel.create(
+            "testuser", "encPw", null,
+            LocalDate.of(2000, 1, 1), "test@email.com"))
             .isInstanceOf(CoreException.class);
 }
 ```
@@ -191,9 +189,11 @@ assertAll(
 @DisplayName("2자 이상 10자 이하의 이름이 주어지면, 정상적으로 생성된다.")
 @ParameterizedTest
 @ValueSource(strings = {"홍길", "홍길동", "가나다라마바사아자차"})
-void createName_whenValidNameProvided(String validNameValue) {
-    Name name = new Name(validNameValue);
-    assertThat(name.getValue()).isEqualTo(validNameValue);
+void create_whenValidNameProvided(String validName) {
+    UserModel user = UserModel.create(
+            "testuser", "encPw", validName,
+            LocalDate.of(2000, 1, 1), "test@email.com");
+    assertThat(user.getName()).isEqualTo(validName);
 }
 ```
 
@@ -205,7 +205,7 @@ void createName_whenValidNameProvided(String validNameValue) {
 
 | 테스트 유형 | 클래스명 패턴 | 예시 |
 |-----------|-----------|------|
-| 단위 (Entity/VO) | `{클래스명}Test` | `NameTest`, `OrderTest` |
+| 단위 (Entity) | `{클래스명}Test` | `UserModelTest`, `OrderModelTest` |
 | 단위 (Domain Service) | `{클래스명}Test` | `OrderServiceTest` |
 | 통합 | `{클래스명}IntegrationTest` | `UserServiceIntegrationTest` |
 | E2E | `{API명}E2ETest` | `UserV1ApiE2ETest` |
@@ -247,7 +247,7 @@ void changePassword_success() { ... }
 
 | 테스트 대상 | 더블 전략 | 이유 |
 |-----------|---------|------|
-| **Entity, VO** | 더블 불필요 (순수 로직) | 외부 의존 없음 |
+| **Entity** | 더블 불필요 (순수 로직) | 외부 의존 없음 |
 | **Domain Service** | **Fake 우선** | 실제 동작과 유사, 상태 검증 가능 |
 | **Application Facade** | **Mockito mock()** | 여러 Service 조합, Fake 비용 큼 |
 | **통합 / E2E** | **실제 Bean** | 연동 검증이 목적 |
@@ -305,7 +305,7 @@ class OrderFacadeTest {
 
 ```
 테스트 대상이 외부 의존이 있는가?
-  ├── NO → 더블 불필요 (Entity, VO)
+  ├── NO → 더블 불필요 (Entity)
   └── YES → 의존이 인터페이스로 분리되어 있는가?
               ├── YES → Fake를 만들 가치가 있는가?
               │         ├── 상태 연동이 중요 → Fake

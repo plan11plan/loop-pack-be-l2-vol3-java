@@ -22,7 +22,7 @@
 - Application `~Criteria`는 유스케이스 입력을 표현하며, 내부에서 Domain Service의 `~Command`를 참조하거나 조합할 수 있다.
 - Application `~Result`는 유스케이스 결과를 표현한다 (단일/조합 구분 없이 통합).
 - Domain Service `~Command`는 자기 도메인 비즈니스 명령과 타 도메인 정보 명세를 모두 포함한다.
-- Domain 계층 자체(Entity, VO)는 DTO를 사용하지 않는다.
+- Domain 계층 자체(Entity)는 DTO를 사용하지 않는다.
 
 ---
 
@@ -95,7 +95,7 @@ public record ProductResult(Long id, String name, int price) {
 
 ```java
 // 주문 도메인이 상품 도메인에 요구하는 정보 명세
-public record OrderProductCommand(Long productId, String name, Money price, Long shopId) {
+public record OrderProductCommand(Long productId, String name, int price, Long shopId) {
     public static OrderProductCommand from(ProductResult product) {
         return new OrderProductCommand(
             product.id(), product.name(), product.price(), product.shopId()
@@ -125,9 +125,8 @@ public record StockDeductionInfo(int remainingStock, boolean success) {}
 | **1~3개** | 원시 타입 직접 전달 | `orderService.create(memberId, address, shopId)` |
 | **4개 이상** | DTO(`~Command`) 사용 | `orderService.create(orderProductCommand)` |
 
-> **주의 — VO 전달과 VO 생성은 다르다.**
-> Entity 필드용 VO를 호출자(Facade 등)가 **새로 생성하여 전달하는 것은 금지**한다. VO는 Entity 내부에서 원시값으로부터 생성한다 (→ entity-vo-convention 참조).
-> 여기서 "직접 전달"이란, Entity getter 등에서 이미 존재하는 값을 꺼내 넘기는 경우를 말한다.
+> **주의 — Entity 필드는 원시값으로 전달한다.**
+> Entity 필드에 대응하는 값은 원시 타입(`int`, `String`, `LocalDate` 등)으로 직접 전달한다 (→ entity-vo-convention 참조).
 
 ```java
 // ✅ 파라미터 3개 이하 → 원시 타입
@@ -213,6 +212,6 @@ Client
 - [ ] Application DTO(Criteria/Result)에 API 스펙 관련 어노테이션이 없는가?
 - [ ] Domain Service가 Application DTO를 참조하지 않는가?
 - [ ] Domain Service의 Info는 Entity로 충분하지 않을 때만 만들었는가?
-- [ ] Domain Service 파라미터 1~3개는 원시 타입/VO, 4개+는 Command DTO인가?
+- [ ] Domain Service 파라미터 1~3개는 원시 타입, 4개+는 Command DTO인가?
 - [ ] Domain Service 메서드 시그니처에 타 도메인 Entity가 노출되지 않는가?
 - [ ] 여러 도메인 Info 조합 시 Application에서 `~Result`로 합치는가?

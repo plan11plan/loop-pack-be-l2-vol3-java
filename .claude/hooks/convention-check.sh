@@ -168,19 +168,6 @@ for ENTITY_FILE in $(grep -rl "^@Entity" "$SRC/domain/" 2>/dev/null); do
 done
 
 # ============================================================================
-# 규칙 8: @Embeddable VO에 @EqualsAndHashCode 필수
-# 출처: entity-vo-convention.md § 2. VO 설계 규칙
-# ============================================================================
-
-for VO_FILE in $(grep -rl "@Embeddable" "$SRC/domain/" 2>/dev/null); do
-  if ! grep -q "EqualsAndHashCode" "$VO_FILE" 2>/dev/null; then
-    WARNINGS+="[경고] @Embeddable VO에 @EqualsAndHashCode 누락: $(basename $VO_FILE)\n"
-    WARNINGS+="  → VO는 값 동등성이 필수. @EqualsAndHashCode를 추가할 것\n"
-    WARNINGS+="  → 참고: entity-vo-convention.md § 2. VO 설계 규칙\n\n"
-  fi
-done
-
-# ============================================================================
 # 규칙 9: Controller → Facade 직접 호출 확인 (Domain Service 직접 호출 금지)
 # 출처: service-layer-convention.md § 5. 계층 간 호출 규칙
 # ============================================================================

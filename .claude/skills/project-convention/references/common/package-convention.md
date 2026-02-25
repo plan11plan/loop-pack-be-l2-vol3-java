@@ -31,7 +31,7 @@ com.loopers/
 │   └── like/
 │
 ├── domain/                         ← Domain 계층
-│   ├── order/                      ← 주문 Entity, VO, Service, Repository(I/F), ErrorCode
+│   ├── order/                      ← 주문 Entity, Service, Repository(I/F), ErrorCode
 │   ├── product/
 │   └── like/
 │
@@ -90,7 +90,7 @@ domain/
 └── order/
     ├── Order.java                          ← Entity (Aggregate Root)
     ├── OrderLine.java                      ← Entity (하위)
-    ├── OrderStatus.java                    ← enum / VO
+    ├── OrderStatus.java                    ← enum
     ├── OrderService.java                   ← Domain Service
     ├── OrderRepository.java                ← Repository 인터페이스
     ├── OrderErrorCode.java                 ← 도메인 에러코드
@@ -202,7 +202,7 @@ support에 넣으면 안 되는 것:
 | Domain Service | `{Domain}Service` | `OrderService` |
 | Repository (인터페이스) | `{Domain}Repository` | `OrderRepository` |
 | ErrorCode | `{Domain}ErrorCode` | `OrderErrorCode` |
-| VO / enum | 의미에 맞게 | `OrderStatus`, `Money` |
+| enum | 의미에 맞게 | `OrderStatus` |
 | Command DTO | `{Target}Command` | `OrderProductCommand` |
 
 ### infrastructure/{domain}/
@@ -270,7 +270,7 @@ public class OrderService {
 
 **의존 방향**
 - [ ] interfaces → application → domain ← infrastructure 방향을 지키는가?
-- [ ] domain Entity/VO/Repository 인터페이스에 Spring 어노테이션(`@Component`, `@Repository`)이 없는가?
+- [ ] domain Entity/Repository 인터페이스에 Spring 어노테이션(`@Component`, `@Repository`)이 없는가?
 - [ ] domain Service의 `@Service`, `@Transactional`, `Page`/`Pageable` 사용은 컨벤션 허용 (service-layer-convention.md § 3~4)
 - [ ] 도메인 간 Entity 직접 참조가 없는가?
 
