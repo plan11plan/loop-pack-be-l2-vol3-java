@@ -150,4 +150,26 @@ class OrderServiceTest {
                     () -> assertThat(page.getContent()).hasSize(2));
         }
     }
+
+    @DisplayName("아이템을 취소할 때, ")
+    @Nested
+    class CancelItem {
+
+        @DisplayName("주문을 조회하고 아이템을 취소한다")
+        @Test
+        void cancelItem_success() {
+            // arrange
+            OrderModel order = orderService.createOrder(1L, createSampleItems());
+            Long orderItemId = order.getItems().get(0).getId();
+
+            // act
+            OrderItemModel cancelledItem = orderService.cancelItem(order.getId(), orderItemId);
+
+            // assert
+            assertAll(
+                    () -> assertThat(cancelledItem.getStatus()).isEqualTo(OrderItemStatus.CANCELLED),
+                    () -> assertThat(order.getTotalPrice()).isEqualTo(0),
+                    () -> assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELLED));
+        }
+    }
 }

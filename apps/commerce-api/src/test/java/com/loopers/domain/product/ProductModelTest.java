@@ -142,6 +142,24 @@ class ProductModelTest {
         }
     }
 
+    @DisplayName("재고를 복구할 때, ")
+    @Nested
+    class IncreaseStock {
+
+        @DisplayName("수량만큼 재고가 증가한다")
+        @Test
+        void increaseStock_success() {
+            // arrange
+            ProductModel product = ProductModel.create(BRAND_ID, "에어맥스", 150000, 5);
+
+            // act
+            product.increaseStock(3);
+
+            // assert
+            assertThat(product.getStock()).isEqualTo(8);
+        }
+    }
+
     @DisplayName("품절 여부를 확인할 때, ")
     @Nested
     class IsSoldOut {

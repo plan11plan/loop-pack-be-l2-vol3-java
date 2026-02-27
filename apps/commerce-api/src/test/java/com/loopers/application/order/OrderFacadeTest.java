@@ -232,4 +232,42 @@ class OrderFacadeTest {
                     () -> assertThat(result.items()).hasSize(1));
         }
     }
+
+    @DisplayName("회원 아이템 취소할 때 (UC-O04), ")
+    @Nested
+    class CancelMyOrderItem {
+
+        @DisplayName("소유자 검증 + 아이템 취소 + 재고 복구가 수행된다")
+        @Test
+        void cancelMyOrderItem_success() {
+            // arrange
+            OrderItemModel cancelledItem = OrderItemModel.create(
+                    10L, 25000, 2, "상품A", "브랜드A");
+
+            when(orderService.getByIdAndUserId(1L, 1L)).thenReturn(
+                    OrderModel.create(1L, List.of(cancelledItem)));
+            when(orderService.cancelItem(1L, 100L)).thenReturn(cancelledItem);
+
+            // act
+            orderFacade.cancelMyOrderItem(1L, 1L, 100L);
+
+            // assert
+            assertAll(
+                    () -> verify(orderService).getByIdAndUserId(1L, 1L),
+                    () -> verify(orderService).cancelItem(1L, 100L),
+                    () -> verify(productService).increaseStock(10L, 2));
+        }
+
+        @DisplayName("본인 주문이 아니면 예외가 발생한다")
+        @Test
+        void cancelMyOrderItem_notOwner_throwsException() {
+            // arrange
+            when(orderService.getByIdAndUserId(1L, 999L))
+                    .thenThrow(new CoreException(OrderErrorCode.FORBIDDEN));
+
+            // act & assert
+            assertThatThrownBy(() -> orderFacade.cancelMyOrderItem(999L, 1L, 100L))
+                    .isInstanceOf(CoreException.class);
+        }
+    }
 }

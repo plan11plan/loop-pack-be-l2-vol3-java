@@ -6,12 +6,32 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 
 import com.loopers.support.error.CoreException;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 @DisplayName("OrderModel 단위 테스트")
 class OrderModelTest {
+
+    private static final AtomicLong ID_GENERATOR = new AtomicLong(1);
+
+    private static void setId(Object entity, long id) {
+        try {
+            var idField = entity.getClass().getSuperclass().getDeclaredField("id");
+            idField.setAccessible(true);
+            idField.set(entity, id);
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static OrderItemModel createItemWithId(Long productId, int orderPrice, int quantity,
+                                                   String productName, String brandName) {
+        OrderItemModel item = OrderItemModel.create(productId, orderPrice, quantity, productName, brandName);
+        setId(item, ID_GENERATOR.getAndIncrement());
+        return item;
+    }
 
     @DisplayName("생성할 때, ")
     @Nested
@@ -69,6 +89,72 @@ class OrderModelTest {
 
             // act & assert
             assertThatThrownBy(() -> order.validateOwner(999L))
+                    .isInstanceOf(CoreException.class);
+        }
+    }
+
+    @DisplayName("아이템을 취소할 때, ")
+    @Nested
+    class CancelItem {
+
+        @DisplayName("취소된 아이템을 제외하고 totalPrice가 재계산된다")
+        @Test
+        void cancelItem_recalculatesTotalPrice() {
+            // arrange
+            OrderItemModel item1 = createItemWithId(10L, 25000, 2, "상품A", "브랜드A");
+            OrderItemModel item2 = createItemWithId(20L, 30000, 1, "상품B", "브랜드B");
+            OrderModel order = OrderModel.create(1L, List.of(item1, item2));
+
+            // act
+            order.cancelItem(item1.getId());
+
+            // assert
+            assertAll(
+                    () -> assertThat(order.getTotalPrice()).isEqualTo(30000),
+                    () -> assertThat(order.getOriginalTotalPrice()).isEqualTo(80000),
+                    () -> assertThat(item1.getStatus()).isEqualTo(OrderItemStatus.CANCELLED));
+        }
+
+        @DisplayName("모든 아이템이 취소되면 주문 상태가 CANCELLED로 변경된다")
+        @Test
+        void cancelItem_allItemsCancelled_orderCancelled() {
+            // arrange
+            OrderItemModel item1 = createItemWithId(10L, 25000, 2, "상품A", "브랜드A");
+            OrderItemModel item2 = createItemWithId(20L, 30000, 1, "상품B", "브랜드B");
+            OrderModel order = OrderModel.create(1L, List.of(item1, item2));
+
+            // act
+            order.cancelItem(item1.getId());
+            order.cancelItem(item2.getId());
+
+            // assert
+            assertAll(
+                    () -> assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELLED),
+                    () -> assertThat(order.getTotalPrice()).isEqualTo(0));
+        }
+
+        @DisplayName("존재하지 않는 아이템 ID로 취소하면 예외가 발생한다")
+        @Test
+        void cancelItem_itemNotFound_throwsException() {
+            // arrange
+            OrderItemModel item = createItemWithId(10L, 25000, 1, "상품A", "브랜드A");
+            OrderModel order = OrderModel.create(1L, List.of(item));
+
+            // act & assert
+            assertThatThrownBy(() -> order.cancelItem(999L))
+                    .isInstanceOf(CoreException.class);
+        }
+
+        @DisplayName("이미 CANCELLED인 주문에서 취소하면 예외가 발생한다")
+        @Test
+        void cancelItem_orderAlreadyCancelled_throwsException() {
+            // arrange
+            OrderItemModel item = createItemWithId(10L, 25000, 1, "상품A", "브랜드A");
+            OrderModel order = OrderModel.create(1L, List.of(item));
+            order.cancelItem(item.getId());
+
+            // act & assert
+            assertThatThrownBy(() -> order.cancelItem(item.getId()))
                     .isInstanceOf(CoreException.class);
         }
     }

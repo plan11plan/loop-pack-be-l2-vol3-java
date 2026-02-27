@@ -32,4 +32,36 @@ class OrderItemModelTest {
                     () -> assertThat(orderItem.getBrandName()).isEqualTo("브랜드A"));
         }
     }
+
+    @DisplayName("취소할 때, ")
+    @Nested
+    class Cancel {
+
+        @DisplayName("ORDERED 상태의 아이템이 CANCELLED로 변경된다")
+        @Test
+        void cancel_success() {
+            // arrange
+            OrderItemModel orderItem = OrderItemModel.create(
+                    10L, 25000, 2, "상품A", "브랜드A");
+
+            // act
+            orderItem.cancel();
+
+            // assert
+            assertThat(orderItem.getStatus()).isEqualTo(OrderItemStatus.CANCELLED);
+        }
+
+        @DisplayName("이미 CANCELLED인 아이템을 취소하면 예외가 발생한다")
+        @Test
+        void cancel_alreadyCancelled_throwsException() {
+            // arrange
+            OrderItemModel orderItem = OrderItemModel.create(
+                    10L, 25000, 2, "상품A", "브랜드A");
+            orderItem.cancel();
+
+            // act & assert
+            assertThatThrownBy(() -> orderItem.cancel())
+                    .isInstanceOf(CoreException.class);
+        }
+    }
 }
