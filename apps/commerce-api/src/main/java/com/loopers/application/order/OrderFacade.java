@@ -4,14 +4,12 @@ import com.loopers.application.order.dto.OrderCriteria;
 import com.loopers.application.order.dto.OrderResult;
 import com.loopers.domain.brand.BrandService;
 import com.loopers.domain.order.OrderItemModel;
-import com.loopers.domain.order.OrderModel;
 import com.loopers.domain.order.OrderService;
-import com.loopers.domain.product.ProductModel;
 import com.loopers.domain.product.ProductService;
+import com.loopers.domain.product.ProductSnapshot;
+import com.loopers.domain.product.StockDeductionCommand;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -28,31 +26,25 @@ public class OrderFacade {
 
     @Transactional
     public OrderResult.OrderSummary createOrder(Long userId, OrderCriteria.Create criteria) {
-        List<ProductModel> products = productService.getAllByIds(criteria.items().stream()
-                .map(OrderCriteria.Create.CreateItem::productId)
-                .toList());
-
-        Map<Long, ProductModel> productMap = products.stream()
-                .collect(Collectors.toMap(ProductModel::getId, Function.identity()));
+        List<ProductSnapshot> snapshots = productService.validateAndDeductStock(
+                criteria.items().stream()
+                        .map(item -> new StockDeductionCommand(
+                                item.productId(), item.quantity(), item.expectedPrice()))
+                        .toList());
 
         Map<Long, String> brandNameMap = brandService.getNameMapByIds(
-                products.stream()
-                        .map(ProductModel::getBrandId)
+                snapshots.stream()
+                        .map(ProductSnapshot::brandId)
                         .distinct()
                         .toList());
 
-        List<OrderItemModel> items = criteria.items().stream()
-                .map(item -> {
-                    ProductModel product = productMap.get(item.productId());
-                    product.validateExpectedPrice(item.expectedPrice());
-                    product.decreaseStock(item.quantity());
-                    return OrderItemModel.create(
-                            item.productId(),
-                            product.getPrice(),
-                            item.quantity(),
-                            product.getName(),
-                            brandNameMap.get(product.getBrandId()));
-                })
+        List<OrderItemModel> items = snapshots.stream()
+                .map(snapshot -> OrderItemModel.create(
+                        snapshot.productId(),
+                        snapshot.price(),
+                        snapshot.quantity(),
+                        snapshot.name(),
+                        brandNameMap.get(snapshot.brandId())))
                 .toList();
 
         return OrderResult.OrderSummary.from(

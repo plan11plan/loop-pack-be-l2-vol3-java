@@ -2,6 +2,9 @@ package com.loopers.domain.product;
 
 import com.loopers.support.error.CoreException;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -81,5 +84,28 @@ public class ProductService {
     @Transactional(readOnly = true)
     public List<ProductModel> getAllByBrandId(Long brandId) {
         return productRepository.findAllByBrandId(brandId);
+    }
+
+    @Transactional
+    public List<ProductSnapshot> validateAndDeductStock(List<StockDeductionCommand> commands) {
+        List<ProductModel> products = getAllByIds(
+                commands.stream().map(StockDeductionCommand::productId).toList());
+
+        Map<Long, ProductModel> productMap = products.stream()
+                .collect(Collectors.toMap(ProductModel::getId, Function.identity()));
+
+        return commands.stream()
+                .map(command -> {
+                    ProductModel product = productMap.get(command.productId());
+                    product.validateExpectedPrice(command.expectedPrice());
+                    product.decreaseStock(command.quantity());
+                    return new ProductSnapshot(
+                            command.productId(),
+                            product.getName(),
+                            product.getPrice(),
+                            command.quantity(),
+                            product.getBrandId());
+                })
+                .toList();
     }
 }
