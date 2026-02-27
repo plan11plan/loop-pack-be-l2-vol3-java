@@ -87,7 +87,7 @@ public class ProductFacade {
                         brandNameMap.get(product.getBrandId()),
                         likeCountMap.getOrDefault(product.getId(), 0L)))
                 .toList();
-        return new PageImpl<>(results, products.getPageable(), results.size());
+        return new PageImpl<>(results, products.getPageable(), products.getTotalElements());
     }
 
     @Transactional(readOnly = true)
