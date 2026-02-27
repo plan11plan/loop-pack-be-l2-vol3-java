@@ -85,7 +85,7 @@ class AdminOrderV1ApiE2ETest {
 
         OrderModel order = orderJpaRepository.save(
                 OrderModel.create(userId, List.of(
-                        OrderItemModel.create(productId, 50000, 2, "오버사이즈 코트", "ACNE STUDIOS"))));
+                        OrderItemModel.create(productId, 50000, 2, "오버사이즈 코트", ("ACNE STUDIOS")))));
         orderId = order.getId();
         orderItemId = order.getItems().get(0).getId();
     }

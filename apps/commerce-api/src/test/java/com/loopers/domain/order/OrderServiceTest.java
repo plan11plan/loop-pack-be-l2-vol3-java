@@ -29,7 +29,7 @@ class OrderServiceTest {
 
     private List<OrderItemModel> createSampleItems() {
         return List.of(
-                OrderItemModel.create(10L, 25000, 2, "상품A", "브랜드A"));
+                OrderItemModel.create(10L, 25000, 2, "상품A", ("브랜드A")));
     }
 
     @DisplayName("주문을 생성할 때, ")
@@ -139,7 +139,7 @@ class OrderServiceTest {
             // arrange
             orderService.createOrder(1L, createSampleItems());
             orderService.createOrder(2L, List.of(
-                    OrderItemModel.create(20L, 30000, 1, "상품B", "브랜드B")));
+                    OrderItemModel.create(20L, 30000, 1, "상품B", ("브랜드B"))));
 
             // act
             Page<OrderModel> page = orderService.getAllOrders(PageRequest.of(0, 10));

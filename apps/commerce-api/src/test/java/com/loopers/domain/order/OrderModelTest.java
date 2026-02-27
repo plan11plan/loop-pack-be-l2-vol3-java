@@ -28,7 +28,8 @@ class OrderModelTest {
 
     private static OrderItemModel createItemWithId(Long productId, int orderPrice, int quantity,
                                                    String productName, String brandName) {
-        OrderItemModel item = OrderItemModel.create(productId, orderPrice, quantity, productName, brandName);
+        OrderItemModel item = OrderItemModel.create(
+                productId, orderPrice, quantity, productName, brandName);
         setId(item, ID_GENERATOR.getAndIncrement());
         return item;
     }
@@ -42,7 +43,7 @@ class OrderModelTest {
         void create_withValidValues() {
             // arrange
             List<OrderItemModel> items = List.of(
-                    OrderItemModel.create(10L, 25000, 2, "상품A", "브랜드A"));
+                    OrderItemModel.create(10L, 25000, 2, "상품A", ("브랜드A")));
 
             // act
             OrderModel order = OrderModel.create(1L, items);
@@ -68,7 +69,7 @@ class OrderModelTest {
         void create_withNullUserId_throwsException() {
             // arrange
             List<OrderItemModel> items = List.of(
-                    OrderItemModel.create(10L, 25000, 1, "상품A", "브랜드A"));
+                    OrderItemModel.create(10L, 25000, 1, "상품A", ("브랜드A")));
 
             // act & assert
             assertThatThrownBy(() -> OrderModel.create(null, items))
@@ -85,7 +86,7 @@ class OrderModelTest {
         void validateOwner_notOwner_throwsException() {
             // arrange
             OrderModel order = OrderModel.create(1L, List.of(
-                    OrderItemModel.create(10L, 25000, 1, "상품A", "브랜드A")));
+                    OrderItemModel.create(10L, 25000, 1, "상품A", ("브랜드A"))));
 
             // act & assert
             assertThatThrownBy(() -> order.validateOwner(999L))

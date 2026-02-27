@@ -18,7 +18,7 @@ import com.loopers.domain.order.OrderModel;
 import com.loopers.domain.order.OrderService;
 import com.loopers.domain.product.ProductErrorCode;
 import com.loopers.domain.product.ProductService;
-import com.loopers.domain.product.ProductSnapshot;
+import com.loopers.domain.product.dto.ProductInfo;
 import com.loopers.support.error.CoreException;
 import java.time.ZonedDateTime;
 import java.util.List;
@@ -60,11 +60,11 @@ class OrderFacadeTest {
             // arrange
             Long brandId = 1L;
             when(productService.validateAndDeductStock(anyList())).thenReturn(List.of(
-                    new ProductSnapshot(10L, "상품A", 25000, 1, brandId)));
+                    new ProductInfo.StockDeduction(10L, "상품A", 25000, 1, brandId)));
             when(brandService.getNameMapByIds(List.of(brandId))).thenReturn(Map.of(brandId, "브랜드A"));
 
             OrderModel order = OrderModel.create(1L, List.of(
-                    OrderItemModel.create(10L, 25000, 1, "상품A", "브랜드A")));
+                    OrderItemModel.create(10L, 25000, 1, "상품A", ("브랜드A"))));
             when(orderService.createOrder(anyLong(), anyList())).thenReturn(order);
 
             OrderCriteria.Create criteria = new OrderCriteria.Create(List.of(
@@ -136,7 +136,7 @@ class OrderFacadeTest {
         void getMyOrders_returnsOrders() {
             // arrange
             OrderModel order = OrderModel.create(1L, List.of(
-                    OrderItemModel.create(10L, 50000, 1, "상품A", "브랜드A")));
+                    OrderItemModel.create(10L, 50000, 1, "상품A", ("브랜드A"))));
             ZonedDateTime startAt = ZonedDateTime.now().minusDays(7);
             ZonedDateTime endAt = ZonedDateTime.now();
 
@@ -164,7 +164,7 @@ class OrderFacadeTest {
         void getMyOrderDetail_returnsDetail() {
             // arrange
             OrderModel order = OrderModel.create(1L, List.of(
-                    OrderItemModel.create(10L, 25000, 2, "상품A", "브랜드A")));
+                    OrderItemModel.create(10L, 25000, 2, "상품A", ("브랜드A"))));
 
             when(orderService.getByIdAndUserId(1L, 1L)).thenReturn(order);
 
@@ -200,7 +200,7 @@ class OrderFacadeTest {
         void getAllOrders_returnsPage() {
             // arrange
             OrderModel order = OrderModel.create(1L, List.of(
-                    OrderItemModel.create(10L, 50000, 1, "상품A", "브랜드A")));
+                    OrderItemModel.create(10L, 50000, 1, "상품A", ("브랜드A"))));
             Page<OrderModel> page = new PageImpl<>(List.of(order), PageRequest.of(0, 10), 1);
 
             when(orderService.getAllOrders(any())).thenReturn(page);
@@ -219,7 +219,7 @@ class OrderFacadeTest {
         void getOrderDetail_returnsDetail_withoutOwnerCheck() {
             // arrange
             OrderModel order = OrderModel.create(2L, List.of(
-                    OrderItemModel.create(10L, 25000, 2, "상품A", "브랜드A")));
+                    OrderItemModel.create(10L, 25000, 2, "상품A", ("브랜드A"))));
 
             when(orderService.getById(1L)).thenReturn(order);
 
@@ -242,7 +242,7 @@ class OrderFacadeTest {
         void cancelMyOrderItem_success() {
             // arrange
             OrderItemModel cancelledItem = OrderItemModel.create(
-                    10L, 25000, 2, "상품A", "브랜드A");
+                    10L, 25000, 2, "상품A", ("브랜드A"));
 
             when(orderService.getByIdAndUserId(1L, 1L)).thenReturn(
                     OrderModel.create(1L, List.of(cancelledItem)));

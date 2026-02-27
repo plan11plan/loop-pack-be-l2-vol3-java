@@ -21,7 +21,7 @@ class OrderItemModelTest {
         void create_withValidValues() {
             // act
             OrderItemModel orderItem = OrderItemModel.create(
-                    10L, 25000, 2, "상품A", "브랜드A");
+                    10L, 25000, 2, "상품A", ("브랜드A"));
 
             // assert
             assertAll(
@@ -42,7 +42,7 @@ class OrderItemModelTest {
         void cancel_success() {
             // arrange
             OrderItemModel orderItem = OrderItemModel.create(
-                    10L, 25000, 2, "상품A", "브랜드A");
+                    10L, 25000, 2, "상품A", ("브랜드A"));
 
             // act
             orderItem.cancel();
@@ -56,7 +56,7 @@ class OrderItemModelTest {
         void cancel_alreadyCancelled_throwsException() {
             // arrange
             OrderItemModel orderItem = OrderItemModel.create(
-                    10L, 25000, 2, "상품A", "브랜드A");
+                    10L, 25000, 2, "상품A", ("브랜드A"));
             orderItem.cancel();
 
             // act & assert

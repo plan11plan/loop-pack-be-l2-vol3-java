@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
 
+import com.loopers.domain.product.dto.ProductCommand;
+import com.loopers.domain.product.dto.ProductInfo;
 import com.loopers.support.error.CoreException;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -226,11 +228,11 @@ class ProductServiceTest {
             Long productId = productRepository.findAll(PageRequest.of(0, 20))
                     .getContent().get(0).getId();
 
-            List<StockDeductionCommand> commands = List.of(
-                    new StockDeductionCommand(productId, 2, 150000));
+            List<ProductCommand.StockDeduction> commands = List.of(
+                    new ProductCommand.StockDeduction(productId, 2, 150000));
 
             // act
-            List<ProductSnapshot> snapshots = productService.validateAndDeductStock(commands);
+            List<ProductInfo.StockDeduction> snapshots = productService.validateAndDeductStock(commands);
 
             // assert
             assertAll(
@@ -247,7 +249,7 @@ class ProductServiceTest {
         @Test
         void validateAndDeductStock_whenProductNotFound() {
             assertThatThrownBy(() -> productService.validateAndDeductStock(List.of(
-                    new StockDeductionCommand(999L, 1, 50000))))
+                    new ProductCommand.StockDeduction(999L, 1, 50000))))
                     .isInstanceOf(CoreException.class)
                     .satisfies(e -> assertThat(((CoreException) e).getErrorCode())
                             .isEqualTo(ProductErrorCode.NOT_FOUND));
@@ -263,7 +265,7 @@ class ProductServiceTest {
 
             // act & assert
             assertThatThrownBy(() -> productService.validateAndDeductStock(List.of(
-                    new StockDeductionCommand(productId, 1, 200000))))
+                    new ProductCommand.StockDeduction(productId, 1, 200000))))
                     .isInstanceOf(CoreException.class)
                     .satisfies(e -> assertThat(((CoreException) e).getErrorCode())
                             .isEqualTo(ProductErrorCode.PRICE_MISMATCH));
@@ -279,7 +281,7 @@ class ProductServiceTest {
 
             // act & assert
             assertThatThrownBy(() -> productService.validateAndDeductStock(List.of(
-                    new StockDeductionCommand(productId, 10, 150000))))
+                    new ProductCommand.StockDeduction(productId, 10, 150000))))
                     .isInstanceOf(CoreException.class);
         }
     }
