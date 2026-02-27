@@ -53,6 +53,13 @@ public class FakeProductRepository implements ProductRepository {
     }
 
     @Override
+    public List<ProductModel> findAll() {
+        return store.values().stream()
+            .filter(product -> product.getDeletedAt() == null)
+            .toList();
+    }
+
+    @Override
     public Page<ProductModel> findAllByBrandId(Long brandId, Pageable pageable) {
         List<ProductModel> filtered = store.values().stream()
             .filter(product -> product.getDeletedAt() == null)
@@ -82,13 +89,6 @@ public class FakeProductRepository implements ProductRepository {
         return store.values().stream()
             .filter(product -> product.getDeletedAt() == null)
             .filter(product -> ids.contains(product.getId()))
-            .toList();
-    }
-
-    @Override
-    public List<ProductModel> findAll() {
-        return store.values().stream()
-            .filter(product -> product.getDeletedAt() == null)
             .toList();
     }
 }

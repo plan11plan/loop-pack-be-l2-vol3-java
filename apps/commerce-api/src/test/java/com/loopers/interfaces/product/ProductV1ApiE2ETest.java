@@ -5,8 +5,10 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.loopers.domain.brand.BrandModel;
+import com.loopers.domain.like.ProductLikeModel;
 import com.loopers.domain.product.ProductModel;
 import com.loopers.infrastructure.brand.BrandJpaRepository;
+import com.loopers.infrastructure.like.ProductLikeJpaRepository;
 import com.loopers.infrastructure.product.ProductJpaRepository;
 import com.loopers.interfaces.api.ApiResponse;
 import com.loopers.interfaces.product.dto.ProductV1Dto;
@@ -32,6 +34,7 @@ class ProductV1ApiE2ETest {
     private final TestRestTemplate testRestTemplate;
     private final BrandJpaRepository brandJpaRepository;
     private final ProductJpaRepository productJpaRepository;
+    private final ProductLikeJpaRepository productLikeJpaRepository;
     private final DatabaseCleanUp databaseCleanUp;
 
     private BrandModel savedBrand;
@@ -41,11 +44,13 @@ class ProductV1ApiE2ETest {
         TestRestTemplate testRestTemplate,
         BrandJpaRepository brandJpaRepository,
         ProductJpaRepository productJpaRepository,
+        ProductLikeJpaRepository productLikeJpaRepository,
         DatabaseCleanUp databaseCleanUp
     ) {
         this.testRestTemplate = testRestTemplate;
         this.brandJpaRepository = brandJpaRepository;
         this.productJpaRepository = productJpaRepository;
+        this.productLikeJpaRepository = productLikeJpaRepository;
         this.databaseCleanUp = databaseCleanUp;
     }
 
@@ -156,19 +161,74 @@ class ProductV1ApiE2ETest {
                 () -> assertThat(response.getBody().data().items()).isEmpty()
             );
         }
+
+        @DisplayName("목록 조회 시 각 상품에 좋아요 수가 포함된다.")
+        @Test
+        void returnsList_withLikeCount() {
+            // arrange
+            ProductModel product1 = saveProduct("에어맥스", 150000, 100);
+            saveProduct("에어포스", 120000, 50);
+            productLikeJpaRepository.save(ProductLikeModel.create(1L, product1.getId()));
+            productLikeJpaRepository.save(ProductLikeModel.create(2L, product1.getId()));
+
+            // act
+            ParameterizedTypeReference<ApiResponse<ProductV1Dto.ListResponse>> responseType = new ParameterizedTypeReference<>() {};
+            ResponseEntity<ApiResponse<ProductV1Dto.ListResponse>> response =
+                testRestTemplate.exchange(ENDPOINT_PRODUCTS, HttpMethod.GET, null, responseType);
+
+            // assert
+            assertAll(
+                () -> assertTrue(response.getStatusCode().is2xxSuccessful()),
+                () -> assertThat(response.getBody().data().items()).anyMatch(item -> item.likeCount() == 2L),
+                () -> assertThat(response.getBody().data().items()).anyMatch(item -> item.likeCount() == 0L)
+            );
+        }
+
+        @DisplayName("likes_desc 정렬로 조회하면, 좋아요 수 내림차순으로 정렬된다.")
+        @Test
+        void returnsSortedByLikesDesc_whenSortIsLikesDesc() {
+            // arrange
+            ProductModel product1 = saveProduct("에어맥스", 150000, 100);
+            ProductModel product2 = saveProduct("에어포스", 120000, 50);
+            ProductModel product3 = saveProduct("조던1", 200000, 30);
+            productLikeJpaRepository.save(ProductLikeModel.create(1L, product2.getId()));
+            productLikeJpaRepository.save(ProductLikeModel.create(2L, product2.getId()));
+            productLikeJpaRepository.save(ProductLikeModel.create(3L, product2.getId()));
+            productLikeJpaRepository.save(ProductLikeModel.create(1L, product3.getId()));
+
+            // act
+            ParameterizedTypeReference<ApiResponse<ProductV1Dto.ListResponse>> responseType = new ParameterizedTypeReference<>() {};
+            ResponseEntity<ApiResponse<ProductV1Dto.ListResponse>> response =
+                testRestTemplate.exchange(
+                        ENDPOINT_PRODUCTS + "?sort=likes_desc&page=0&size=2",
+                        HttpMethod.GET, null, responseType);
+
+            // assert
+            assertAll(
+                () -> assertTrue(response.getStatusCode().is2xxSuccessful()),
+                () -> assertThat(response.getBody().data().totalElements()).isEqualTo(3),
+                () -> assertThat(response.getBody().data().totalPages()).isEqualTo(2),
+                () -> assertThat(response.getBody().data().items()).hasSize(2),
+                () -> assertThat(response.getBody().data().items().get(0).name()).isEqualTo("에어포스"),
+                () -> assertThat(response.getBody().data().items().get(0).likeCount()).isEqualTo(3L),
+                () -> assertThat(response.getBody().data().items().get(1).name()).isEqualTo("조던1"),
+                () -> assertThat(response.getBody().data().items().get(1).likeCount()).isEqualTo(1L)
+            );
+        }
     }
 
     @DisplayName("GET /api/v1/products/{productId}")
     @Nested
     class GetById {
 
-        @DisplayName("존재하는 상품을 조회하면, 상세 정보를 반환한다.")
+        @DisplayName("존재하는 상품을 조회하면, 좋아요 수가 포함된 상세 정보를 반환한다.")
         @Test
         void returnsProductDetail_whenProductExists() {
             // arrange
-            saveProduct("에어맥스", 150000, 100);
-            Long productId = productJpaRepository.findAllByDeletedAtIsNull(org.springframework.data.domain.PageRequest.of(0, 1))
-                .getContent().get(0).getId();
+            ProductModel product = saveProduct("에어맥스", 150000, 100);
+            Long productId = product.getId();
+            productLikeJpaRepository.save(ProductLikeModel.create(1L, productId));
+            productLikeJpaRepository.save(ProductLikeModel.create(2L, productId));
 
             // act
             ParameterizedTypeReference<ApiResponse<ProductV1Dto.DetailResponse>> responseType = new ParameterizedTypeReference<>() {};
@@ -183,7 +243,8 @@ class ProductV1ApiE2ETest {
                 () -> assertThat(response.getBody().data().brandName()).isEqualTo("나이키"),
                 () -> assertThat(response.getBody().data().name()).isEqualTo("에어맥스"),
                 () -> assertThat(response.getBody().data().price()).isEqualTo(150000),
-                () -> assertThat(response.getBody().data().stock()).isEqualTo(100)
+                () -> assertThat(response.getBody().data().stock()).isEqualTo(100),
+                () -> assertThat(response.getBody().data().likeCount()).isEqualTo(2L)
             );
         }
 

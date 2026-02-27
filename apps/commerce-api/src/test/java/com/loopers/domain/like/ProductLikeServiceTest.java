@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.loopers.support.error.CoreException;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -145,6 +146,28 @@ class ProductLikeServiceTest {
             assertThat(productLikeService.countLikes(10L)).isEqualTo(2);
             assertThat(productLikeService.countLikes(20L)).isEqualTo(1);
             assertThat(productLikeService.countLikes(99L)).isEqualTo(0);
+        }
+    }
+
+    @DisplayName("상품별 좋아요 수를 일괄 조회할 때, ")
+    @Nested
+    class CountLikesByProductIds {
+
+        @DisplayName("여러 상품 ID로 조회하면, 상품별 좋아요 수 Map을 반환한다.")
+        @Test
+        void countLikesByProductIds_returnsCountMap() {
+            // arrange
+            productLikeRepository.save(ProductLikeModel.create(1L, 10L));
+            productLikeRepository.save(ProductLikeModel.create(2L, 10L));
+            productLikeRepository.save(ProductLikeModel.create(3L, 20L));
+
+            // act
+            Map<Long, Long> result = productLikeService.countLikesByProductIds(List.of(10L, 20L, 30L));
+
+            // assert
+            assertThat(result).containsEntry(10L, 2L);
+            assertThat(result).containsEntry(20L, 1L);
+            assertThat(result).containsEntry(30L, 0L);
         }
     }
 }

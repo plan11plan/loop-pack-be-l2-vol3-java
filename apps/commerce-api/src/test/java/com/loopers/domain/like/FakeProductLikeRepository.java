@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Collectors;
 
 public class FakeProductLikeRepository implements ProductLikeRepository {
 
@@ -50,5 +51,16 @@ public class FakeProductLikeRepository implements ProductLikeRepository {
         return store.values().stream()
             .filter(like -> like.getProductId().equals(productId))
             .count();
+    }
+
+    @Override
+    public Map<Long, Long> countByProductIds(List<Long> productIds) {
+        Map<Long, Long> countMap = store.values().stream()
+                .filter(like -> productIds.contains(like.getProductId()))
+                .collect(Collectors.groupingBy(
+                        ProductLikeModel::getProductId,
+                        Collectors.counting()));
+        productIds.forEach(id -> countMap.putIfAbsent(id, 0L));
+        return countMap;
     }
 }
