@@ -3,14 +3,19 @@ package com.loopers.domain.order;
 import com.loopers.domain.BaseEntity;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.BatchSize;
 
 @Getter
 @Entity
@@ -28,16 +33,34 @@ public class OrderModel extends BaseEntity {
     @Column(name = "status", nullable = false)
     private OrderStatus status;
 
+    @BatchSize(size = 100)
+    @OneToMany(mappedBy = "order", cascade = CascadeType.PERSIST)
+    private List<OrderItemModel> items = new ArrayList<>();
+
     private OrderModel(Long userId, int totalPrice, OrderStatus status) {
         this.userId = userId;
         this.totalPrice = totalPrice;
         this.status = status;
     }
 
-    public static OrderModel create(Long userId, int totalPrice) {
+    public static OrderModel create(Long userId, List<OrderItemModel> items) {
         validateUserId(userId);
-        validateTotalPrice(totalPrice);
-        return new OrderModel(userId, totalPrice, OrderStatus.ORDERED);
+        validateItems(items);
+        OrderModel order = new OrderModel(userId, 0, OrderStatus.ORDERED);
+        items.forEach(order::addItem);
+        order.totalPrice = order.calculateTotalPrice();
+        return order;
+    }
+
+    public void addItem(OrderItemModel item) {
+        items.add(item);
+        item.assignOrder(this);
+    }
+
+    public int calculateTotalPrice() {
+        return items.stream()
+                .mapToInt(item -> item.getOrderPrice() * item.getQuantity())
+                .sum();
     }
 
     public void validateOwner(Long userId) {
@@ -52,9 +75,9 @@ public class OrderModel extends BaseEntity {
         }
     }
 
-    private static void validateTotalPrice(int totalPrice) {
-        if (totalPrice < 0) {
-            throw new CoreException(ErrorType.BAD_REQUEST, "가격은 0 이상이어야 합니다.");
+    private static void validateItems(List<OrderItemModel> items) {
+        if (items == null || items.isEmpty()) {
+            throw new CoreException(OrderErrorCode.EMPTY_ORDER_ITEMS);
         }
     }
 }

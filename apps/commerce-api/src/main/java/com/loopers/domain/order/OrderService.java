@@ -1,6 +1,5 @@
 package com.loopers.domain.order;
 
-import com.loopers.domain.order.dto.OrderCommand;
 import com.loopers.support.error.CoreException;
 import java.time.ZonedDateTime;
 import java.util.List;
@@ -18,28 +17,8 @@ public class OrderService {
     private final OrderItemRepository orderItemRepository;
 
     @Transactional
-    public OrderModel createOrder(OrderCommand.Create command) {
-        validateItems(command.items());
-
-        int totalPrice = command.items().stream()
-                .mapToInt(item -> item.orderPrice() * item.quantity())
-                .sum();
-
-        OrderModel savedOrder = orderRepository.save(
-                OrderModel.create(command.userId(), totalPrice));
-
-        for (OrderCommand.Create.CreateItem item : command.items()) {
-            orderItemRepository.save(
-                    OrderItemModel.create(
-                            savedOrder.getId(),
-                            item.productId(),
-                            item.orderPrice(),
-                            item.quantity(),
-                            item.productName(),
-                            item.brandName()));
-        }
-
-        return savedOrder;
+    public OrderModel createOrder(Long userId, List<OrderItemModel> items) {
+        return orderRepository.save(OrderModel.create(userId, items));
     }
 
     @Transactional(readOnly = true)
@@ -68,11 +47,5 @@ public class OrderService {
     @Transactional(readOnly = true)
     public Page<OrderModel> getAllOrders(Pageable pageable) {
         return orderRepository.findAll(pageable);
-    }
-
-    private void validateItems(List<OrderCommand.Create.CreateItem> items) {
-        if (items == null || items.isEmpty()) {
-            throw new CoreException(OrderErrorCode.EMPTY_ORDER_ITEMS);
-        }
     }
 }

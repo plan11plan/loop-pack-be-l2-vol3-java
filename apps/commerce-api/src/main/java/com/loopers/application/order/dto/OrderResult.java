@@ -30,14 +30,14 @@ public class OrderResult {
         ZonedDateTime createdAt,
         List<OrderItemDetail> items
     ) {
-        public static OrderDetail from(OrderModel model, List<OrderItemModel> items) {
+        public static OrderDetail from(OrderModel model) {
             return new OrderDetail(
                     model.getId(),
                     model.getUserId(),
                     model.getTotalPrice(),
                     model.getStatus().name(),
                     model.getCreatedAt(),
-                    items.stream().map(OrderItemDetail::from).toList());
+                    model.getItems().stream().map(OrderItemDetail::from).toList());
         }
     }
 

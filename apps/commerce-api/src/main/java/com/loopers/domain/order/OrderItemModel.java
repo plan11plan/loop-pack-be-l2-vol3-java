@@ -5,6 +5,9 @@ import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -16,8 +19,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class OrderItemModel extends BaseEntity {
 
-    @Column(name = "order_id", nullable = false)
-    private Long orderId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "order_id", nullable = false)
+    private OrderModel order;
 
     @Column(name = "product_id", nullable = false)
     private Long productId;
@@ -34,9 +38,8 @@ public class OrderItemModel extends BaseEntity {
     @Column(name = "brand_name", nullable = false)
     private String brandName;
 
-    private OrderItemModel(Long orderId, Long productId, int orderPrice, int quantity,
+    private OrderItemModel(Long productId, int orderPrice, int quantity,
                            String productName, String brandName) {
-        this.orderId = orderId;
         this.productId = productId;
         this.orderPrice = orderPrice;
         this.quantity = quantity;
@@ -44,21 +47,18 @@ public class OrderItemModel extends BaseEntity {
         this.brandName = brandName;
     }
 
-    public static OrderItemModel create(Long orderId, Long productId, int orderPrice, int quantity,
+    public static OrderItemModel create(Long productId, int orderPrice, int quantity,
                                         String productName, String brandName) {
-        validateOrderId(orderId);
         validateProductId(productId);
         validateOrderPrice(orderPrice);
         validateQuantity(quantity);
         validateProductName(productName);
         validateBrandName(brandName);
-        return new OrderItemModel(orderId, productId, orderPrice, quantity, productName, brandName);
+        return new OrderItemModel(productId, orderPrice, quantity, productName, brandName);
     }
 
-    private static void validateOrderId(Long orderId) {
-        if (orderId == null) {
-            throw new CoreException(ErrorType.BAD_REQUEST, "주문 ID는 필수값입니다.");
-        }
+    void assignOrder(OrderModel order) {
+        this.order = order;
     }
 
     private static void validateProductId(Long productId) {
