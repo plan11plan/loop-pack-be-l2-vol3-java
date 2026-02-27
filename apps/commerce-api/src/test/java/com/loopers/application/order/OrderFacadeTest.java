@@ -16,10 +16,9 @@ import com.loopers.domain.order.OrderErrorCode;
 import com.loopers.domain.order.OrderItemModel;
 import com.loopers.domain.order.OrderModel;
 import com.loopers.domain.order.OrderService;
-import com.loopers.domain.order.OrderStatus;
 import com.loopers.domain.product.ProductErrorCode;
-import com.loopers.domain.product.ProductModel;
 import com.loopers.domain.product.ProductService;
+import com.loopers.domain.product.ProductSnapshot;
 import com.loopers.support.error.CoreException;
 import java.time.ZonedDateTime;
 import java.util.List;
@@ -51,30 +50,17 @@ class OrderFacadeTest {
     @InjectMocks
     private OrderFacade orderFacade;
 
-    private ProductModel createProductWithId(Long brandId, String name, int price, int stock, Long id) {
-        ProductModel product = ProductModel.create(brandId, name, price, stock);
-        try {
-            var idField = product.getClass().getSuperclass().getDeclaredField("id");
-            idField.setAccessible(true);
-            idField.set(product, id);
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            throw new RuntimeException(e);
-        }
-        return product;
-    }
-
     @DisplayName("주문을 생성할 때 (UC-O01), ")
     @Nested
     class CreateOrder {
 
-        @DisplayName("상품 일괄 조회 → 가격 검증 → 재고 차감 → 주문 생성 순서를 수행한다")
+        @DisplayName("검증+차감 → 브랜드 조회 → 주문 생성 순서를 수행한다")
         @Test
         void createOrder_success() {
             // arrange
             Long brandId = 1L;
-            ProductModel product = createProductWithId(brandId, "상품A", 25000, 100, 10L);
-
-            when(productService.getAllByIds(List.of(10L))).thenReturn(List.of(product));
+            when(productService.validateAndDeductStock(anyList())).thenReturn(List.of(
+                    new ProductSnapshot(10L, "상품A", 25000, 1, brandId)));
             when(brandService.getNameMapByIds(List.of(brandId))).thenReturn(Map.of(brandId, "브랜드A"));
 
             OrderModel order = OrderModel.create(1L, List.of(
@@ -89,7 +75,7 @@ class OrderFacadeTest {
 
             // assert
             assertAll(
-                    () -> verify(productService).getAllByIds(List.of(10L)),
+                    () -> verify(productService).validateAndDeductStock(anyList()),
                     () -> verify(brandService).getNameMapByIds(List.of(brandId)),
                     () -> verify(orderService).createOrder(anyLong(), anyList()),
                     () -> assertThat(result.totalPrice()).isEqualTo(25000));
@@ -99,7 +85,7 @@ class OrderFacadeTest {
         @Test
         void createOrder_productNotFound_throwsException() {
             // arrange
-            when(productService.getAllByIds(List.of(999L)))
+            when(productService.validateAndDeductStock(anyList()))
                     .thenThrow(new CoreException(ProductErrorCode.NOT_FOUND));
 
             OrderCriteria.Create criteria = new OrderCriteria.Create(List.of(
@@ -114,11 +100,8 @@ class OrderFacadeTest {
         @Test
         void createOrder_priceMismatch_throwsException() {
             // arrange
-            Long brandId = 1L;
-            ProductModel product = createProductWithId(brandId, "상품A", 25000, 100, 10L);
-
-            when(productService.getAllByIds(List.of(10L))).thenReturn(List.of(product));
-            when(brandService.getNameMapByIds(List.of(brandId))).thenReturn(Map.of(brandId, "브랜드A"));
+            when(productService.validateAndDeductStock(anyList()))
+                    .thenThrow(new CoreException(ProductErrorCode.PRICE_MISMATCH));
 
             OrderCriteria.Create criteria = new OrderCriteria.Create(List.of(
                     new OrderCriteria.Create.CreateItem(10L, 1, 30000)));
@@ -132,11 +115,8 @@ class OrderFacadeTest {
         @Test
         void createOrder_insufficientStock_throwsException() {
             // arrange
-            Long brandId = 1L;
-            ProductModel product = createProductWithId(brandId, "상품A", 25000, 1, 10L);
-
-            when(productService.getAllByIds(List.of(10L))).thenReturn(List.of(product));
-            when(brandService.getNameMapByIds(List.of(brandId))).thenReturn(Map.of(brandId, "브랜드A"));
+            when(productService.validateAndDeductStock(anyList()))
+                    .thenThrow(new CoreException(ProductErrorCode.NOT_FOUND));
 
             OrderCriteria.Create criteria = new OrderCriteria.Create(List.of(
                     new OrderCriteria.Create.CreateItem(10L, 100, 25000)));

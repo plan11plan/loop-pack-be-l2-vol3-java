@@ -2,8 +2,10 @@ package com.loopers.domain.product;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertAll;
 
 import com.loopers.support.error.CoreException;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -209,6 +211,76 @@ class ProductServiceTest {
             // assert
             Page<ProductModel> result = productService.getAll(PageRequest.of(0, 20));
             assertThat(result.getTotalElements()).isEqualTo(0);
+        }
+    }
+
+    @DisplayName("상품 검증 및 재고 차감을 할 때, ")
+    @Nested
+    class ValidateAndDeductStock {
+
+        @DisplayName("유효한 커맨드가 주어지면, 스냅샷을 반환하고 재고가 차감된다.")
+        @Test
+        void validateAndDeductStock_success() {
+            // arrange
+            productService.register(BRAND_ID, "에어맥스", 150000, 100);
+            Long productId = productRepository.findAll(PageRequest.of(0, 20))
+                    .getContent().get(0).getId();
+
+            List<StockDeductionCommand> commands = List.of(
+                    new StockDeductionCommand(productId, 2, 150000));
+
+            // act
+            List<ProductSnapshot> snapshots = productService.validateAndDeductStock(commands);
+
+            // assert
+            assertAll(
+                    () -> assertThat(snapshots).hasSize(1),
+                    () -> assertThat(snapshots.get(0).productId()).isEqualTo(productId),
+                    () -> assertThat(snapshots.get(0).name()).isEqualTo("에어맥스"),
+                    () -> assertThat(snapshots.get(0).price()).isEqualTo(150000),
+                    () -> assertThat(snapshots.get(0).quantity()).isEqualTo(2),
+                    () -> assertThat(snapshots.get(0).brandId()).isEqualTo(BRAND_ID),
+                    () -> assertThat(productService.getById(productId).getStock()).isEqualTo(98));
+        }
+
+        @DisplayName("존재하지 않는 상품 ID가 포함되면, NOT_FOUND 예외가 발생한다.")
+        @Test
+        void validateAndDeductStock_whenProductNotFound() {
+            assertThatThrownBy(() -> productService.validateAndDeductStock(List.of(
+                    new StockDeductionCommand(999L, 1, 50000))))
+                    .isInstanceOf(CoreException.class)
+                    .satisfies(e -> assertThat(((CoreException) e).getErrorCode())
+                            .isEqualTo(ProductErrorCode.NOT_FOUND));
+        }
+
+        @DisplayName("expectedPrice와 현재 가격이 불일치하면, PRICE_MISMATCH 예외가 발생한다.")
+        @Test
+        void validateAndDeductStock_whenPriceMismatch() {
+            // arrange
+            productService.register(BRAND_ID, "에어맥스", 150000, 100);
+            Long productId = productRepository.findAll(PageRequest.of(0, 20))
+                    .getContent().get(0).getId();
+
+            // act & assert
+            assertThatThrownBy(() -> productService.validateAndDeductStock(List.of(
+                    new StockDeductionCommand(productId, 1, 200000))))
+                    .isInstanceOf(CoreException.class)
+                    .satisfies(e -> assertThat(((CoreException) e).getErrorCode())
+                            .isEqualTo(ProductErrorCode.PRICE_MISMATCH));
+        }
+
+        @DisplayName("재고가 부족하면, 예외가 발생한다.")
+        @Test
+        void validateAndDeductStock_whenInsufficientStock() {
+            // arrange
+            productService.register(BRAND_ID, "에어맥스", 150000, 5);
+            Long productId = productRepository.findAll(PageRequest.of(0, 20))
+                    .getContent().get(0).getId();
+
+            // act & assert
+            assertThatThrownBy(() -> productService.validateAndDeductStock(List.of(
+                    new StockDeductionCommand(productId, 10, 150000))))
+                    .isInstanceOf(CoreException.class);
         }
     }
 }
