@@ -1,6 +1,7 @@
 package com.loopers.domain.like;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public interface ProductLikeRepository {
@@ -13,4 +14,6 @@ public interface ProductLikeRepository {
     List<ProductLikeModel> findAllByUserId(Long userId);
 
     long countByProductId(Long productId);
+
+    Map<Long, Long> countByProductIds(List<Long> productIds);
 }

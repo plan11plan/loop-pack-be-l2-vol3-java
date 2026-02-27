@@ -25,18 +25,21 @@ public class ProductV1Controller implements ProductV1ApiSpec {
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size
     ) {
-        PageRequest pageRequest = PageRequest.of(page, size, toSort(sort));
-        Page<ProductResult> productInfoPage = brandId != null
-            ? productFacade.getProductsWithActiveBrandByBrandId(brandId, pageRequest)
-            : productFacade.getProductsWithActiveBrand(pageRequest);
+        Page<ProductResult> productPage = "likes_desc".equals(sort)
+                ? productFacade.getProductsWithActiveBrandSortedByLikes(brandId, page, size)
+                : brandId != null
+                        ? productFacade.getProductsWithActiveBrandByBrandId(
+                                brandId, PageRequest.of(page, size, toSort(sort)))
+                        : productFacade.getProductsWithActiveBrand(
+                                PageRequest.of(page, size, toSort(sort)));
 
         return ApiResponse.success(
                 new ProductV1Dto.ListResponse(
-                        productInfoPage.getNumber(),
-                        productInfoPage.getSize(),
-                        productInfoPage.getTotalElements(),
-                        productInfoPage.getTotalPages(),
-                        productInfoPage.getContent().stream()
+                        productPage.getNumber(),
+                        productPage.getSize(),
+                        productPage.getTotalElements(),
+                        productPage.getTotalPages(),
+                        productPage.getContent().stream()
                                 .map(ProductV1Dto.ListResponse.ListItem::from)
                                 .toList()));
     }
@@ -46,8 +49,8 @@ public class ProductV1Controller implements ProductV1ApiSpec {
     public ApiResponse<ProductV1Dto.DetailResponse> getById(
         @PathVariable Long productId
     ) {
-        ProductResult productInfo = productFacade.getProduct(productId);
-        return ApiResponse.success(ProductV1Dto.DetailResponse.from(productInfo));
+        ProductResult result = productFacade.getProduct(productId);
+        return ApiResponse.success(ProductV1Dto.DetailResponse.from(result));
     }
 
     private Sort toSort(String sort) {

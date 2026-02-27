@@ -30,6 +30,11 @@ public class ProductRepositoryImpl implements ProductRepository {
     }
 
     @Override
+    public List<ProductModel> findAll() {
+        return productJpaRepository.findAllByDeletedAtIsNull();
+    }
+
+    @Override
     public Page<ProductModel> findAllByBrandId(Long brandId, Pageable pageable) {
         return productJpaRepository.findAllByBrandIdAndDeletedAtIsNull(brandId, pageable);
     }

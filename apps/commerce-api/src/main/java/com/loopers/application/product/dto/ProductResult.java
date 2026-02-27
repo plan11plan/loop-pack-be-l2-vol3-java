@@ -10,11 +10,16 @@ public record ProductResult(
     String name,
     int price,
     int stock,
+    long likeCount,
     ZonedDateTime createdAt,
     ZonedDateTime updatedAt,
     ZonedDateTime deletedAt
 ) {
     public static ProductResult of(ProductModel model, String brandName) {
+        return of(model, brandName, 0L);
+    }
+
+    public static ProductResult of(ProductModel model, String brandName, long likeCount) {
         return new ProductResult(
                 model.getId(),
                 model.getBrandId(),
@@ -22,6 +27,7 @@ public record ProductResult(
                 model.getName(),
                 model.getPrice(),
                 model.getStock(),
+                likeCount,
                 model.getCreatedAt(),
                 model.getUpdatedAt(),
                 model.getDeletedAt());

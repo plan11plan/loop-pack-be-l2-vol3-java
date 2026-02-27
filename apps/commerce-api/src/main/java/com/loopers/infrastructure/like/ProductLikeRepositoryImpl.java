@@ -3,6 +3,7 @@ package com.loopers.infrastructure.like;
 import com.loopers.domain.like.ProductLikeModel;
 import com.loopers.domain.like.ProductLikeRepository;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -18,7 +19,7 @@ public class ProductLikeRepositoryImpl implements ProductLikeRepository {
 
     @Override
     public Optional<ProductLikeModel> findByUserIdAndProductId(Long userId, Long productId) {
-        return productLikeJpaRepository.findByUserIdAndProductId(userId,productId);
+        return productLikeJpaRepository.findByUserIdAndProductId(userId, productId);
     }
 
     @Override
@@ -34,5 +35,13 @@ public class ProductLikeRepositoryImpl implements ProductLikeRepository {
     @Override
     public long countByProductId(Long productId) {
         return productLikeJpaRepository.countByProductId(productId);
+    }
+
+    @Override
+    public Map<Long, Long> countByProductIds(List<Long> productIds) {
+        return productLikeJpaRepository.countByProductIdIn(productIds).stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        row -> (Long) row[0],
+                        row -> (Long) row[1]));
     }
 }

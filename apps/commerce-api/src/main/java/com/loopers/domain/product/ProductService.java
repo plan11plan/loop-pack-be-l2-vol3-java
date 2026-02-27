@@ -51,6 +51,11 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
+    public List<ProductModel> getAll() {
+        return productRepository.findAll();
+    }
+
+    @Transactional(readOnly = true)
     public Page<ProductModel> getAllByBrandId(Long brandId, Pageable pageable) {
         return productRepository.findAllByBrandId(brandId, pageable);
     }
@@ -73,4 +78,8 @@ public class ProductService {
         }
     }
 
+    @Transactional(readOnly = true)
+    public List<ProductModel> getAllByBrandId(Long brandId) {
+        return productRepository.findAllByBrandId(brandId);
+    }
 }

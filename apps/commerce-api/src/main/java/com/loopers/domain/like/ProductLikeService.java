@@ -3,6 +3,7 @@ package com.loopers.domain.like;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,5 +41,10 @@ public class ProductLikeService {
     @Transactional(readOnly = true)
     public long countLikes(Long productId) {
         return productLikeRepository.countByProductId(productId);
+    }
+
+    @Transactional(readOnly = true)
+    public Map<Long, Long> countLikesByProductIds(List<Long> productIds) {
+        return productLikeRepository.countByProductIds(productIds);
     }
 }

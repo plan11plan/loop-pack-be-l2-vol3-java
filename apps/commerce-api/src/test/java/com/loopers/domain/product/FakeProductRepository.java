@@ -85,4 +85,10 @@ public class FakeProductRepository implements ProductRepository {
             .toList();
     }
 
+    @Override
+    public List<ProductModel> findAll() {
+        return store.values().stream()
+            .filter(product -> product.getDeletedAt() == null)
+            .toList();
+    }
 }
