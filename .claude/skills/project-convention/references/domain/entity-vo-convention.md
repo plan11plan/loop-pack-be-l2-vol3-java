@@ -211,6 +211,47 @@ record는 불변, equals/hashCode/toString 자동 생성. compact constructor에
 
 **주의**: common이 비대해지지 않게 진입 기준을 엄격히 적용한다.
 
+### @Embeddable 개념 그룹핑
+
+Entity 내에서 관련 필드가 하나의 개념 단위를 이룰 때 `@Embeddable`로 그룹핑한다. 행위 중심의 record VO와는 목적이 다르다.
+
+**사용 기준 — 아래 세 가지를 모두 충족할 때:**
+
+1. **3개 이상**의 필드가 하나의 개념을 표현 (예: 스냅샷, 주소, 좌표)
+2. 해당 필드들이 항상 **함께 생성**되고 **함께 조회**됨
+3. 도메인 성장에 따라 필드가 **늘어날 가능성**이 있음
+
+**규칙:**
+
+- 행위 없이 **데이터 그룹핑만** 담당 (행위가 필요하면 Entity 메서드에서 처리)
+- 같은 Entity에 같은 타입 2개 사용 금지 (`@AttributeOverride` 보일러플레이트 방지)
+- 클래스명은 `{개념}Snapshot`, `{개념}Info` 등 역할이 드러나는 이름 사용
+
+```java
+// ✅ @Embeddable 그룹핑 — 스냅샷 필드 3개 이상, 함께 생성/조회, 확장 가능성
+@Embeddable
+public class ProductSnapshot {
+
+    @Column(name = "product_name", nullable = false)
+    private String productName;
+
+    @Column(name = "brand_name", nullable = false)
+    private String brandName;
+
+    @Column(name = "image_url")
+    private String imageUrl;
+
+    protected ProductSnapshot() {
+    }
+
+    public ProductSnapshot(String productName, String brandName, String imageUrl) {
+        this.productName = productName;
+        this.brandName = brandName;
+        this.imageUrl = imageUrl;
+    }
+}
+```
+
 ---
 
 ## 3. 검증 위치 규칙
