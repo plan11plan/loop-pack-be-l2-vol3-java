@@ -1,5 +1,7 @@
 package com.loopers.domain.product;
 
+import com.loopers.domain.product.dto.ProductCommand;
+import com.loopers.domain.product.dto.ProductInfo;
 import com.loopers.support.error.CoreException;
 import java.util.List;
 import java.util.Map;
@@ -38,14 +40,12 @@ public class ProductService {
 
     @Transactional
     public void update(Long id, String name, int price, int stock) {
-        ProductModel productModel = getById(id);
-        productModel.update(name, price, stock);
+        getById(id).update(name, price, stock);
     }
 
     @Transactional
     public void delete(Long id) {
-        ProductModel productModel = getById(id);
-        productModel.delete();
+        getById(id).delete();
     }
 
     @Transactional(readOnly = true)
@@ -65,8 +65,7 @@ public class ProductService {
 
     @Transactional
     public void deleteAllByBrandId(Long brandId) {
-        List<ProductModel> products = productRepository.findAllByBrandId(brandId);
-        products.forEach(ProductModel::delete);
+        productRepository.findAllByBrandId(brandId).forEach(ProductModel::delete);
     }
 
     @Transactional(readOnly = true)
@@ -92,9 +91,10 @@ public class ProductService {
     }
 
     @Transactional
-    public List<ProductSnapshot> validateAndDeductStock(List<StockDeductionCommand> commands) {
+    public List<ProductInfo.StockDeduction> validateAndDeductStock(
+            List<ProductCommand.StockDeduction> commands) {
         List<ProductModel> products = getAllByIds(
-                commands.stream().map(StockDeductionCommand::productId).toList());
+                commands.stream().map(ProductCommand.StockDeduction::productId).toList());
 
         Map<Long, ProductModel> productMap = products.stream()
                 .collect(Collectors.toMap(ProductModel::getId, Function.identity()));
@@ -104,7 +104,7 @@ public class ProductService {
                     ProductModel product = productMap.get(command.productId());
                     product.validateExpectedPrice(command.expectedPrice());
                     product.decreaseStock(command.quantity());
-                    return new ProductSnapshot(
+                    return new ProductInfo.StockDeduction(
                             command.productId(),
                             product.getName(),
                             product.getPrice(),

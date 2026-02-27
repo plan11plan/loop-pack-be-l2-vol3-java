@@ -4,6 +4,7 @@ import com.loopers.domain.BaseEntity;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import jakarta.persistence.Column;
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -34,23 +35,19 @@ public class OrderItemModel extends BaseEntity {
     @Column(name = "quantity", nullable = false)
     private int quantity;
 
-    @Column(name = "product_name", nullable = false)
-    private String productName;
-
-    @Column(name = "brand_name", nullable = false)
-    private String brandName;
+    @Embedded
+    private ProductSnapshot productSnapshot;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private OrderItemStatus status;
 
     private OrderItemModel(Long productId, int orderPrice, int quantity,
-                           String productName, String brandName) {
+                           ProductSnapshot productSnapshot) {
         this.productId = productId;
         this.orderPrice = orderPrice;
         this.quantity = quantity;
-        this.productName = productName;
-        this.brandName = brandName;
+        this.productSnapshot = productSnapshot;
         this.status = OrderItemStatus.ORDERED;
     }
 
@@ -61,7 +58,16 @@ public class OrderItemModel extends BaseEntity {
         validateQuantity(quantity);
         validateProductName(productName);
         validateBrandName(brandName);
-        return new OrderItemModel(productId, orderPrice, quantity, productName, brandName);
+        return new OrderItemModel(productId, orderPrice, quantity,
+                new ProductSnapshot(productName, brandName));
+    }
+
+    public String getProductName() {
+        return productSnapshot.getProductName();
+    }
+
+    public String getBrandName() {
+        return productSnapshot.getBrandName();
     }
 
     public void cancel() {

@@ -6,8 +6,8 @@ import com.loopers.domain.brand.BrandService;
 import com.loopers.domain.order.OrderItemModel;
 import com.loopers.domain.order.OrderService;
 import com.loopers.domain.product.ProductService;
-import com.loopers.domain.product.ProductSnapshot;
-import com.loopers.domain.product.StockDeductionCommand;
+import com.loopers.domain.product.dto.ProductCommand;
+import com.loopers.domain.product.dto.ProductInfo;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -26,25 +26,25 @@ public class OrderFacade {
 
     @Transactional
     public OrderResult.OrderSummary createOrder(Long userId, OrderCriteria.Create criteria) {
-        List<ProductSnapshot> snapshots = productService.validateAndDeductStock(
+        List<ProductInfo.StockDeduction> deductionInfos = productService.validateAndDeductStock(
                 criteria.items().stream()
-                        .map(item -> new StockDeductionCommand(
+                        .map(item -> new ProductCommand.StockDeduction(
                                 item.productId(), item.quantity(), item.expectedPrice()))
                         .toList());
 
         Map<Long, String> brandNameMap = brandService.getNameMapByIds(
-                snapshots.stream()
-                        .map(ProductSnapshot::brandId)
+                deductionInfos.stream()
+                        .map(ProductInfo.StockDeduction::brandId)
                         .distinct()
                         .toList());
 
-        List<OrderItemModel> items = snapshots.stream()
-                .map(snapshot -> OrderItemModel.create(
-                        snapshot.productId(),
-                        snapshot.price(),
-                        snapshot.quantity(),
-                        snapshot.name(),
-                        brandNameMap.get(snapshot.brandId())))
+        List<OrderItemModel> items = deductionInfos.stream()
+                .map(info -> OrderItemModel.create(
+                        info.productId(),
+                        info.price(),
+                        info.quantity(),
+                        info.name(),
+                        brandNameMap.get(info.brandId())))
                 .toList();
 
         return OrderResult.OrderSummary.from(
