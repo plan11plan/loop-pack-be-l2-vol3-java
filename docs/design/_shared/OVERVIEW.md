@@ -146,17 +146,23 @@ classDiagram
 
     class Order {
         Long userId
+        List~OrderItem~ items
         int totalPrice
         OrderStatus status
+        +create(Long userId, List~OrderItem~ items) Order
+        +addItem(OrderItem item) void
+        +calculateTotalPrice() int
     }
 
     class OrderItem {
-        Long orderId
+        Order order
         Long productId
         int orderPrice
         int quantity
         String productName
         String brandName
+        +create(Long productId, int orderPrice, int quantity, String productName, String brandName) OrderItem
+        +assignOrder(Order order) void
     }
 
     class OrderStatus {
@@ -171,7 +177,7 @@ classDiagram
     CartItem "*" --> "1" Product : productId
     Cart o-- CartItem : 일급 컬렉션
     Order "*" --> "1" User : userId
-    OrderItem "*" --> "1" Order : orderId
+    Order "1" *-- "*" OrderItem : @OneToMany (양방향)
     Order --> OrderStatus
 ```
 
@@ -187,7 +193,7 @@ classDiagram
 | User → CartItem | 1 : N | ID 참조 (userId) | UNIQUE(userId, productId) |
 | Product → CartItem | 1 : N | ID 참조 (productId) | 가격 저장 안 함 |
 | User → Order | 1 : N | ID 참조 (userId) | UserSnapshot 불필요 |
-| Order → OrderItem | 1 : N | ID 참조 (orderId) | @OneToMany 미사용 |
+| Order ↔ OrderItem | 1 : N | 양방향 `@OneToMany` / `@ManyToOne` | 같은 Aggregate. cascade=PERSIST, @BatchSize(100) |
 | OrderItem | - | 직접 필드 (productName, brandName) | 주문 시점 스냅샷 |
 
 ---

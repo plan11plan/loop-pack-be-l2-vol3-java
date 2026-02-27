@@ -21,8 +21,13 @@
 - **동시성 이슈** — 추후 비관적 락 또는 낙관적 락으로 해결 예정.
 - **가격 변동 검증** — 주문 시점에 클라이언트가 보낸 expectedPrice와 Product의 현재 가격을 비교. 불일치 시 주문 실패 ("가격이 변경되었습니다"). 하이패션 고가 상품의 가격 분쟁 방지.
 - **두 가지 주문 경로** — 바로구매(상품 페이지에서 직접)와 장바구니 주문. Order 도메인은 출처를 모르고, Facade가 경로를 조율. 주문 로직은 단일.
-- **스냅샷 구조** — OrderItem에 직접 필드로 저장 (productName, brandName). productId는 별도 유지 (재구매, 통계용, FK 아님). VO(@Embeddable)를 사용하지 않고 Entity 필드로 직접 관리.
-- **Order ↔ OrderItem** — ID 참조 (orderId). @OneToMany 미사용. 같은 Aggregate이지만 프로젝트 전체 ID 참조 패턴과 일관성 유지.
+- **스냅샷 구조** — OrderItem에 직접 필드로 저장 (productName, brandName). 필드 3~4개 수준에서 별도 테이블 분리는 불필요. productId는 별도 유지 (재구매, 통계용, FK 아님). VO(@Embeddable)를 사용하지 않고 Entity 필드로 직접 관리.
+- **Order ↔ OrderItem** — 양방향 `@OneToMany` / `@ManyToOne` 매핑. 같은 Aggregate 내부이므로 Aggregate Root(Order)가 OrderItem의 생명주기를 직접 관리한다.
+  - `cascade = CascadeType.PERSIST` — Order 저장 시 OrderItem 함께 저장. REMOVE는 Soft Delete와 충돌하므로 미사용.
+  - `orphanRemoval = false` — 주문 항목 제거 요구사항 없음 + Soft Delete 정책과 충돌 방지.
+  - `@BatchSize(size = 100)` — LAZY 기본, 목록 조회 시 N+1 방지.
+  - **totalPrice** — Order.create() 시점에 items로부터 직접 계산. 도메인 계산 로직은 도메인이 소유한다.
+  - **OrderItemRepository 유지** — Aggregate Root 통한 접근은 생성/변경에 적용. 조회(통계, 배치, 검색)는 OrderItemRepository 직접 사용 허용.
 
 ### API
 
@@ -143,17 +148,24 @@ sequenceDiagram
 classDiagram
     class Order {
         Long userId
+        List~OrderItem~ items
         int totalPrice
         OrderStatus status
+        +create(Long userId, List~OrderItem~ items) Order
+        +addItem(OrderItem item) void
+        +calculateTotalPrice() int
+        +validateOwner(Long userId) void
     }
 
     class OrderItem {
-        Long orderId
+        Order order
         Long productId
         int orderPrice
         int quantity
         String productName
         String brandName
+        +create(Long productId, int orderPrice, int quantity, String productName, String brandName) OrderItem
+        +assignOrder(Order order) void
     }
 
     class OrderStatus {
@@ -162,7 +174,7 @@ classDiagram
     }
 
     Order "*" --> "1" User : userId
-    OrderItem "*" --> "1" Order : orderId
+    Order "1" *-- "*" OrderItem : @OneToMany (양방향)
     Order --> OrderStatus
 ```
 
@@ -170,14 +182,18 @@ classDiagram
 
 | 엔티티 | 메서드 | 비즈니스 규칙 |
 |---|---|---|
-| OrderItem | create(orderId, productId, orderPrice, quantity, productName, brandName) | 정적 팩토리. 주문 시점 상품 정보를 직접 필드로 저장 |
+| Order | create(userId, items) | 정적 팩토리. items를 받아 totalPrice를 직접 계산하고, 양방향 연관관계를 세팅 |
+| Order | addItem(item) | 편의 메서드. items 컬렉션에 추가 + item.assignOrder(this)로 양방향 동기화 |
+| Order | calculateTotalPrice() | items의 orderPrice × quantity 합산 |
+| OrderItem | create(productId, orderPrice, quantity, productName, brandName) | 정적 팩토리. 주문 시점 상품 정보를 직접 필드로 저장. orderId 불필요 (연관관계로 관리) |
+| OrderItem | assignOrder(order) | Order 참조 세팅. Order.addItem()에서 호출 |
 
 ### 관계 정리
 
 | 관계 | 참조 방식 | 설명 |
 |---|---|---|
 | User → Order | ID 참조 (userId) | UserSnapshot 불필요 |
-| Order → OrderItem | ID 참조 (orderId) | @OneToMany 미사용. 같은 Aggregate이지만 ID 참조 |
+| Order ↔ OrderItem | 양방향 `@OneToMany` / `@ManyToOne` | 같은 Aggregate. cascade=PERSIST, orphanRemoval=false, @BatchSize(100) |
 | OrderItem 스냅샷 필드 | 직접 필드 (productName, brandName) | 주문 시점 상품 정보를 Entity 필드로 직접 저장 |
 | OrderItem.productId | ID 유지 (FK 아님) | 재구매, 통계 분석을 위한 데이터 연결용 |
 
