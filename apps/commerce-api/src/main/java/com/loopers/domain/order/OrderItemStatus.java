@@ -1,6 +1,6 @@
 package com.loopers.domain.order;
 
-public enum OrderStatus {
+public enum OrderItemStatus {
     ORDERED,
     CANCELLED
 }

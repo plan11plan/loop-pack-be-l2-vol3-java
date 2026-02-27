@@ -39,6 +39,12 @@ public class OrderService {
         return orderRepository.findAllByUserIdAndCreatedAtBetween(userId, startAt, endAt);
     }
 
+    @Transactional
+    public OrderItemModel cancelItem(Long orderId, Long orderItemId) {
+        OrderModel order = getById(orderId);
+        return order.cancelItem(orderItemId);
+    }
+
     @Transactional(readOnly = true)
     public List<OrderItemModel> getOrderItemsByOrderId(Long orderId) {
         return orderItemRepository.findAllByOrderId(orderId);

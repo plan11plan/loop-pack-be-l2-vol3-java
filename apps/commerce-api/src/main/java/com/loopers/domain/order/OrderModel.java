@@ -29,6 +29,9 @@ public class OrderModel extends BaseEntity {
     @Column(name = "total_price", nullable = false)
     private int totalPrice;
 
+    @Column(name = "original_total_price", nullable = false)
+    private int originalTotalPrice;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private OrderStatus status;
@@ -40,6 +43,7 @@ public class OrderModel extends BaseEntity {
     private OrderModel(Long userId, int totalPrice, OrderStatus status) {
         this.userId = userId;
         this.totalPrice = totalPrice;
+        this.originalTotalPrice = totalPrice;
         this.status = status;
     }
 
@@ -48,7 +52,9 @@ public class OrderModel extends BaseEntity {
         validateItems(items);
         OrderModel order = new OrderModel(userId, 0, OrderStatus.ORDERED);
         items.forEach(order::addItem);
-        order.totalPrice = order.calculateTotalPrice();
+        int calculatedPrice = order.calculateTotalPrice();
+        order.totalPrice = calculatedPrice;
+        order.originalTotalPrice = calculatedPrice;
         return order;
     }
 
@@ -57,8 +63,36 @@ public class OrderModel extends BaseEntity {
         item.assignOrder(this);
     }
 
+    public OrderItemModel cancelItem(Long orderItemId) {
+        if (this.status == OrderStatus.CANCELLED) {
+            throw new CoreException(OrderErrorCode.ALREADY_CANCELLED_ORDER);
+        }
+        OrderItemModel item = items.stream()
+                .filter(i -> i.getId().equals(orderItemId))
+                .findFirst()
+                .orElseThrow(() -> new CoreException(OrderErrorCode.ORDER_ITEM_NOT_FOUND));
+        item.cancel();
+        recalculateTotalPrice();
+        if (isAllItemsCancelled()) {
+            this.status = OrderStatus.CANCELLED;
+        }
+        return item;
+    }
+
+    private boolean isAllItemsCancelled() {
+        return items.stream()
+                .allMatch(item -> item.getStatus() == OrderItemStatus.CANCELLED);
+    }
+
     public int calculateTotalPrice() {
         return items.stream()
+                .mapToInt(item -> item.getOrderPrice() * item.getQuantity())
+                .sum();
+    }
+
+    public void recalculateTotalPrice() {
+        this.totalPrice = items.stream()
+                .filter(item -> item.getStatus() == OrderItemStatus.ORDERED)
                 .mapToInt(item -> item.getOrderPrice() * item.getQuantity())
                 .sum();
     }

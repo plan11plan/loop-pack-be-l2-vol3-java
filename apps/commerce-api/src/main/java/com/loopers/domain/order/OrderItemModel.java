@@ -5,6 +5,8 @@ import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -38,6 +40,10 @@ public class OrderItemModel extends BaseEntity {
     @Column(name = "brand_name", nullable = false)
     private String brandName;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private OrderItemStatus status;
+
     private OrderItemModel(Long productId, int orderPrice, int quantity,
                            String productName, String brandName) {
         this.productId = productId;
@@ -45,6 +51,7 @@ public class OrderItemModel extends BaseEntity {
         this.quantity = quantity;
         this.productName = productName;
         this.brandName = brandName;
+        this.status = OrderItemStatus.ORDERED;
     }
 
     public static OrderItemModel create(Long productId, int orderPrice, int quantity,
@@ -55,6 +62,13 @@ public class OrderItemModel extends BaseEntity {
         validateProductName(productName);
         validateBrandName(brandName);
         return new OrderItemModel(productId, orderPrice, quantity, productName, brandName);
+    }
+
+    public void cancel() {
+        if (this.status == OrderItemStatus.CANCELLED) {
+            throw new CoreException(OrderErrorCode.ALREADY_CANCELLED_ITEM);
+        }
+        this.status = OrderItemStatus.CANCELLED;
     }
 
     void assignOrder(OrderModel order) {

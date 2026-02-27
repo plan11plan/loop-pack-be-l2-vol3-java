@@ -72,6 +72,13 @@ public class ProductModel extends BaseEntity {
         this.stock -= quantity;
     }
 
+    public void increaseStock(int quantity) {
+        if (quantity < 1) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "복구 수량은 1 이상이어야 합니다.");
+        }
+        this.stock += quantity;
+    }
+
     public boolean isSoldOut() {
         return this.stock == 0;
     }

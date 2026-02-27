@@ -74,4 +74,17 @@ public class OrderFacade {
     public OrderResult.OrderDetail getOrderDetail(Long orderId) {
         return OrderResult.OrderDetail.from(orderService.getById(orderId));
     }
+
+    @Transactional
+    public void cancelMyOrderItem(Long userId, Long orderId, Long orderItemId) {
+        orderService.getByIdAndUserId(orderId, userId);
+        OrderItemModel cancelledItem = orderService.cancelItem(orderId, orderItemId);
+        productService.increaseStock(cancelledItem.getProductId(), cancelledItem.getQuantity());
+    }
+
+    @Transactional
+    public void cancelOrderItem(Long orderId, Long orderItemId) {
+        OrderItemModel cancelledItem = orderService.cancelItem(orderId, orderItemId);
+        productService.increaseStock(cancelledItem.getProductId(), cancelledItem.getQuantity());
+    }
 }

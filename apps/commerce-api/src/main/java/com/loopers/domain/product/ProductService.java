@@ -87,6 +87,11 @@ public class ProductService {
     }
 
     @Transactional
+    public void increaseStock(Long productId, int quantity) {
+        getById(productId).increaseStock(quantity);
+    }
+
+    @Transactional
     public List<ProductSnapshot> validateAndDeductStock(List<StockDeductionCommand> commands) {
         List<ProductModel> products = getAllByIds(
                 commands.stream().map(StockDeductionCommand::productId).toList());
