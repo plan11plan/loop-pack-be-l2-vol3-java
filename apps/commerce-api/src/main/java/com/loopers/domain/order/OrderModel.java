@@ -37,7 +37,7 @@ public class OrderModel extends BaseEntity {
     private OrderStatus status;
 
     @BatchSize(size = 100)
-    @OneToMany(mappedBy = "order", cascade = CascadeType.PERSIST)
+    @OneToMany(mappedBy = "order", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     private List<OrderItemModel> items = new ArrayList<>();
 
     private OrderModel(Long userId, int totalPrice, OrderStatus status) {

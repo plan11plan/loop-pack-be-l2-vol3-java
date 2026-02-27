@@ -9,11 +9,11 @@ import com.loopers.domain.order.OrderItemModel;
 import com.loopers.domain.order.OrderModel;
 import com.loopers.domain.product.ProductModel;
 import com.loopers.infrastructure.brand.BrandJpaRepository;
+import com.loopers.infrastructure.order.OrderJpaRepository;
 import com.loopers.infrastructure.product.ProductJpaRepository;
 import com.loopers.interfaces.api.ApiResponse;
 import com.loopers.interfaces.user.dto.UserV1Dto;
 import com.loopers.utils.DatabaseCleanUp;
-import jakarta.persistence.EntityManager;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,7 +29,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.transaction.support.TransactionTemplate;
 
 @DisplayName("Admin Order V1 API E2E 테스트")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -40,8 +39,7 @@ class AdminOrderV1ApiE2ETest {
     private final TestRestTemplate testRestTemplate;
     private final BrandJpaRepository brandJpaRepository;
     private final ProductJpaRepository productJpaRepository;
-    private final EntityManager entityManager;
-    private final TransactionTemplate transactionTemplate;
+    private final OrderJpaRepository orderJpaRepository;
     private final DatabaseCleanUp databaseCleanUp;
 
     private Long productId;
@@ -53,15 +51,13 @@ class AdminOrderV1ApiE2ETest {
         TestRestTemplate testRestTemplate,
         BrandJpaRepository brandJpaRepository,
         ProductJpaRepository productJpaRepository,
-        EntityManager entityManager,
-        TransactionTemplate transactionTemplate,
+        OrderJpaRepository orderJpaRepository,
         DatabaseCleanUp databaseCleanUp
     ) {
         this.testRestTemplate = testRestTemplate;
         this.brandJpaRepository = brandJpaRepository;
         this.productJpaRepository = productJpaRepository;
-        this.entityManager = entityManager;
-        this.transactionTemplate = transactionTemplate;
+        this.orderJpaRepository = orderJpaRepository;
         this.databaseCleanUp = databaseCleanUp;
     }
 
@@ -87,15 +83,11 @@ class AdminOrderV1ApiE2ETest {
         product.decreaseStock(2);
         productJpaRepository.save(product);
 
-        Long finalUserId = userId;
-        transactionTemplate.executeWithoutResult(status -> {
-            OrderModel order = OrderModel.create(finalUserId, List.of(
-                    OrderItemModel.create(productId, 50000, 2, "오버사이즈 코트", "ACNE STUDIOS")));
-            entityManager.persist(order);
-            entityManager.flush();
-            orderId = order.getId();
-            orderItemId = order.getItems().get(0).getId();
-        });
+        OrderModel order = orderJpaRepository.save(
+                OrderModel.create(userId, List.of(
+                        OrderItemModel.create(productId, 50000, 2, "오버사이즈 코트", "ACNE STUDIOS"))));
+        orderId = order.getId();
+        orderItemId = order.getItems().get(0).getId();
     }
 
     @AfterEach

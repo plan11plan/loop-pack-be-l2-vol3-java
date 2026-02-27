@@ -27,7 +27,7 @@
 - **두 가지 주문 경로** — 바로구매(상품 페이지에서 직접)와 장바구니 주문. Order 도메인은 출처를 모르고, Facade가 경로를 조율. 주문 로직은 단일.
 - **스냅샷 구조** — `ProductSnapshot` `@Embeddable` VO로 그룹핑 (productName, brandName, imageUrl). 도메인 성장에 따라 스냅샷 필드가 늘어날 수 있으므로 개념 단위로 묶는다. productId는 스냅샷 외부에 별도 유지 (재구매, 통계용, FK 아님).
 - **Order ↔ OrderItem** — 양방향 `@OneToMany` / `@ManyToOne` 매핑. 같은 Aggregate 내부이므로 Aggregate Root(Order)가 OrderItem의 생명주기를 직접 관리한다.
-  - `cascade = CascadeType.PERSIST` — Order 저장 시 OrderItem 함께 저장. REMOVE는 Soft Delete와 충돌하므로 미사용.
+  - `cascade = {CascadeType.PERSIST, CascadeType.MERGE}` — Order 저장/병합 시 OrderItem 함께 처리. REMOVE는 Soft Delete와 충돌하므로 미사용.
   - `orphanRemoval = false` — 주문 항목 제거 요구사항 없음 + Soft Delete 정책과 충돌 방지.
   - `@BatchSize(size = 100)` — LAZY 기본, 목록 조회 시 N+1 방지.
   - **totalPrice / originalTotalPrice** — Order.create() 시점에 items로부터 직접 계산. originalTotalPrice는 생성 시점의 금액을 보존(불변). totalPrice는 아이템 취소 시 남은 ORDERED 아이템 기준으로 재계산.
@@ -305,7 +305,7 @@ classDiagram
 | 관계 | 참조 방식 | 설명 |
 |---|---|---|
 | User → Order | ID 참조 (userId) | UserSnapshot 불필요 |
-| Order ↔ OrderItem | 양방향 `@OneToMany` / `@ManyToOne` | 같은 Aggregate. cascade=PERSIST, orphanRemoval=false, @BatchSize(100) |
+| Order ↔ OrderItem | 양방향 `@OneToMany` / `@ManyToOne` | 같은 Aggregate. cascade={PERSIST,MERGE}, orphanRemoval=false, @BatchSize(100) |
 | OrderItem → ProductSnapshot | `@Embedded` (`@Embeddable` VO) | 주문 시점 상품 정보를 개념 단위로 그룹핑. 테이블은 order_items에 그대로 저장 |
 | OrderItem.productId | ID 유지 (FK 아님) | 재구매, 통계 분석을 위한 데이터 연결용 |
 
