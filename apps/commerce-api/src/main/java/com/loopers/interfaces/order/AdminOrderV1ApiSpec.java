@@ -25,4 +25,13 @@ public interface AdminOrderV1ApiSpec {
     ApiResponse<OrderResponse.OrderDetail> getById(
         @Parameter(description = "주문 ID", required = true) Long orderId
     );
+
+    @Operation(
+        summary = "주문 아이템 취소",
+        description = "주문 아이템을 취소합니다. 취소 시 재고가 복구됩니다."
+    )
+    ApiResponse<Object> cancelItem(
+        @Parameter(description = "주문 ID", required = true) Long orderId,
+        @Parameter(description = "주문 아이템 ID", required = true) Long orderItemId
+    );
 }

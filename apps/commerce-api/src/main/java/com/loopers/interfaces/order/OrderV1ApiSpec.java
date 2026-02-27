@@ -40,4 +40,14 @@ public interface OrderV1ApiSpec {
         @Parameter(hidden = true) LoginUser loginUser,
         @Parameter(description = "주문 ID", required = true) Long orderId
     );
+
+    @Operation(
+        summary = "주문 아이템 취소",
+        description = "본인 주문의 아이템을 개별 취소합니다. 취소 시 재고가 복구됩니다."
+    )
+    ApiResponse<Object> cancelItem(
+        @Parameter(hidden = true) LoginUser loginUser,
+        @Parameter(description = "주문 ID", required = true) Long orderId,
+        @Parameter(description = "주문 아이템 ID", required = true) Long orderItemId
+    );
 }
