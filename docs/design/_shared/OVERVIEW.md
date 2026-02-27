@@ -62,6 +62,7 @@ erDiagram
         bigint id PK
         bigint user_id
         int total_price
+        int original_total_price
         varchar status
         timestamp created_at
         timestamp updated_at
@@ -77,6 +78,7 @@ erDiagram
         varchar image_url
         int order_price
         int quantity
+        varchar status
         timestamp created_at
         timestamp updated_at
         timestamp deleted_at
@@ -148,26 +150,44 @@ classDiagram
         Long userId
         List~OrderItem~ items
         int totalPrice
+        int originalTotalPrice
         OrderStatus status
         +create(Long userId, List~OrderItem~ items) Order
         +addItem(OrderItem item) void
-        +calculateTotalPrice() int
+        +cancelItem(Long orderItemId) OrderItem
+        +recalculateTotalPrice() void
+        +validateOwner(Long userId) void
     }
 
     class OrderItem {
         Order order
         Long productId
+        ProductSnapshot productSnapshot
         int orderPrice
         int quantity
+        OrderItemStatus status
+        +create(Long productId, int orderPrice, int quantity, ProductSnapshot snapshot) OrderItem
+        +cancel() void
+        +assignOrder(Order order) void
+    }
+
+    class ProductSnapshot {
+        <<Embeddable>>
         String productName
         String brandName
-        +create(Long productId, int orderPrice, int quantity, String productName, String brandName) OrderItem
-        +assignOrder(Order order) void
+        String imageUrl
     }
 
     class OrderStatus {
         <<enumeration>>
         ORDERED
+        CANCELLED
+    }
+
+    class OrderItemStatus {
+        <<enumeration>>
+        ORDERED
+        CANCELLED
     }
 
     Product "*" --> "1" Brand : ID 참조 (brandId)
@@ -179,6 +199,8 @@ classDiagram
     Order "*" --> "1" User : userId
     Order "1" *-- "*" OrderItem : @OneToMany (양방향)
     Order --> OrderStatus
+    OrderItem *-- ProductSnapshot : @Embedded
+    OrderItem --> OrderItemStatus
 ```
 
 ---
@@ -194,7 +216,7 @@ classDiagram
 | Product → CartItem | 1 : N | ID 참조 (productId) | 가격 저장 안 함 |
 | User → Order | 1 : N | ID 참조 (userId) | UserSnapshot 불필요 |
 | Order ↔ OrderItem | 1 : N | 양방향 `@OneToMany` / `@ManyToOne` | 같은 Aggregate. cascade=PERSIST, @BatchSize(100) |
-| OrderItem | - | 직접 필드 (productName, brandName) | 주문 시점 스냅샷 |
+| OrderItem → ProductSnapshot | - | `@Embedded` (`@Embeddable` VO) | 주문 시점 스냅샷을 개념 단위로 그룹핑 |
 
 ---
 
