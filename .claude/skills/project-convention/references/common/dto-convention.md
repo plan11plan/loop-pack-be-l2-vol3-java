@@ -66,6 +66,13 @@ public class ProductCriteria {
 public class ProductCommand {
     public record Create(String name, int price) {}
     public record Update(Long id, String name, int price) {}
+    public record StockDeduction(Long productId, int quantity, int expectedPrice) {}
+}
+```
+
+```java
+public class ProductInfo {
+    public record StockDeduction(Long productId, String name, int price, int quantity, Long brandId) {}
 }
 ```
 
@@ -76,6 +83,9 @@ public record ProductResult(Long id, String name, int price) {
     }
 }
 ```
+
+> **Domain DTO 배치**: `~Command`와 `~Info`는 모두 `domain/{도메인}/dto/` 패키지에 배치한다.
+> `{Domain}Command`, `{Domain}Info` 그룹 클래스 아래 Inner Class(record)로 그룹핑한다.
 
 ### 2. 변환 메서드 위치: "아는 쪽"에 둔다
 
@@ -108,8 +118,11 @@ public Order create(OrderMemberCommand member, List<OrderProductCommand> product
     return Order.create(member.memberId(), products);
 }
 
-// Entity로 표현 불가능할 때만 Info 생성
-public record StockDeductionInfo(int remainingStock, boolean success) {}
+// Entity로 표현 불가능할 때만 Info 생성 — {Domain}Info의 Inner Class로 작성
+// 위치: domain/{도메인}/dto/{Domain}Info.java
+public class ProductInfo {
+    public record StockDeduction(Long productId, String name, int price, int quantity, Long brandId) {}
+}
 ```
 
 ---
@@ -215,3 +228,6 @@ Client
 - [ ] Domain Service 파라미터 1~3개는 원시 타입, 4개+는 Command DTO인가?
 - [ ] Domain Service 메서드 시그니처에 타 도메인 Entity가 노출되지 않는가?
 - [ ] 여러 도메인 Info 조합 시 Application에서 `~Result`로 합치는가?
+- [ ] Domain DTO(`~Command`, `~Info`)가 `domain/{도메인}/dto/` 패키지에 있는가?
+- [ ] Domain `~Command`는 `{Domain}Command`의 Inner Class로 그룹핑되었는가?
+- [ ] Domain `~Info`는 `{Domain}Info`의 Inner Class로 그룹핑되었는가?

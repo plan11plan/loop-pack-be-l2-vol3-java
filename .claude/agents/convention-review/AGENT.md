@@ -40,7 +40,7 @@ git diff --name-only HEAD
 | `application/` | Application | `inline-variable-convention.md`, `service-layer-convention.md` |
 | `domain/` | Domain | `inline-variable-convention.md`, `entity-vo-convention.md` |
 | `infrastructure/` | Infrastructure | `infrastructure-convention.md` |
-| `*Dto*.java`, `*Request*.java`, `*Response*.java`, `*Result*.java`, `*Criteria*.java` | DTO | `inline-variable-convention.md`, `dto-convention.md` |
+| `*Dto*.java`, `*Request*.java`, `*Response*.java`, `*Result*.java`, `*Criteria*.java`, `*Command*.java`, `*Info*.java` | DTO | `inline-variable-convention.md`, `dto-convention.md` |
 
 `inline-variable-convention.md`는 **모든 계층**에서 필수로 포함한다.
 
