@@ -43,12 +43,13 @@ public class OrderModel extends BaseEntity {
     @Column(name = "discount_amount", nullable = false)
     private int discountAmount;
 
-    private OrderModel(Long userId, int totalPrice, OrderStatus status) {
+    private OrderModel(Long userId, int originalTotalPrice,
+                       int discountAmount, OrderStatus status) {
         this.userId = userId;
-        this.totalPrice = totalPrice;
-        this.originalTotalPrice = totalPrice;
+        this.originalTotalPrice = originalTotalPrice;
+        this.discountAmount = discountAmount;
+        this.totalPrice = originalTotalPrice - discountAmount;
         this.status = status;
-        this.discountAmount = 0;
     }
 
     public static OrderModel create(Long userId, List<OrderItemModel> items) {
@@ -59,12 +60,10 @@ public class OrderModel extends BaseEntity {
                                     int discountAmount) {
         validateUserId(userId);
         validateItems(items);
-        OrderModel order = new OrderModel(userId, 0, OrderStatus.ORDERED);
+        int originalTotalPrice = OrderItemModel.calculateTotalPrice(items);
+        OrderModel order = new OrderModel(
+                userId, originalTotalPrice, discountAmount, OrderStatus.ORDERED);
         items.forEach(order::addItem);
-        int calculatedPrice = order.calculateTotalPrice();
-        order.originalTotalPrice = calculatedPrice;
-        order.discountAmount = discountAmount;
-        order.totalPrice = calculatedPrice - discountAmount;
         return order;
     }
 
