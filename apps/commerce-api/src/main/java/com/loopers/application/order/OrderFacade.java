@@ -3,8 +3,11 @@ package com.loopers.application.order;
 import com.loopers.application.order.dto.OrderCriteria;
 import com.loopers.application.order.dto.OrderResult;
 import com.loopers.domain.brand.BrandService;
+import com.loopers.domain.coupon.CouponService;
 import com.loopers.domain.order.OrderItemModel;
+import com.loopers.domain.order.OrderModel;
 import com.loopers.domain.order.OrderService;
+import com.loopers.domain.order.OrderStatus;
 import com.loopers.domain.product.ProductService;
 import com.loopers.domain.product.dto.ProductCommand;
 import com.loopers.domain.product.dto.ProductInfo;
@@ -23,6 +26,7 @@ public class OrderFacade {
     private final ProductService productService;
     private final BrandService brandService;
     private final OrderService orderService;
+    private final CouponService couponService;
 
     @Transactional
     public OrderResult.OrderSummary createOrder(Long userId, OrderCriteria.Create criteria) {
@@ -47,8 +51,15 @@ public class OrderFacade {
                         brandNameMap.get(info.brandId())))
                 .toList();
 
+        Long ownedCouponId = criteria.ownedCouponId();
+        int discountAmount = 0;
+        if (ownedCouponId != null) {
+            discountAmount = (int) couponService.useAndCalculateDiscount(
+                    ownedCouponId, userId, OrderItemModel.calculateTotalPrice(items));
+        }
+
         return OrderResult.OrderSummary.from(
-                orderService.createOrder(userId, items));
+                orderService.createOrder(userId, items, ownedCouponId, discountAmount));
     }
 
     @Transactional(readOnly = true)
@@ -77,14 +88,21 @@ public class OrderFacade {
 
     @Transactional
     public void cancelMyOrderItem(Long userId, Long orderId, Long orderItemId) {
-        orderService.getByIdAndUserId(orderId, userId);
+        OrderModel order = orderService.getByIdAndUserId(orderId, userId);
         OrderItemModel cancelledItem = orderService.cancelItem(orderId, orderItemId);
         productService.increaseStock(cancelledItem.getProductId(), cancelledItem.getQuantity());
+        if (order.getStatus() == OrderStatus.CANCELLED && order.getOwnedCouponId() != null) {
+            couponService.restoreOwnedCoupon(order.getOwnedCouponId());
+        }
     }
 
     @Transactional
     public void cancelOrderItem(Long orderId, Long orderItemId) {
+        OrderModel order = orderService.getById(orderId);
         OrderItemModel cancelledItem = orderService.cancelItem(orderId, orderItemId);
         productService.increaseStock(cancelledItem.getProductId(), cancelledItem.getQuantity());
+        if (order.getStatus() == OrderStatus.CANCELLED && order.getOwnedCouponId() != null) {
+            couponService.restoreOwnedCoupon(order.getOwnedCouponId());
+        }
     }
 }
