@@ -42,6 +42,7 @@ out/
 ### Claude Code ###
 claude/*
 !.claude/skills/
+.claude/settings.local.json
 .interview-state/
 
 ### Documentation ###
