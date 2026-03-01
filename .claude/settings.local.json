@@ -51,7 +51,8 @@
       "Bash(JAVA_HOME=/Users/jins/Library/Java/JavaVirtualMachines/corretto-21.0.4/Contents/Home ./gradlew:*)",
       "mcp__claude_ai_Notion__notion-search",
       "mcp__claude_ai_Notion__notion-fetch",
-      "mcp__claude_ai_Notion__notion-create-pages"
+      "mcp__claude_ai_Notion__notion-create-pages",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []
