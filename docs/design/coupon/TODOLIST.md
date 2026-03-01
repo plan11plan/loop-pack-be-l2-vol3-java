@@ -123,6 +123,6 @@
 
 ## Controller 계층 (TLD — 별도 진행)
 
-- [ ] CouponV1Controller — E2E
-- [ ] AdminCouponV1Controller — E2E
-- [ ] OrderV1Controller — 쿠폰 적용 주문 E2E
+- [x] CouponV1Controller — 단위 테스트
+- [x] AdminCouponV1Controller — 단위 테스트
+- [x] OrderV1Controller — 쿠폰 적용 주문 단위 테스트
