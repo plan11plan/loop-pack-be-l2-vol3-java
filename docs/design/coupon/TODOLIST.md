@@ -46,31 +46,31 @@
 
 ### 생성
 
-- [ ] create — 정상 생성
-- [ ] create — name 빈값 시 예외
-- [ ] create — discountValue 0 이하 시 예외
-- [ ] create — RATE 타입 1~100 범위 벗어나면 예외
-- [ ] create — totalQuantity 1 미만 시 예외
-- [ ] create — expiredAt 과거 시 예외
+- [x] create — 정상 생성
+- [x] create — name 빈값 시 예외
+- [x] create — discountValue 0 이하 시 예외
+- [x] create — RATE 타입 1~100 범위 벗어나면 예외
+- [x] create — totalQuantity 1 미만 시 예외
+- [x] create — expiredAt 과거 시 예외
 
 ### 수정
 
-- [ ] update — name, expiredAt 변경
+- [x] update — name, expiredAt 변경
 
 ### 할인 계산
 
-- [ ] ★ 정액 할인 계산 — discountValue 그대로 반환
-- [ ] ★ 정률 할인 계산 — orderAmount * discountValue / 100
-- [ ] 할인 금액이 주문 금액 초과 시 주문 금액까지만 적용
+- [x] ★ 정액 할인 계산 — discountValue 그대로 반환
+- [x] ★ 정률 할인 계산 — orderAmount * discountValue / 100
+- [x] 할인 금액이 주문 금액 초과 시 주문 금액까지만 적용
 
 ### 발급
 
-- [ ] 발급 가능 검증 — 삭제/만료/수량소진 시 실패
-- [ ] issue — issuedQuantity 증가
+- [x] 발급 가능 검증 — 삭제/만료/수량소진 시 실패
+- [x] issue — issuedQuantity 증가
 
 ### 주문 검증
 
-- [ ] 최소 주문 금액 미달 시 실패
+- [x] 최소 주문 금액 미달 시 실패
 
 ---
 
@@ -78,19 +78,19 @@
 
 ### 생성
 
-- [ ] create — 정상 생성
+- [x] create — 정상 생성
 
 ### 사용
 
-- [ ] ★ 사용 — AVAILABLE → USED 전이
-- [ ] ★ 이미 사용된 쿠폰 재사용 시 실패
-- [ ] 본인 소유가 아닌 쿠폰 사용 시 실패
-- [ ] 만료된 쿠폰 사용 시 실패 (R13 유효기간 재검증)
+- [x] ★ 사용 — AVAILABLE → USED 전이
+- [x] ★ 이미 사용된 쿠폰 재사용 시 실패
+- [x] 본인 소유가 아닌 쿠폰 사용 시 실패
+- [x] 만료된 쿠폰 사용 시 실패 (R13 유효기간 재검증)
 
 ### 복원
 
-- [ ] 복원 — 유효기간 내면 AVAILABLE
-- [ ] 복원 — 만료 시 EXPIRED
+- [x] 복원 — 유효기간 내면 AVAILABLE
+- [x] 복원 — 만료 시 EXPIRED
 
 ---
 
