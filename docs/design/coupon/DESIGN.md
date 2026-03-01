@@ -210,7 +210,8 @@
    c. 최소 주문 금액 검증 (R6)
    d. OwnedCoupon을 USED로 전이 (R15)
    e. 할인 금액 계산 — FIXED: discountValue, RATE: orderAmount * discountValue / 100 (R16)
-4. 주문 생성 (ownedCouponId, discountAmount 포함)
+4. 주문 생성 (discountAmount 포함)
+5. 생성된 주문 ID를 OwnedCoupon에 연결 (linkOrderToCoupon)
 
 [예외]
 - 쿠폰이 존재하지 않으면 주문 실패
@@ -230,9 +231,10 @@
 [기능 흐름]
 1. 기존 주문 아이템 취소 흐름 수행
 2. 모든 아이템이 CANCELLED → 주문 자체가 CANCELLED 전이
-3. 주문이 CANCELLED이고 ownedCouponId가 있으면:
-   a. OwnedCoupon.restore() 호출
-   b. 유효기간 체크 → AVAILABLE 또는 EXPIRED로 복원
+3. 주문이 CANCELLED이면:
+   a. orderId로 OwnedCoupon 조회 (없으면 no-op)
+   b. OwnedCoupon.restore() 호출
+   c. 유효기간 체크 → AVAILABLE 또는 EXPIRED로 복원
 
 [조건]
 - 부분 취소 시 쿠폰 복원하지 않음 (할인은 주문 전체에 적용, R12)
@@ -297,11 +299,11 @@ sequenceDiagram
 
     alt couponId != null
         OF->>CS: useAndCalculateDiscount(couponId, userId, originalTotalPrice)
-        Note over CS: OwnedCoupon 조회 (동시성 제어)<br/>validateUsable (R13, R14)<br/>validateMinOrderAmount (R6)<br/>use() → USED (R15)<br/>calculateDiscount() (R16)
+        Note over CS: OwnedCoupon 조회 (동시성 제어)<br/>validateUsable (R13, R14)<br/>validateMinOrderAmount (R6)<br/>use(userId, orderId) → USED (R15)<br/>calculateDiscount() (R16)
         CS-->>OF: discountAmount
     end
 
-    OF->>OS: createOrder(userId, items, couponId, discountAmount)
+    OF->>OS: createOrder(userId, items, discountAmount)
     OS-->>OF: Order
     OF-->>OC: 주문 생성 완료
 ```
@@ -325,9 +327,9 @@ sequenceDiagram
     Note over OS: item.cancel()<br/>recalculateTotalPrice()<br/>전체 CANCELLED 시 Order도 CANCELLED
     OS-->>OF: 취소된 OrderItem
 
-    alt order.status == CANCELLED && ownedCouponId != null
-        OF->>CS: restore(ownedCouponId)
-        Note over CS: OwnedCoupon.restore()<br/>만료 여부 체크 → AVAILABLE / EXPIRED
+    alt order.status == CANCELLED
+        OF->>CS: restoreByOrderId(orderId)
+        Note over CS: OwnedCoupon 조회 (orderId)<br/>있으면 restore()<br/>만료 여부 체크 → AVAILABLE / EXPIRED
         CS-->>OF: 완료
     end
 
@@ -362,11 +364,12 @@ classDiagram
     class OwnedCoupon {
         Coupon coupon
         Long userId
+        Long orderId
         OwnedCouponStatus status
         ZonedDateTime usedAt
         +create(Coupon coupon, Long userId) OwnedCoupon
         +validateUsable(Long userId) void
-        +use(Long userId) void
+        +use(Long userId, Long orderId) void
         +restore() void
     }
 
@@ -401,8 +404,8 @@ classDiagram
 | Coupon | validateMinOrderAmount(orderAmount) | minOrderAmount가 있고 주문 금액 미달 시 예외 (R6) |
 | OwnedCoupon | create(coupon, userId) | 정적 팩토리. status = AVAILABLE |
 | OwnedCoupon | validateUsable(userId) | 본인 소유 확인 (R14), AVAILABLE 상태 확인 (R13), 유효기간 재검증 |
-| OwnedCoupon | use(userId) | validateUsable() 후 status → USED, usedAt 기록 (R15) |
-| OwnedCoupon | restore() | USED 상태만 복원 가능. 유효기간 체크 후 AVAILABLE 또는 EXPIRED로 복원 (R19, R20) |
+| OwnedCoupon | use(userId, orderId) | validateUsable() 후 status → USED, usedAt 기록, orderId 기록 (R15) |
+| OwnedCoupon | restore() | USED 상태만 복원 가능. 유효기간 체크 후 AVAILABLE 또는 EXPIRED로 복원. orderId = null (R19, R20) |
 
 ### 관계 정리
 
@@ -410,8 +413,8 @@ classDiagram
 |---|---|---|
 | OwnedCoupon → Coupon | `@ManyToOne` 직접 참조 | 같은 쿠폰 도메인 내부. 할인 계산 시 Coupon의 type/value 접근 필요 |
 | OwnedCoupon → User | ID 참조 (`Long userId`) | 도메인 간 경계. 객체 참조 없음 |
-| Order → OwnedCoupon | ID 참조 (`Long ownedCouponId`, nullable) | 도메인 간 경계. 쿠폰 미적용 시 null |
-| OwnedCoupon → Order | 역참조 없음 | Application Layer(OrderFacade)에서 조율 |
+| OwnedCoupon → Order | ID 참조 (`Long orderId`, nullable) | 도메인 간 경계. 쿠폰 사용 시 어떤 주문에서 사용되었는지 기록 |
+| Order → OwnedCoupon | 참조 없음 | Order는 할인 결과(discountAmount)만 보유. 할인 출처를 모름 |
 | User → OwnedCoupon | 역참조 없음 | CouponService.getMyOwnedCoupons(userId)로 접근 |
 
 ---
@@ -438,6 +441,7 @@ erDiagram
         bigint id PK
         bigint coupon_id
         bigint user_id
+        bigint order_id "nullable"
         varchar status
         timestamp used_at "nullable"
         timestamp created_at
@@ -448,7 +452,6 @@ erDiagram
     orders {
         bigint id PK
         bigint user_id
-        bigint owned_coupon_id "nullable"
         int original_total_price
         int discount_amount
         int total_price
@@ -460,7 +463,7 @@ erDiagram
 
     coupons ||--o{ owned_coupons : ""
     users ||--o{ owned_coupons : ""
-    owned_coupons |o--o| orders : "nullable"
+    owned_coupons |o--o| orders : "nullable (orderId)"
 ```
 
 ### 인덱스
@@ -484,18 +487,27 @@ erDiagram
 
 - 쿠폰 발급 시 — couponId가 유효하고, 삭제되지 않았으며, 유효기간 내이고, 수량이 남아있는지 확인
 - 쿠폰 사용 시 — ownedCouponId가 유효하고, 본인 소유이며, AVAILABLE 상태이고, 유효기간 내인지 확인
-- 주문 취소 시 — order.ownedCouponId로 OwnedCoupon을 찾아 복원
+- 주문 취소 시 — orderId로 OwnedCoupon을 찾아 복원 (없으면 no-op)
 
 ### Order 도메인 변경사항
 
-주문에 쿠폰 관련 필드 추가:
+주문에 할인 결과 필드만 추가 (할인 출처는 Order가 모름):
 
 | 필드 | 타입 | 설명 |
 |---|---|---|
-| ownedCouponId | Long (nullable) | 사용한 소유 쿠폰 ID. 쿠폰 미적용 시 null |
 | discountAmount | int (default 0) | 실 할인 적용 금액 |
-| originalTotalPrice | int | 기존 필드 유지. 쿠폰 적용 전 상품 합계 금액 |
+| originalTotalPrice | int | 기존 필드 유지. 할인 적용 전 상품 합계 금액 |
 | totalPrice | int | 기존 필드. `originalTotalPrice - discountAmount`로 계산 |
 
-기존 `OrderModel.create(userId, items)` 시그니처는 유지하되, 쿠폰 포함 오버로드 추가:
-`OrderModel.create(userId, items, ownedCouponId, discountAmount)`
+> `ownedCouponId`는 Order에 두지 않는다. 할인 출처 추적은 OwnedCoupon.orderId가 담당한다.
+
+기존 `OrderModel.create(userId, items)` 시그니처는 유지하되, 할인 포함 오버로드 추가:
+`OrderModel.create(userId, items, discountAmount)`
+
+### OwnedCoupon 도메인 변경사항
+
+쿠폰 사용 시 주문 참조 필드 추가:
+
+| 필드 | 타입 | 설명 |
+|---|---|---|
+| orderId | Long (nullable) | 이 쿠폰이 사용된 주문 ID. 사용 전/복원 후에는 null |
