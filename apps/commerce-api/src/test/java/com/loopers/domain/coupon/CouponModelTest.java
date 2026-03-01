@@ -113,56 +113,6 @@ class CouponModelTest {
         }
     }
 
-    @DisplayName("할인 금액을 계산할 때, ")
-    @Nested
-    class CalculateDiscount {
-
-        @DisplayName("FIXED 타입이면 discountValue를 그대로 반환한다")
-        @Test
-        void calculateDiscount_fixed() {
-            // arrange
-            CouponModel coupon = CouponModel.create(
-                    "5000원 할인", CouponDiscountType.FIXED, 5000L,
-                    null, 1000, ZonedDateTime.now().plusDays(30));
-
-            // act
-            long discount = coupon.calculateDiscount(50000L);
-
-            // assert
-            assertThat(discount).isEqualTo(5000L);
-        }
-
-        @DisplayName("RATE 타입이면 orderAmount * discountValue / 100을 반환한다")
-        @Test
-        void calculateDiscount_rate() {
-            // arrange
-            CouponModel coupon = CouponModel.create(
-                    "10% 할인", CouponDiscountType.RATE, 10L,
-                    null, 1000, ZonedDateTime.now().plusDays(30));
-
-            // act
-            long discount = coupon.calculateDiscount(50000L);
-
-            // assert
-            assertThat(discount).isEqualTo(5000L);
-        }
-
-        @DisplayName("할인 금액이 주문 금액을 초과하면 주문 금액까지만 적용한다")
-        @Test
-        void calculateDiscount_cappedAtOrderAmount() {
-            // arrange
-            CouponModel coupon = CouponModel.create(
-                    "10000원 할인", CouponDiscountType.FIXED, 10000L,
-                    null, 1000, ZonedDateTime.now().plusDays(30));
-
-            // act
-            long discount = coupon.calculateDiscount(5000L);
-
-            // assert
-            assertThat(discount).isEqualTo(5000L);
-        }
-    }
-
     @DisplayName("발급 가능 여부를 검증할 때, ")
     @Nested
     class ValidateIssuable {
@@ -210,37 +160,6 @@ class CouponModelTest {
             assertThatThrownBy(coupon::validateIssuable)
                     .isInstanceOf(CoreException.class)
                     .hasMessageContaining("만료된 쿠폰입니다.");
-        }
-    }
-
-    @DisplayName("최소 주문 금액을 검증할 때, ")
-    @Nested
-    class ValidateMinOrderAmount {
-
-        @DisplayName("주문 금액이 최소 주문 금액 미만이면 예외가 발생한다")
-        @Test
-        void validateMinOrderAmount_whenNotMet() {
-            // arrange
-            CouponModel coupon = CouponModel.create(
-                    "할인 쿠폰", CouponDiscountType.FIXED, 5000L,
-                    20000L, 1000, ZonedDateTime.now().plusDays(30));
-
-            // act & assert
-            assertThatThrownBy(() -> coupon.validateMinOrderAmount(15000L))
-                    .isInstanceOf(CoreException.class)
-                    .hasMessageContaining("최소 주문 금액을 충족하지 않습니다.");
-        }
-
-        @DisplayName("minOrderAmount가 null이면 검증을 통과한다")
-        @Test
-        void validateMinOrderAmount_whenNull_passes() {
-            // arrange
-            CouponModel coupon = CouponModel.create(
-                    "할인 쿠폰", CouponDiscountType.FIXED, 5000L,
-                    null, 1000, ZonedDateTime.now().plusDays(30));
-
-            // act — 예외 없이 통과
-            coupon.validateMinOrderAmount(1000L);
         }
     }
 

@@ -153,7 +153,7 @@ class CouponServiceTest {
 
             // assert
             assertAll(
-                    () -> assertThat(result.getCoupon()).isSameAs(coupon),
+                    () -> assertThat(result.getCouponId()).isEqualTo(coupon.getId()),
                     () -> assertThat(result.getUserId()).isEqualTo(100L),
                     () -> assertThat(result.getStatus()).isEqualTo(OwnedCouponStatus.AVAILABLE),
                     () -> assertThat(coupon.getIssuedQuantity()).isEqualTo(1));
@@ -192,7 +192,7 @@ class CouponServiceTest {
 
             // act
             long discount = couponService.useAndCalculateDiscount(
-                    owned.getId(), 100L, 50000L);
+                    owned.getId(), 100L, 1L, 50000L);
 
             // assert
             assertAll(
@@ -214,8 +214,7 @@ class CouponServiceTest {
                     null, 1000, ZonedDateTime.now().plusDays(30)));
             OwnedCouponModel owned = ownedCouponRepository.save(
                     OwnedCouponModel.create(coupon, 100L));
-            owned.use(100L);
-            owned.assignOrderId(1L);
+            owned.use(100L, 1L);
 
             // act
             couponService.restoreByOrderId(1L);

@@ -23,7 +23,7 @@ class OwnedCouponModelTest {
     @Nested
     class Create {
 
-        @DisplayName("유효한 값이면 AVAILABLE 상태로 생성된다")
+        @DisplayName("유효한 값이면 AVAILABLE 상태로 생성되고 스냅샷이 복사된다")
         @Test
         void create_whenValidValues() {
             // arrange
@@ -34,7 +34,9 @@ class OwnedCouponModelTest {
 
             // assert
             assertAll(
-                    () -> assertThat(owned.getCoupon()).isSameAs(coupon),
+                    () -> assertThat(owned.getCouponName()).isEqualTo("테스트 쿠폰"),
+                    () -> assertThat(owned.getDiscountType()).isEqualTo(CouponDiscountType.FIXED),
+                    () -> assertThat(owned.getDiscountValue()).isEqualTo(5000L),
                     () -> assertThat(owned.getUserId()).isEqualTo(100L),
                     () -> assertThat(owned.getStatus()).isEqualTo(OwnedCouponStatus.AVAILABLE),
                     () -> assertThat(owned.getUsedAt()).isNull());
@@ -52,12 +54,13 @@ class OwnedCouponModelTest {
             OwnedCouponModel owned = OwnedCouponModel.create(createCoupon(), 100L);
 
             // act
-            owned.use(100L);
+            owned.use(100L, 1L);
 
             // assert
             assertAll(
                     () -> assertThat(owned.getStatus()).isEqualTo(OwnedCouponStatus.USED),
-                    () -> assertThat(owned.getUsedAt()).isNotNull());
+                    () -> assertThat(owned.getUsedAt()).isNotNull(),
+                    () -> assertThat(owned.getOrderId()).isEqualTo(1L));
         }
 
         @DisplayName("이미 사용된 쿠폰을 재사용하면 예외가 발생한다")
@@ -65,10 +68,10 @@ class OwnedCouponModelTest {
         void use_whenAlreadyUsed() {
             // arrange
             OwnedCouponModel owned = OwnedCouponModel.create(createCoupon(), 100L);
-            owned.use(100L);
+            owned.use(100L, 1L);
 
             // act & assert
-            assertThatThrownBy(() -> owned.use(100L))
+            assertThatThrownBy(() -> owned.use(100L, 2L))
                     .isInstanceOf(CoreException.class)
                     .hasMessageContaining("이미 사용된 쿠폰입니다.");
         }
@@ -80,7 +83,7 @@ class OwnedCouponModelTest {
             OwnedCouponModel owned = OwnedCouponModel.create(createCoupon(), 100L);
 
             // act & assert
-            assertThatThrownBy(() -> owned.use(999L))
+            assertThatThrownBy(() -> owned.use(999L, 1L))
                     .isInstanceOf(CoreException.class)
                     .hasMessageContaining("본인 소유의 쿠폰이 아닙니다.");
         }
@@ -89,15 +92,11 @@ class OwnedCouponModelTest {
         @Test
         void use_whenExpired() {
             // arrange
-            CouponModel coupon = CouponModel.create(
-                    "테스트 쿠폰", CouponDiscountType.FIXED, 5000L,
-                    null, 1000, ZonedDateTime.now().plusDays(1));
-            OwnedCouponModel owned = OwnedCouponModel.create(coupon, 100L);
-            // 쿠폰 만료 시뮬레이션
-            setField(coupon, "expiredAt", ZonedDateTime.now().minusDays(1));
+            OwnedCouponModel owned = OwnedCouponModel.create(createCoupon(), 100L);
+            setField(owned, "expiredAt", ZonedDateTime.now().minusDays(1));
 
             // act & assert
-            assertThatThrownBy(() -> owned.use(100L))
+            assertThatThrownBy(() -> owned.use(100L, 1L))
                     .isInstanceOf(CoreException.class)
                     .hasMessageContaining("만료된 쿠폰입니다.");
         }
@@ -112,7 +111,7 @@ class OwnedCouponModelTest {
         void restore_whenNotExpired() {
             // arrange
             OwnedCouponModel owned = OwnedCouponModel.create(createCoupon(), 100L);
-            owned.use(100L);
+            owned.use(100L, 1L);
 
             // act
             owned.restore();
@@ -127,19 +126,98 @@ class OwnedCouponModelTest {
         @Test
         void restore_whenExpired() {
             // arrange
-            CouponModel coupon = CouponModel.create(
-                    "테스트 쿠폰", CouponDiscountType.FIXED, 5000L,
-                    null, 1000, ZonedDateTime.now().plusDays(1));
-            OwnedCouponModel owned = OwnedCouponModel.create(coupon, 100L);
-            owned.use(100L);
-            // 쿠폰 만료 시뮬레이션
-            setField(coupon, "expiredAt", ZonedDateTime.now().minusDays(1));
+            OwnedCouponModel owned = OwnedCouponModel.create(createCoupon(), 100L);
+            owned.use(100L, 1L);
+            setField(owned, "expiredAt", ZonedDateTime.now().minusDays(1));
 
             // act
             owned.restore();
 
             // assert
             assertThat(owned.getStatus()).isEqualTo(OwnedCouponStatus.EXPIRED);
+        }
+
+        @DisplayName("USED 상태가 아니면 예외가 발생한다")
+        @Test
+        void restore_whenNotUsed() {
+            // arrange
+            OwnedCouponModel owned = OwnedCouponModel.create(createCoupon(), 100L);
+
+            // act & assert
+            assertThatThrownBy(() -> owned.restore())
+                    .isInstanceOf(CoreException.class)
+                    .hasMessageContaining("복원할 수 없는 쿠폰입니다.");
+        }
+    }
+
+    @DisplayName("할인 금액을 계산할 때, ")
+    @Nested
+    class CalculateDiscount {
+
+        @DisplayName("정액(FIXED) 할인은 discountValue를 반환한다")
+        @Test
+        void calculateDiscount_fixed() {
+            // arrange
+            OwnedCouponModel owned = OwnedCouponModel.create(createCoupon(), 100L);
+
+            // act & assert
+            assertThat(owned.calculateDiscount(50000L)).isEqualTo(5000L);
+        }
+
+        @DisplayName("정률(RATE) 할인은 주문 금액의 비율을 반환한다")
+        @Test
+        void calculateDiscount_rate() {
+            // arrange
+            CouponModel coupon = CouponModel.create(
+                    "10% 할인", CouponDiscountType.RATE, 10L,
+                    null, 1000, ZonedDateTime.now().plusDays(30));
+            OwnedCouponModel owned = OwnedCouponModel.create(coupon, 100L);
+
+            // act & assert
+            assertThat(owned.calculateDiscount(50000L)).isEqualTo(5000L);
+        }
+
+        @DisplayName("할인 금액은 주문 금액을 초과하지 않는다")
+        @Test
+        void calculateDiscount_notExceedOrderAmount() {
+            // arrange
+            CouponModel coupon = CouponModel.create(
+                    "10000원 할인", CouponDiscountType.FIXED, 10000L,
+                    null, 1000, ZonedDateTime.now().plusDays(30));
+            OwnedCouponModel owned = OwnedCouponModel.create(coupon, 100L);
+
+            // act & assert
+            assertThat(owned.calculateDiscount(3000L)).isEqualTo(3000L);
+        }
+    }
+
+    @DisplayName("최소 주문 금액을 검증할 때, ")
+    @Nested
+    class ValidateMinOrderAmount {
+
+        @DisplayName("최소 주문 금액 미달 시 예외가 발생한다")
+        @Test
+        void validateMinOrderAmount_notMet() {
+            // arrange
+            CouponModel coupon = CouponModel.create(
+                    "할인 쿠폰", CouponDiscountType.FIXED, 5000L,
+                    20000L, 1000, ZonedDateTime.now().plusDays(30));
+            OwnedCouponModel owned = OwnedCouponModel.create(coupon, 100L);
+
+            // act & assert
+            assertThatThrownBy(() -> owned.validateMinOrderAmount(10000L))
+                    .isInstanceOf(CoreException.class)
+                    .hasMessageContaining("최소 주문 금액을 충족하지 않습니다.");
+        }
+
+        @DisplayName("최소 주문 금액이 없으면 통과한다")
+        @Test
+        void validateMinOrderAmount_noMinimum() {
+            // arrange
+            OwnedCouponModel owned = OwnedCouponModel.create(createCoupon(), 100L);
+
+            // act & assert (예외 없이 통과)
+            owned.validateMinOrderAmount(1000L);
         }
     }
 

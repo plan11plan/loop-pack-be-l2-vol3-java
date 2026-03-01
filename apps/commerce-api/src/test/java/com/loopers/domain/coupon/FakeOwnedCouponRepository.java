@@ -32,7 +32,7 @@ public class FakeOwnedCouponRepository implements OwnedCouponRepository {
     @Override
     public Optional<OwnedCouponModel> findByCouponIdAndUserId(Long couponId, Long userId) {
         return store.values().stream()
-                .filter(owned -> owned.getCoupon().getId().equals(couponId))
+                .filter(owned -> owned.getCouponId().equals(couponId))
                 .filter(owned -> owned.getUserId().equals(userId))
                 .findFirst();
     }
@@ -54,7 +54,7 @@ public class FakeOwnedCouponRepository implements OwnedCouponRepository {
     @Override
     public Page<OwnedCouponModel> findAllByCouponId(Long couponId, Pageable pageable) {
         List<OwnedCouponModel> filtered = store.values().stream()
-                .filter(owned -> owned.getCoupon().getId().equals(couponId))
+                .filter(owned -> owned.getCouponId().equals(couponId))
                 .toList();
 
         int start = (int) pageable.getOffset();
