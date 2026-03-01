@@ -45,6 +45,13 @@ public class FakeOwnedCouponRepository implements OwnedCouponRepository {
     }
 
     @Override
+    public Optional<OwnedCouponModel> findByOrderId(Long orderId) {
+        return store.values().stream()
+                .filter(owned -> orderId.equals(owned.getOrderId()))
+                .findFirst();
+    }
+
+    @Override
     public Page<OwnedCouponModel> findAllByCouponId(Long couponId, Pageable pageable) {
         List<OwnedCouponModel> filtered = store.values().stream()
                 .filter(owned -> owned.getCoupon().getId().equals(couponId))

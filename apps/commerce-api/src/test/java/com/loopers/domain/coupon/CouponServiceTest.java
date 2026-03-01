@@ -205,9 +205,9 @@ class CouponServiceTest {
     @Nested
     class Restore {
 
-        @DisplayName("성공하면 쿠폰 상태가 AVAILABLE로 복원된다")
+        @DisplayName("orderId로 복원하면 쿠폰 상태가 AVAILABLE로 복원된다")
         @Test
-        void restore_success() {
+        void restoreByOrderId_success() {
             // arrange
             CouponModel coupon = couponRepository.save(CouponModel.create(
                     "5000원 할인", CouponDiscountType.FIXED, 5000L,
@@ -215,14 +215,23 @@ class CouponServiceTest {
             OwnedCouponModel owned = ownedCouponRepository.save(
                     OwnedCouponModel.create(coupon, 100L));
             owned.use(100L);
+            owned.assignOrderId(1L);
 
             // act
-            couponService.restoreOwnedCoupon(owned.getId());
+            couponService.restoreByOrderId(1L);
 
             // assert
             assertAll(
                     () -> assertThat(owned.getStatus()).isEqualTo(OwnedCouponStatus.AVAILABLE),
-                    () -> assertThat(owned.getUsedAt()).isNull());
+                    () -> assertThat(owned.getUsedAt()).isNull(),
+                    () -> assertThat(owned.getOrderId()).isNull());
+        }
+
+        @DisplayName("해당 orderId의 쿠폰이 없으면 아무 일도 일어나지 않는다")
+        @Test
+        void restoreByOrderId_whenNoCoupon_noOp() {
+            // act & assert (예외 없이 정상 종료)
+            couponService.restoreByOrderId(999L);
         }
     }
 

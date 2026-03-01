@@ -71,10 +71,16 @@ public class CouponService {
     }
 
     @Transactional
-    public void restoreOwnedCoupon(Long ownedCouponId) {
+    public void linkOrderToCoupon(Long ownedCouponId, Long orderId) {
         ownedCouponRepository.findById(ownedCouponId)
                 .orElseThrow(() -> new CoreException(CouponErrorCode.NOT_FOUND))
-                .restore();
+                .assignOrderId(orderId);
+    }
+
+    @Transactional
+    public void restoreByOrderId(Long orderId) {
+        ownedCouponRepository.findByOrderId(orderId)
+                .ifPresent(OwnedCouponModel::restore);
     }
 
     @Transactional(readOnly = true)

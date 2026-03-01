@@ -23,8 +23,8 @@ public class OrderService {
 
     @Transactional
     public OrderModel createOrder(Long userId, List<OrderItemModel> items,
-                                  Long ownedCouponId, int discountAmount) {
-        return orderRepository.save(OrderModel.create(userId, items, ownedCouponId, discountAmount));
+                                  int discountAmount) {
+        return orderRepository.save(OrderModel.create(userId, items, discountAmount));
     }
 
     @Transactional(readOnly = true)

@@ -32,6 +32,9 @@ public class OwnedCouponModel extends BaseEntity {
     @Column(name = "status", nullable = false)
     private OwnedCouponStatus status;
 
+    @Column(name = "order_id")
+    private Long orderId;
+
     @Column(name = "used_at")
     private ZonedDateTime usedAt;
 
@@ -51,12 +54,17 @@ public class OwnedCouponModel extends BaseEntity {
         this.usedAt = ZonedDateTime.now();
     }
 
+    public void assignOrderId(Long orderId) {
+        this.orderId = orderId;
+    }
+
     public void restore() {
         if (this.coupon.getExpiredAt().isBefore(ZonedDateTime.now())) {
             this.status = OwnedCouponStatus.EXPIRED;
         } else {
             this.status = OwnedCouponStatus.AVAILABLE;
         }
+        this.orderId = null;
         this.usedAt = null;
     }
 

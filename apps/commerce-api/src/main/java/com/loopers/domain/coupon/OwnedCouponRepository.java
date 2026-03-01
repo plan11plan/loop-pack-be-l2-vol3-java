@@ -16,4 +16,6 @@ public interface OwnedCouponRepository {
     List<OwnedCouponModel> findAllByUserId(Long userId);
 
     Page<OwnedCouponModel> findAllByCouponId(Long couponId, Pageable pageable);
+
+    Optional<OwnedCouponModel> findByOrderId(Long orderId);
 }

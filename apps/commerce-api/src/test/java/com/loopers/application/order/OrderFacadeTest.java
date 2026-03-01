@@ -73,7 +73,7 @@ class OrderFacadeTest {
 
             OrderModel order = OrderModel.create(1L, List.of(
                     OrderItemModel.create(10L, 25000, 1, "상품A", ("브랜드A"))));
-            when(orderService.createOrder(anyLong(), anyList(), any(), anyInt())).thenReturn(order);
+            when(orderService.createOrder(anyLong(), anyList(), anyInt())).thenReturn(order);
 
             OrderCriteria.Create criteria = new OrderCriteria.Create(List.of(
                     new OrderCriteria.Create.CreateItem(10L, 1, 25000)));
@@ -85,7 +85,7 @@ class OrderFacadeTest {
             assertAll(
                     () -> verify(productService).validateAndDeductStock(anyList()),
                     () -> verify(brandService).getNameMapByIds(List.of(brandId)),
-                    () -> verify(orderService).createOrder(anyLong(), anyList(), any(), anyInt()),
+                    () -> verify(orderService).createOrder(anyLong(), anyList(), anyInt()),
                     () -> assertThat(result.totalPrice()).isEqualTo(25000));
         }
 
@@ -295,8 +295,9 @@ class OrderFacadeTest {
 
             OrderModel order = OrderModel.create(1L, List.of(
                     OrderItemModel.create(10L, 50000, 1, "상품A", "브랜드A")),
-                    5L, 5000);
-            when(orderService.createOrder(anyLong(), anyList(), eq(5L), eq(5000)))
+                    5000);
+            setId(order, 1L);
+            when(orderService.createOrder(anyLong(), anyList(), eq(5000)))
                     .thenReturn(order);
 
             OrderCriteria.Create criteria = new OrderCriteria.Create(List.of(
@@ -308,6 +309,7 @@ class OrderFacadeTest {
             // assert
             assertAll(
                     () -> verify(couponService).useAndCalculateDiscount(5L, 1L, 50000L),
+                    () -> verify(couponService).linkOrderToCoupon(5L, 1L),
                     () -> assertThat(result.totalPrice()).isEqualTo(45000));
         }
 
@@ -323,8 +325,9 @@ class OrderFacadeTest {
 
             OrderModel order = OrderModel.create(1L, List.of(
                     OrderItemModel.create(10L, 50000, 1, "상품A", "브랜드A")),
-                    5L, 5000);
-            when(orderService.createOrder(anyLong(), anyList(), eq(5L), eq(5000)))
+                    5000);
+            setId(order, 1L);
+            when(orderService.createOrder(anyLong(), anyList(), eq(5000)))
                     .thenReturn(order);
 
             OrderCriteria.Create criteria = new OrderCriteria.Create(List.of(
@@ -336,6 +339,7 @@ class OrderFacadeTest {
             // assert
             assertAll(
                     () -> verify(couponService).useAndCalculateDiscount(5L, 1L, 50000L),
+                    () -> verify(couponService).linkOrderToCoupon(5L, 1L),
                     () -> assertThat(result.totalPrice()).isEqualTo(45000));
         }
 
@@ -371,7 +375,7 @@ class OrderFacadeTest {
 
             OrderModel order = OrderModel.create(1L, List.of(
                     OrderItemModel.create(10L, 50000, 1, "상품A", "브랜드A")));
-            when(orderService.createOrder(anyLong(), anyList(), any(), anyInt()))
+            when(orderService.createOrder(anyLong(), anyList(), anyInt()))
                     .thenReturn(order);
 
             OrderCriteria.Create criteria = new OrderCriteria.Create(List.of(
@@ -462,7 +466,7 @@ class OrderFacadeTest {
             OrderItemModel item = OrderItemModel.create(
                     10L, 50000, 1, "상품A", "브랜드A");
             setId(item, 100L);
-            OrderModel order = OrderModel.create(1L, List.of(item), 5L, 5000);
+            OrderModel order = OrderModel.create(1L, List.of(item), 5000);
 
             when(orderService.getByIdAndUserId(1L, 1L)).thenReturn(order);
             when(orderService.cancelItem(1L, 100L)).thenAnswer(invocation -> {
@@ -474,7 +478,7 @@ class OrderFacadeTest {
 
             // assert
             assertAll(
-                    () -> verify(couponService).restoreOwnedCoupon(5L),
+                    () -> verify(couponService).restoreByOrderId(1L),
                     () -> verify(productService).increaseStock(10L, 1));
         }
 
@@ -488,7 +492,7 @@ class OrderFacadeTest {
                     20L, 20000, 1, "상품B", "브랜드A");
             setId(item1, 100L);
             setId(item2, 200L);
-            OrderModel order = OrderModel.create(1L, List.of(item1, item2), 5L, 5000);
+            OrderModel order = OrderModel.create(1L, List.of(item1, item2), 5000);
 
             when(orderService.getByIdAndUserId(1L, 1L)).thenReturn(order);
             when(orderService.cancelItem(1L, 100L)).thenAnswer(invocation -> {
@@ -500,7 +504,7 @@ class OrderFacadeTest {
 
             // assert
             assertAll(
-                    () -> verify(couponService, never()).restoreOwnedCoupon(anyLong()),
+                    () -> verify(couponService, never()).restoreByOrderId(anyLong()),
                     () -> verify(productService).increaseStock(10L, 1));
         }
     }

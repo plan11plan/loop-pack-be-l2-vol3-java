@@ -51,15 +51,20 @@ public class OrderFacade {
                         brandNameMap.get(info.brandId())))
                 .toList();
 
-        Long ownedCouponId = criteria.ownedCouponId();
         int discountAmount = 0;
-        if (ownedCouponId != null) {
+        if (criteria.ownedCouponId() != null) {
             discountAmount = (int) couponService.useAndCalculateDiscount(
-                    ownedCouponId, userId, OrderItemModel.calculateTotalPrice(items));
+                    criteria.ownedCouponId(), userId,
+                    OrderItemModel.calculateTotalPrice(items));
         }
 
-        return OrderResult.OrderSummary.from(
-                orderService.createOrder(userId, items, ownedCouponId, discountAmount));
+        OrderModel order = orderService.createOrder(userId, items, discountAmount);
+
+        if (criteria.ownedCouponId() != null) {
+            couponService.linkOrderToCoupon(criteria.ownedCouponId(), order.getId());
+        }
+
+        return OrderResult.OrderSummary.from(order);
     }
 
     @Transactional(readOnly = true)
@@ -91,8 +96,8 @@ public class OrderFacade {
         OrderModel order = orderService.getByIdAndUserId(orderId, userId);
         OrderItemModel cancelledItem = orderService.cancelItem(orderId, orderItemId);
         productService.increaseStock(cancelledItem.getProductId(), cancelledItem.getQuantity());
-        if (order.getStatus() == OrderStatus.CANCELLED && order.getOwnedCouponId() != null) {
-            couponService.restoreOwnedCoupon(order.getOwnedCouponId());
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            couponService.restoreByOrderId(orderId);
         }
     }
 
@@ -101,8 +106,8 @@ public class OrderFacade {
         OrderModel order = orderService.getById(orderId);
         OrderItemModel cancelledItem = orderService.cancelItem(orderId, orderItemId);
         productService.increaseStock(cancelledItem.getProductId(), cancelledItem.getQuantity());
-        if (order.getStatus() == OrderStatus.CANCELLED && order.getOwnedCouponId() != null) {
-            couponService.restoreOwnedCoupon(order.getOwnedCouponId());
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            couponService.restoreByOrderId(orderId);
         }
     }
 }

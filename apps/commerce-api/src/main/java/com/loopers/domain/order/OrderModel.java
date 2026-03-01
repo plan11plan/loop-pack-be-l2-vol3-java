@@ -40,9 +40,6 @@ public class OrderModel extends BaseEntity {
     @OneToMany(mappedBy = "order", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     private List<OrderItemModel> items = new ArrayList<>();
 
-    @Column(name = "owned_coupon_id")
-    private Long ownedCouponId;
-
     @Column(name = "discount_amount", nullable = false)
     private int discountAmount;
 
@@ -55,18 +52,17 @@ public class OrderModel extends BaseEntity {
     }
 
     public static OrderModel create(Long userId, List<OrderItemModel> items) {
-        return create(userId, items, null, 0);
+        return create(userId, items, 0);
     }
 
     public static OrderModel create(Long userId, List<OrderItemModel> items,
-                                    Long ownedCouponId, int discountAmount) {
+                                    int discountAmount) {
         validateUserId(userId);
         validateItems(items);
         OrderModel order = new OrderModel(userId, 0, OrderStatus.ORDERED);
         items.forEach(order::addItem);
         int calculatedPrice = order.calculateTotalPrice();
         order.originalTotalPrice = calculatedPrice;
-        order.ownedCouponId = ownedCouponId;
         order.discountAmount = discountAmount;
         order.totalPrice = calculatedPrice - discountAmount;
         return order;

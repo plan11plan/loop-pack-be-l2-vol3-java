@@ -39,4 +39,9 @@ public class OwnedCouponRepositoryImpl implements OwnedCouponRepository {
     public Page<OwnedCouponModel> findAllByCouponId(Long couponId, Pageable pageable) {
         return ownedCouponJpaRepository.findAllByCouponId(couponId, pageable);
     }
+
+    @Override
+    public Optional<OwnedCouponModel> findByOrderId(Long orderId) {
+        return ownedCouponJpaRepository.findByOrderId(orderId);
+    }
 }
