@@ -51,17 +51,13 @@ public class OrderFacade {
                         brandNameMap.get(info.brandId())))
                 .toList();
 
-        int discountAmount = 0;
-        if (criteria.ownedCouponId() != null) {
-            discountAmount = (int) couponService.useAndCalculateDiscount(
-                    criteria.ownedCouponId(), userId,
-                    OrderItemModel.calculateTotalPrice(items));
-        }
-
-        OrderModel order = orderService.createOrder(userId, items, discountAmount);
+        OrderModel order = orderService.createOrder(userId, items, 0);
 
         if (criteria.ownedCouponId() != null) {
-            couponService.linkOrderToCoupon(criteria.ownedCouponId(), order.getId());
+            order.applyDiscount(
+                    (int) couponService.useAndCalculateDiscount(
+                            criteria.ownedCouponId(), userId, order.getId(),
+                            OrderItemModel.calculateTotalPrice(items)));
         }
 
         return OrderResult.OrderSummary.from(order);

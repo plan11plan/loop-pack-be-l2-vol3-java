@@ -60,9 +60,9 @@ public class OrderModel extends BaseEntity {
                                     int discountAmount) {
         validateUserId(userId);
         validateItems(items);
-        int originalTotalPrice = OrderItemModel.calculateTotalPrice(items);
         OrderModel order = new OrderModel(
-                userId, originalTotalPrice, discountAmount, OrderStatus.ORDERED);
+                userId, OrderItemModel.calculateTotalPrice(items),
+                discountAmount, OrderStatus.ORDERED);
         items.forEach(order::addItem);
         return order;
     }
@@ -91,6 +91,11 @@ public class OrderModel extends BaseEntity {
     private boolean isAllItemsCancelled() {
         return items.stream()
                 .allMatch(item -> item.getStatus() == OrderItemStatus.CANCELLED);
+    }
+
+    public void applyDiscount(int discountAmount) {
+        this.discountAmount = discountAmount;
+        this.totalPrice = Math.max(0, this.originalTotalPrice - discountAmount);
     }
 
     public int calculateTotalPrice() {

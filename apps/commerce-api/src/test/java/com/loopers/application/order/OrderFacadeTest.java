@@ -291,14 +291,14 @@ class OrderFacadeTest {
             when(productService.validateAndDeductStock(anyList())).thenReturn(List.of(
                     new ProductInfo.StockDeduction(10L, "상품A", 50000, 1, brandId)));
             when(brandService.getNameMapByIds(List.of(brandId))).thenReturn(Map.of(brandId, "브랜드A"));
-            when(couponService.useAndCalculateDiscount(5L, 1L, 50000L)).thenReturn(5000L);
 
             OrderModel order = OrderModel.create(1L, List.of(
-                    OrderItemModel.create(10L, 50000, 1, "상품A", "브랜드A")),
-                    5000);
+                    OrderItemModel.create(10L, 50000, 1, "상품A", "브랜드A")));
             setId(order, 1L);
-            when(orderService.createOrder(anyLong(), anyList(), eq(5000)))
+            when(orderService.createOrder(anyLong(), anyList(), eq(0)))
                     .thenReturn(order);
+            when(couponService.useAndCalculateDiscount(5L, 1L, 1L, 50000L))
+                    .thenReturn(5000L);
 
             OrderCriteria.Create criteria = new OrderCriteria.Create(List.of(
                     new OrderCriteria.Create.CreateItem(10L, 1, 50000)), 5L);
@@ -308,8 +308,7 @@ class OrderFacadeTest {
 
             // assert
             assertAll(
-                    () -> verify(couponService).useAndCalculateDiscount(5L, 1L, 50000L),
-                    () -> verify(couponService).linkOrderToCoupon(5L, 1L),
+                    () -> verify(couponService).useAndCalculateDiscount(5L, 1L, 1L, 50000L),
                     () -> assertThat(result.totalPrice()).isEqualTo(45000));
         }
 
@@ -321,14 +320,14 @@ class OrderFacadeTest {
             when(productService.validateAndDeductStock(anyList())).thenReturn(List.of(
                     new ProductInfo.StockDeduction(10L, "상품A", 50000, 1, brandId)));
             when(brandService.getNameMapByIds(List.of(brandId))).thenReturn(Map.of(brandId, "브랜드A"));
-            when(couponService.useAndCalculateDiscount(5L, 1L, 50000L)).thenReturn(5000L);
 
             OrderModel order = OrderModel.create(1L, List.of(
-                    OrderItemModel.create(10L, 50000, 1, "상품A", "브랜드A")),
-                    5000);
+                    OrderItemModel.create(10L, 50000, 1, "상품A", "브랜드A")));
             setId(order, 1L);
-            when(orderService.createOrder(anyLong(), anyList(), eq(5000)))
+            when(orderService.createOrder(anyLong(), anyList(), eq(0)))
                     .thenReturn(order);
+            when(couponService.useAndCalculateDiscount(5L, 1L, 1L, 50000L))
+                    .thenReturn(5000L);
 
             OrderCriteria.Create criteria = new OrderCriteria.Create(List.of(
                     new OrderCriteria.Create.CreateItem(10L, 1, 50000)), 5L);
@@ -338,8 +337,7 @@ class OrderFacadeTest {
 
             // assert
             assertAll(
-                    () -> verify(couponService).useAndCalculateDiscount(5L, 1L, 50000L),
-                    () -> verify(couponService).linkOrderToCoupon(5L, 1L),
+                    () -> verify(couponService).useAndCalculateDiscount(5L, 1L, 1L, 50000L),
                     () -> assertThat(result.totalPrice()).isEqualTo(45000));
         }
 
@@ -351,7 +349,12 @@ class OrderFacadeTest {
             when(productService.validateAndDeductStock(anyList())).thenReturn(List.of(
                     new ProductInfo.StockDeduction(10L, "상품A", 50000, 1, brandId)));
             when(brandService.getNameMapByIds(List.of(brandId))).thenReturn(Map.of(brandId, "브랜드A"));
-            when(couponService.useAndCalculateDiscount(5L, 1L, 50000L))
+
+            OrderModel order = OrderModel.create(1L, List.of(
+                    OrderItemModel.create(10L, 50000, 1, "상품A", "브랜드A")));
+            setId(order, 1L);
+            when(orderService.createOrder(anyLong(), anyList(), eq(0))).thenReturn(order);
+            when(couponService.useAndCalculateDiscount(eq(5L), eq(1L), anyLong(), eq(50000L)))
                     .thenThrow(new CoreException(CouponErrorCode.ALREADY_USED));
 
             OrderCriteria.Create criteria = new OrderCriteria.Create(List.of(
@@ -387,7 +390,7 @@ class OrderFacadeTest {
             // assert
             assertAll(
                     () -> verify(couponService, never()).useAndCalculateDiscount(
-                            anyLong(), anyLong(), anyLong()),
+                            anyLong(), anyLong(), anyLong(), anyLong()),
                     () -> assertThat(result.totalPrice()).isEqualTo(50000));
         }
 
@@ -399,7 +402,12 @@ class OrderFacadeTest {
             when(productService.validateAndDeductStock(anyList())).thenReturn(List.of(
                     new ProductInfo.StockDeduction(10L, "상품A", 50000, 1, brandId)));
             when(brandService.getNameMapByIds(List.of(brandId))).thenReturn(Map.of(brandId, "브랜드A"));
-            when(couponService.useAndCalculateDiscount(999L, 1L, 50000L))
+
+            OrderModel order = OrderModel.create(1L, List.of(
+                    OrderItemModel.create(10L, 50000, 1, "상품A", "브랜드A")));
+            setId(order, 1L);
+            when(orderService.createOrder(anyLong(), anyList(), eq(0))).thenReturn(order);
+            when(couponService.useAndCalculateDiscount(eq(999L), eq(1L), anyLong(), eq(50000L)))
                     .thenThrow(new CoreException(CouponErrorCode.NOT_FOUND));
 
             OrderCriteria.Create criteria = new OrderCriteria.Create(List.of(
@@ -420,7 +428,12 @@ class OrderFacadeTest {
             when(productService.validateAndDeductStock(anyList())).thenReturn(List.of(
                     new ProductInfo.StockDeduction(10L, "상품A", 50000, 1, brandId)));
             when(brandService.getNameMapByIds(List.of(brandId))).thenReturn(Map.of(brandId, "브랜드A"));
-            when(couponService.useAndCalculateDiscount(5L, 1L, 50000L))
+
+            OrderModel order = OrderModel.create(1L, List.of(
+                    OrderItemModel.create(10L, 50000, 1, "상품A", "브랜드A")));
+            setId(order, 1L);
+            when(orderService.createOrder(anyLong(), anyList(), eq(0))).thenReturn(order);
+            when(couponService.useAndCalculateDiscount(eq(5L), eq(1L), anyLong(), eq(50000L)))
                     .thenThrow(new CoreException(CouponErrorCode.NOT_OWNED));
 
             OrderCriteria.Create criteria = new OrderCriteria.Create(List.of(
@@ -441,7 +454,12 @@ class OrderFacadeTest {
             when(productService.validateAndDeductStock(anyList())).thenReturn(List.of(
                     new ProductInfo.StockDeduction(10L, "상품A", 10000, 1, brandId)));
             when(brandService.getNameMapByIds(List.of(brandId))).thenReturn(Map.of(brandId, "브랜드A"));
-            when(couponService.useAndCalculateDiscount(5L, 1L, 10000L))
+
+            OrderModel order = OrderModel.create(1L, List.of(
+                    OrderItemModel.create(10L, 10000, 1, "상품A", "브랜드A")));
+            setId(order, 1L);
+            when(orderService.createOrder(anyLong(), anyList(), eq(0))).thenReturn(order);
+            when(couponService.useAndCalculateDiscount(eq(5L), eq(1L), anyLong(), eq(10000L)))
                     .thenThrow(new CoreException(CouponErrorCode.MIN_ORDER_AMOUNT_NOT_MET));
 
             OrderCriteria.Create criteria = new OrderCriteria.Create(List.of(
