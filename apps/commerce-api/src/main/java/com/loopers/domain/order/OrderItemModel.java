@@ -12,6 +12,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.util.List;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -75,6 +76,12 @@ public class OrderItemModel extends BaseEntity {
             throw new CoreException(OrderErrorCode.ALREADY_CANCELLED_ITEM);
         }
         this.status = OrderItemStatus.CANCELLED;
+    }
+
+    public static int calculateTotalPrice(List<OrderItemModel> items) {
+        return items.stream()
+                .mapToInt(item -> item.getOrderPrice() * item.getQuantity())
+                .sum();
     }
 
     void assignOrder(OrderModel order) {

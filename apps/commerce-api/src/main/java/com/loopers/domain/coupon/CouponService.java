@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -15,33 +16,40 @@ public class CouponService {
     private final CouponRepository couponRepository;
     private final OwnedCouponRepository ownedCouponRepository;
 
+    @Transactional
     public CouponModel register(CouponCommand.Create command) {
         return couponRepository.save(CouponModel.create(
                 command.name(), command.discountType(), command.discountValue(),
                 command.minOrderAmount(), command.totalQuantity(), command.expiredAt()));
     }
 
+    @Transactional(readOnly = true)
     public CouponModel getById(Long id) {
         return couponRepository.findById(id)
                 .orElseThrow(() -> new CoreException(CouponErrorCode.NOT_FOUND));
     }
 
+    @Transactional(readOnly = true)
     public Page<CouponModel> getAll(Pageable pageable) {
         return couponRepository.findAll(pageable);
     }
 
+    @Transactional
     public void update(Long id, CouponCommand.Update command) {
         getById(id).update(command.name(), command.expiredAt());
     }
 
+    @Transactional
     public void delete(Long id) {
         getById(id).delete();
     }
 
+    @Transactional(readOnly = true)
     public Page<OwnedCouponModel> getIssuedCoupons(Long couponId, Pageable pageable) {
         return ownedCouponRepository.findAllByCouponId(couponId, pageable);
     }
 
+    @Transactional
     public OwnedCouponModel issue(Long couponId, Long userId) {
         CouponModel coupon = getById(couponId);
         ownedCouponRepository.findByCouponIdAndUserId(couponId, userId)
@@ -52,6 +60,7 @@ public class CouponService {
         return ownedCouponRepository.save(OwnedCouponModel.create(coupon, userId));
     }
 
+    @Transactional
     public long useAndCalculateDiscount(Long ownedCouponId, Long userId, long orderAmount) {
         OwnedCouponModel owned = ownedCouponRepository.findById(ownedCouponId)
                 .orElseThrow(() -> new CoreException(CouponErrorCode.NOT_FOUND));
@@ -61,12 +70,14 @@ public class CouponService {
         return coupon.calculateDiscount(orderAmount);
     }
 
+    @Transactional
     public void restoreOwnedCoupon(Long ownedCouponId) {
         ownedCouponRepository.findById(ownedCouponId)
                 .orElseThrow(() -> new CoreException(CouponErrorCode.NOT_FOUND))
                 .restore();
     }
 
+    @Transactional(readOnly = true)
     public List<OwnedCouponModel> getMyOwnedCoupons(Long userId) {
         return ownedCouponRepository.findAllByUserId(userId);
     }
