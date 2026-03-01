@@ -18,6 +18,8 @@
 - **Soft Delete** — 쿠폰 템플릿은 `deleted_at` 컬럼으로 논리 삭제. 이미 발급된 쿠폰은 삭제 후에도 유효기간까지 정상 사용 가능 (R4).
 - **2테이블 구조** — Coupon(템플릿)과 OwnedCoupon(소유 쿠폰). User↔Coupon은 M:N 관계이며 중간 테이블이 자체 상태를 가지므로 독립 엔티티로 분리.
 - **2 Aggregate Root** — Coupon과 OwnedCoupon은 생명주기가 다르다(Coupon soft delete 시 OwnedCoupon은 유지). 각각 별도 Aggregate Root.
+- **스냅샷 분리** — OwnedCoupon은 발급 시점에 Coupon의 할인 조건(couponName, discountType, discountValue, minOrderAmount, expiredAt)을 스냅샷 복사. Coupon에 대한 `@ManyToOne` 직접 참조 없이 `Long couponId`(ID 참조)만 보유.
+- **발급 시점 확정** — 유저가 발급받을 때의 조건이 "계약". Admin이 사후에 Coupon 템플릿을 수정해도 이미 발급된 OwnedCoupon에는 영향 없음.
 - **쿠폰 타입** — 정액 할인(FIXED)과 정률 할인(RATE) 두 가지 (R1).
 - **수량 제한** — totalQuantity로 총 발급 가능 수량을 제한하고, issuedQuantity로 현재 발급 수량을 추적 (R2).
 - **정률 쿠폰 할인 상한 없음** — maxDiscountAmount 필드 없이 PDF 스펙 그대로 (R3).
@@ -204,25 +206,27 @@
 [기능 흐름]
 1. 회원이 상품 목록과 couponId(nullable)로 주문을 요청한다
 2. 상품 검증 + 재고 차감 (기존 주문 흐름)
-3. couponId가 있으면:
+3. 주문 생성 (discountAmount = 0)
+4. couponId가 있으면:
    a. OwnedCoupon을 조회한다 (동시성 제어)
-   b. 본인 소유 + AVAILABLE 상태 + 유효기간 미경과 검증 (R13, R14)
-   c. 최소 주문 금액 검증 (R6)
-   d. OwnedCoupon을 USED로 전이 (R15)
-   e. 할인 금액 계산 — FIXED: discountValue, RATE: orderAmount * discountValue / 100 (R16)
-4. 주문 생성 (discountAmount 포함)
-5. 생성된 주문 ID를 OwnedCoupon에 연결 (linkOrderToCoupon)
+   b. 최소 주문 금액 검증 — OwnedCoupon 자체 스냅샷 사용 (R6)
+   c. 본인 소유 + AVAILABLE 상태 + 유효기간 미경과 검증 — 자체 스냅샷 (R13, R14)
+   d. OwnedCoupon을 USED로 전이, orderId 기록 (R15)
+   e. 할인 금액 계산 — OwnedCoupon 자체 스냅샷 사용 (R16)
+   f. order.applyDiscount(discountAmount) — 주문에 할인 반영
 
 [예외]
-- 쿠폰이 존재하지 않으면 주문 실패
-- 본인 소유가 아니면 주문 실패
-- AVAILABLE이 아니면 주문 실패
-- 유효기간 경과 시 주문 실패
-- 최소 주문 금액 미달 시 주문 실패
+- 쿠폰이 존재하지 않으면 주문 실패 (트랜잭션 롤백)
+- 본인 소유가 아니면 주문 실패 (트랜잭션 롤백)
+- AVAILABLE이 아니면 주문 실패 (트랜잭션 롤백)
+- 유효기간 경과 시 주문 실패 (트랜잭션 롤백)
+- 최소 주문 금액 미달 시 주문 실패 (트랜잭션 롤백)
 
 [조건]
 - couponId가 null이면 기존 주문 흐름과 동일 (쿠폰 미적용)
 - 동시에 같은 쿠폰을 사용하는 요청 시 정합성 보장 필요 (R18)
+- Order 먼저 생성 후 쿠폰 사용 — orderId를 OwnedCoupon에 전달하기 위함
+- 쿠폰 검증 실패 시 트랜잭션 롤백으로 Order도 함께 취소
 ```
 
 **UC-C10: 주문 취소 시 쿠폰 복원**
@@ -277,6 +281,7 @@ sequenceDiagram
 ### 쿠폰 적용 주문 생성
 
 > 주문은 **Product 도메인 (재고) + Coupon 도메인 (할인) + Order 도메인 (주문)**을 조율해야 하므로 Facade가 필요하다.
+> Order를 먼저 생성(discountAmount=0)한 뒤, 쿠폰을 사용하여 orderId를 연결하고, Order에 할인을 반영한다.
 
 ```mermaid
 sequenceDiagram
@@ -284,8 +289,8 @@ sequenceDiagram
     participant OF as OrderFacade
     participant PS as ProductService
     participant BS as BrandService
-    participant CS as CouponService
     participant OS as OrderService
+    participant CS as CouponService
 
     Note left of OC: POST /api/v1/orders<br/>{items: [...], couponId: 42}
     OC->>OF: 주문 요청 (userId, items, couponId)
@@ -297,14 +302,16 @@ sequenceDiagram
 
     Note over OF: OrderItemModel 생성
 
+    OF->>OS: createOrder(userId, items, 0)
+    OS-->>OF: Order (discountAmount=0)
+
     alt couponId != null
-        OF->>CS: useAndCalculateDiscount(couponId, userId, originalTotalPrice)
-        Note over CS: OwnedCoupon 조회 (동시성 제어)<br/>validateUsable (R13, R14)<br/>validateMinOrderAmount (R6)<br/>use(userId, orderId) → USED (R15)<br/>calculateDiscount() (R16)
+        OF->>CS: useAndCalculateDiscount(couponId, userId, order.id, originalTotalPrice)
+        Note over CS: OwnedCoupon 조회 (동시성 제어)<br/>validateMinOrderAmount (R6, 자체 스냅샷)<br/>use(userId, orderId) → USED (R13~R15)<br/>calculateDiscount() (R16, 자체 스냅샷)
         CS-->>OF: discountAmount
+        Note over OF: order.applyDiscount(discountAmount)
     end
 
-    OF->>OS: createOrder(userId, items, discountAmount)
-    OS-->>OF: Order
     OF-->>OC: 주문 생성 완료
 ```
 
@@ -357,20 +364,25 @@ classDiagram
         +update(String name, ZonedDateTime expiredAt) void
         +validateIssuable() void
         +issue() void
-        +calculateDiscount(long orderAmount) long
-        +validateMinOrderAmount(long orderAmount) void
     }
 
     class OwnedCoupon {
-        Coupon coupon
+        Long couponId
+        String couponName
+        CouponDiscountType discountType
+        Long discountValue
+        Long minOrderAmount
+        ZonedDateTime expiredAt
         Long userId
         Long orderId
         OwnedCouponStatus status
         ZonedDateTime usedAt
         +create(Coupon coupon, Long userId) OwnedCoupon
         +validateUsable(Long userId) void
+        +validateMinOrderAmount(long orderAmount) void
         +use(Long userId, Long orderId) void
         +restore() void
+        +calculateDiscount(long orderAmount) long
     }
 
     class CouponDiscountType {
@@ -386,10 +398,11 @@ classDiagram
         EXPIRED
     }
 
-    OwnedCoupon "*" --> "1" Coupon : @ManyToOne (같은 도메인)
+    OwnedCoupon "*" ..> "1" Coupon : couponId (ID 참조 + 스냅샷)
     OwnedCoupon "*" --> "1" User : userId (ID 참조)
     Coupon --> CouponDiscountType
     OwnedCoupon --> OwnedCouponStatus
+    OwnedCoupon --> CouponDiscountType
 ```
 
 ### 비즈니스 규칙
@@ -400,18 +413,18 @@ classDiagram
 | Coupon | update(name, expiredAt) | 수정 가능 필드만 변경 (R5). 핵심 조건(type, value, minOrderAmount)은 수정 불가 |
 | Coupon | validateIssuable() | 삭제 여부, 유효기간 경과, 수량 소진 검증 (R4, R8, R9) |
 | Coupon | issue() | validateIssuable() 후 issuedQuantity++ (R10 동시성 제어 대상) |
-| Coupon | calculateDiscount(orderAmount) | FIXED: discountValue, RATE: orderAmount * discountValue / 100. `Math.min(discount, orderAmount)` (R16) |
-| Coupon | validateMinOrderAmount(orderAmount) | minOrderAmount가 있고 주문 금액 미달 시 예외 (R6) |
-| OwnedCoupon | create(coupon, userId) | 정적 팩토리. status = AVAILABLE |
-| OwnedCoupon | validateUsable(userId) | 본인 소유 확인 (R14), AVAILABLE 상태 확인 (R13), 유효기간 재검증 |
+| OwnedCoupon | create(coupon, userId) | 정적 팩토리. status = AVAILABLE. Coupon의 할인 조건을 스냅샷으로 복사 |
+| OwnedCoupon | validateUsable(userId) | 본인 소유 확인 (R14), AVAILABLE 상태 확인 (R13), 유효기간 재검증 (자체 스냅샷) |
+| OwnedCoupon | validateMinOrderAmount(orderAmount) | minOrderAmount가 있고 주문 금액 미달 시 예외 (R6). 자체 스냅샷 사용 |
 | OwnedCoupon | use(userId, orderId) | validateUsable() 후 status → USED, usedAt 기록, orderId 기록 (R15) |
 | OwnedCoupon | restore() | USED 상태만 복원 가능. 유효기간 체크 후 AVAILABLE 또는 EXPIRED로 복원. orderId = null (R19, R20) |
+| OwnedCoupon | calculateDiscount(orderAmount) | FIXED: discountValue, RATE: orderAmount * discountValue / 100. `Math.min(discount, orderAmount)` (R16). 자체 스냅샷 사용 |
 
 ### 관계 정리
 
 | 관계 | 참조 방식 | 설명 |
 |---|---|---|
-| OwnedCoupon → Coupon | `@ManyToOne` 직접 참조 | 같은 쿠폰 도메인 내부. 할인 계산 시 Coupon의 type/value 접근 필요 |
+| OwnedCoupon → Coupon | `Long couponId` (ID 참조) + 스냅샷 필드 | 별도 Aggregate Root 간 ID 참조. 발급 시점에 할인 조건(couponName, discountType, discountValue, minOrderAmount, expiredAt)을 스냅샷 복사 |
 | OwnedCoupon → User | ID 참조 (`Long userId`) | 도메인 간 경계. 객체 참조 없음 |
 | OwnedCoupon → Order | ID 참조 (`Long orderId`, nullable) | 도메인 간 경계. 쿠폰 사용 시 어떤 주문에서 사용되었는지 기록 |
 | Order → OwnedCoupon | 참조 없음 | Order는 할인 결과(discountAmount)만 보유. 할인 출처를 모름 |
@@ -439,7 +452,12 @@ erDiagram
 
     owned_coupons {
         bigint id PK
-        bigint coupon_id
+        bigint coupon_id "FK 없음 — ID 참조만"
+        varchar coupon_name "스냅샷"
+        varchar discount_type "스냅샷"
+        bigint discount_value "스냅샷"
+        bigint min_order_amount "스냅샷, nullable"
+        timestamp expired_at "스냅샷"
         bigint user_id
         bigint order_id "nullable"
         varchar status
@@ -461,7 +479,7 @@ erDiagram
         timestamp deleted_at
     }
 
-    coupons ||--o{ owned_coupons : ""
+    coupons ||..o{ owned_coupons : "couponId (ID 참조)"
     users ||--o{ owned_coupons : ""
     owned_coupons |o--o| orders : "nullable (orderId)"
 ```
