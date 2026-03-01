@@ -39,16 +39,16 @@ class OrderV1ControllerTest {
     @Nested
     class CreateOrder {
 
-        @DisplayName("주문 생성 요청이면, 201 응답을 반환한다")
+        @DisplayName("주문 생성 요청이면, SUCCESS 응답을 반환한다")
         @Test
         void create_returnsCreatedResponse() {
             // arrange
             OrderRequest.Create request = new OrderRequest.Create(List.of(
-                new OrderRequest.OrderItemRequest(10L, 2, 25000)
-            ));
+                new OrderRequest.OrderItemRequest(10L, 2, 25000)),
+                null);
 
             OrderResult.OrderSummary result = new OrderResult.OrderSummary(
-                1L, 50000, "ORDERED", ZonedDateTime.now()
+                1L, 50000, 50000, 0, "ORDERED", ZonedDateTime.now()
             );
             when(orderFacade.createOrder(eq(1L), any(OrderCriteria.Create.class))).thenReturn(result);
 
@@ -59,7 +59,33 @@ class OrderV1ControllerTest {
             assertAll(
                 () -> assertThat(response.meta().result()).isEqualTo(ApiResponse.Metadata.Result.SUCCESS),
                 () -> assertThat(response.data().orderId()).isEqualTo(1L),
-                () -> assertThat(response.data().totalPrice()).isEqualTo(50000)
+                () -> assertThat(response.data().totalPrice()).isEqualTo(50000),
+                () -> assertThat(response.data().discountAmount()).isEqualTo(0)
+            );
+        }
+
+        @DisplayName("쿠폰 적용 주문 생성 요청이면, 할인 정보가 포함된 응답을 반환한다")
+        @Test
+        void create_withCoupon_returnsDiscountInfo() {
+            // arrange
+            OrderRequest.Create request = new OrderRequest.Create(List.of(
+                new OrderRequest.OrderItemRequest(10L, 2, 25000)),
+                42L);
+
+            OrderResult.OrderSummary result = new OrderResult.OrderSummary(
+                1L, 45000, 50000, 5000, "ORDERED", ZonedDateTime.now()
+            );
+            when(orderFacade.createOrder(eq(1L), any(OrderCriteria.Create.class))).thenReturn(result);
+
+            // act
+            ApiResponse<OrderResponse.OrderSummary> response = orderV1Controller.create(loginUser, request);
+
+            // assert
+            assertAll(
+                () -> assertThat(response.meta().result()).isEqualTo(ApiResponse.Metadata.Result.SUCCESS),
+                () -> assertThat(response.data().totalPrice()).isEqualTo(45000),
+                () -> assertThat(response.data().originalTotalPrice()).isEqualTo(50000),
+                () -> assertThat(response.data().discountAmount()).isEqualTo(5000)
             );
         }
     }
@@ -76,7 +102,7 @@ class OrderV1ControllerTest {
             ZonedDateTime endAt = ZonedDateTime.now();
 
             List<OrderResult.OrderSummary> results = List.of(
-                new OrderResult.OrderSummary(1L, 50000, "ORDERED", ZonedDateTime.now())
+                new OrderResult.OrderSummary(1L, 50000, 50000, 0, "ORDERED", ZonedDateTime.now())
             );
             when(orderFacade.getMyOrders(eq(1L), any(OrderCriteria.ListByDate.class))).thenReturn(results);
 
