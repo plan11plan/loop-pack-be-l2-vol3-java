@@ -5,7 +5,11 @@ import java.util.List;
 
 public class OrderCriteria {
 
-    public record Create(List<CreateItem> items) {
+    public record Create(List<CreateItem> items, Long ownedCouponId) {
+
+        public Create(List<CreateItem> items) {
+            this(items, null);
+        }
 
         public record CreateItem(Long productId, int quantity, int expectedPrice) {}
     }
