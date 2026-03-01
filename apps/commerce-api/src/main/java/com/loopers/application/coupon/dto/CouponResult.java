@@ -4,6 +4,7 @@ import com.loopers.domain.coupon.CouponModel;
 import com.loopers.domain.coupon.OwnedCouponModel;
 import java.time.ZonedDateTime;
 
+
 public class CouponResult {
 
     public record Detail(
@@ -63,16 +64,15 @@ public class CouponResult {
         ZonedDateTime issuedAt
     ) {
         public static OwnedDetail from(OwnedCouponModel model) {
-            CouponModel coupon = model.getCoupon();
             return new OwnedDetail(
                     model.getId(),
-                    coupon.getId(),
-                    coupon.getName(),
-                    coupon.getDiscountType().name(),
-                    coupon.getDiscountValue(),
-                    coupon.getMinOrderAmount(),
+                    model.getCouponId(),
+                    model.getCouponName(),
+                    model.getDiscountType().name(),
+                    model.getDiscountValue(),
+                    model.getMinOrderAmount(),
                     model.getStatus().name(),
-                    coupon.getExpiredAt(),
+                    model.getExpiredAt(),
                     model.getUsedAt(),
                     model.getCreatedAt());
         }

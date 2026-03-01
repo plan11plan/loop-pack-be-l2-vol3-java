@@ -15,7 +15,8 @@ public enum CouponErrorCode implements ErrorCode {
     ALREADY_ISSUED(HttpStatus.CONFLICT, "COUPON_005", "이미 발급받은 쿠폰입니다."),
     NOT_OWNED(HttpStatus.FORBIDDEN, "COUPON_006", "본인 소유의 쿠폰이 아닙니다."),
     ALREADY_USED(HttpStatus.BAD_REQUEST, "COUPON_007", "이미 사용된 쿠폰입니다."),
-    MIN_ORDER_AMOUNT_NOT_MET(HttpStatus.BAD_REQUEST, "COUPON_008", "최소 주문 금액을 충족하지 않습니다.");
+    MIN_ORDER_AMOUNT_NOT_MET(HttpStatus.BAD_REQUEST, "COUPON_008", "최소 주문 금액을 충족하지 않습니다."),
+    NOT_RESTORABLE(HttpStatus.BAD_REQUEST, "COUPON_009", "복원할 수 없는 쿠폰입니다.");
 
     private final HttpStatus status;
     private final String code;

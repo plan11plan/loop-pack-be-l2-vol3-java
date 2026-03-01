@@ -6,9 +6,6 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.ZonedDateTime;
 import lombok.AccessLevel;
@@ -21,9 +18,24 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class OwnedCouponModel extends BaseEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "coupon_id", nullable = false)
-    private CouponModel coupon;
+    @Column(name = "coupon_id", nullable = false)
+    private Long couponId;
+
+    @Column(name = "coupon_name", nullable = false)
+    private String couponName;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "discount_type", nullable = false)
+    private CouponDiscountType discountType;
+
+    @Column(name = "discount_value", nullable = false)
+    private long discountValue;
+
+    @Column(name = "min_order_amount")
+    private Long minOrderAmount;
+
+    @Column(name = "expired_at", nullable = false)
+    private ZonedDateTime expiredAt;
 
     @Column(name = "user_id", nullable = false)
     private Long userId;
@@ -38,34 +50,58 @@ public class OwnedCouponModel extends BaseEntity {
     @Column(name = "used_at")
     private ZonedDateTime usedAt;
 
-    private OwnedCouponModel(CouponModel coupon, Long userId) {
-        this.coupon = coupon;
+    private OwnedCouponModel(Long couponId, String couponName,
+                             CouponDiscountType discountType, long discountValue,
+                             Long minOrderAmount, ZonedDateTime expiredAt, Long userId) {
+        this.couponId = couponId;
+        this.couponName = couponName;
+        this.discountType = discountType;
+        this.discountValue = discountValue;
+        this.minOrderAmount = minOrderAmount;
+        this.expiredAt = expiredAt;
         this.userId = userId;
         this.status = OwnedCouponStatus.AVAILABLE;
     }
 
     public static OwnedCouponModel create(CouponModel coupon, Long userId) {
-        return new OwnedCouponModel(coupon, userId);
+        return new OwnedCouponModel(
+                coupon.getId(), coupon.getName(),
+                coupon.getDiscountType(), coupon.getDiscountValue(),
+                coupon.getMinOrderAmount(), coupon.getExpiredAt(), userId);
     }
 
-    public void use(Long userId) {
+    public void use(Long userId, Long orderId) {
         validateUsable(userId);
         this.status = OwnedCouponStatus.USED;
         this.usedAt = ZonedDateTime.now();
-    }
-
-    public void assignOrderId(Long orderId) {
         this.orderId = orderId;
     }
 
     public void restore() {
-        if (this.coupon.getExpiredAt().isBefore(ZonedDateTime.now())) {
+        if (this.status != OwnedCouponStatus.USED) {
+            throw new CoreException(CouponErrorCode.NOT_RESTORABLE);
+        }
+        if (this.expiredAt.isBefore(ZonedDateTime.now())) {
             this.status = OwnedCouponStatus.EXPIRED;
         } else {
             this.status = OwnedCouponStatus.AVAILABLE;
         }
         this.orderId = null;
         this.usedAt = null;
+    }
+
+    public long calculateDiscount(long orderAmount) {
+        long discount = this.discountValue;
+        if (this.discountType == CouponDiscountType.RATE) {
+            discount = orderAmount * this.discountValue / 100;
+        }
+        return Math.min(discount, orderAmount);
+    }
+
+    public void validateMinOrderAmount(long orderAmount) {
+        if (this.minOrderAmount != null && orderAmount < this.minOrderAmount) {
+            throw new CoreException(CouponErrorCode.MIN_ORDER_AMOUNT_NOT_MET);
+        }
     }
 
     public void validateUsable(Long userId) {
@@ -75,7 +111,7 @@ public class OwnedCouponModel extends BaseEntity {
         if (this.status != OwnedCouponStatus.AVAILABLE) {
             throw new CoreException(CouponErrorCode.ALREADY_USED);
         }
-        if (this.coupon.getExpiredAt().isBefore(ZonedDateTime.now())) {
+        if (this.expiredAt.isBefore(ZonedDateTime.now())) {
             throw new CoreException(CouponErrorCode.EXPIRED);
         }
     }

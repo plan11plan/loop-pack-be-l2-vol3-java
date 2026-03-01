@@ -61,20 +61,13 @@ public class CouponService {
     }
 
     @Transactional
-    public long useAndCalculateDiscount(Long ownedCouponId, Long userId, long orderAmount) {
+    public long useAndCalculateDiscount(Long ownedCouponId, Long userId, Long orderId,
+                                        long orderAmount) {
         OwnedCouponModel owned = ownedCouponRepository.findById(ownedCouponId)
                 .orElseThrow(() -> new CoreException(CouponErrorCode.NOT_FOUND));
-        CouponModel coupon = owned.getCoupon();
-        coupon.validateMinOrderAmount(orderAmount);
-        owned.use(userId);
-        return coupon.calculateDiscount(orderAmount);
-    }
-
-    @Transactional
-    public void linkOrderToCoupon(Long ownedCouponId, Long orderId) {
-        ownedCouponRepository.findById(ownedCouponId)
-                .orElseThrow(() -> new CoreException(CouponErrorCode.NOT_FOUND))
-                .assignOrderId(orderId);
+        owned.validateMinOrderAmount(orderAmount);
+        owned.use(userId, orderId);
+        return owned.calculateDiscount(orderAmount);
     }
 
     @Transactional

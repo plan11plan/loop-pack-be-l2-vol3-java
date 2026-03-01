@@ -64,14 +64,6 @@ public class CouponModel extends BaseEntity {
                 minOrderAmount, totalQuantity, expiredAt);
     }
 
-    public long calculateDiscount(long orderAmount) {
-        long discount = this.discountValue;
-        if (this.discountType == CouponDiscountType.RATE) {
-            discount = orderAmount * this.discountValue / 100;
-        }
-        return Math.min(discount, orderAmount);
-    }
-
     public void validateIssuable() {
         if (this.getDeletedAt() != null) {
             throw new CoreException(CouponErrorCode.ALREADY_DELETED);
@@ -81,12 +73,6 @@ public class CouponModel extends BaseEntity {
         }
         if (this.issuedQuantity >= this.totalQuantity) {
             throw new CoreException(CouponErrorCode.QUANTITY_EXHAUSTED);
-        }
-    }
-
-    public void validateMinOrderAmount(long orderAmount) {
-        if (this.minOrderAmount != null && orderAmount < this.minOrderAmount) {
-            throw new CoreException(CouponErrorCode.MIN_ORDER_AMOUNT_NOT_MET);
         }
     }
 
