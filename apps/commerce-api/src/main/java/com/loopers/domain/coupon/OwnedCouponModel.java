@@ -1,6 +1,7 @@
 package com.loopers.domain.coupon;
 
 import com.loopers.domain.BaseEntity;
+import com.loopers.support.error.CoreException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -42,5 +43,32 @@ public class OwnedCouponModel extends BaseEntity {
 
     public static OwnedCouponModel create(CouponModel coupon, Long userId) {
         return new OwnedCouponModel(coupon, userId);
+    }
+
+    public void use(Long userId) {
+        validateUsable(userId);
+        this.status = OwnedCouponStatus.USED;
+        this.usedAt = ZonedDateTime.now();
+    }
+
+    public void restore() {
+        if (this.coupon.getExpiredAt().isBefore(ZonedDateTime.now())) {
+            this.status = OwnedCouponStatus.EXPIRED;
+        } else {
+            this.status = OwnedCouponStatus.AVAILABLE;
+        }
+        this.usedAt = null;
+    }
+
+    public void validateUsable(Long userId) {
+        if (!this.userId.equals(userId)) {
+            throw new CoreException(CouponErrorCode.NOT_OWNED);
+        }
+        if (this.status != OwnedCouponStatus.AVAILABLE) {
+            throw new CoreException(CouponErrorCode.ALREADY_USED);
+        }
+        if (this.coupon.getExpiredAt().isBefore(ZonedDateTime.now())) {
+            throw new CoreException(CouponErrorCode.EXPIRED);
+        }
     }
 }
