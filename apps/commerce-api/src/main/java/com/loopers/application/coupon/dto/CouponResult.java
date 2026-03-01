@@ -52,25 +52,29 @@ public class CouponResult {
 
     public record OwnedDetail(
         Long id,
+        Long couponId,
         String couponName,
         String discountType,
         long discountValue,
         Long minOrderAmount,
         String status,
         ZonedDateTime expiredAt,
-        ZonedDateTime usedAt
+        ZonedDateTime usedAt,
+        ZonedDateTime issuedAt
     ) {
         public static OwnedDetail from(OwnedCouponModel model) {
             CouponModel coupon = model.getCoupon();
             return new OwnedDetail(
                     model.getId(),
+                    coupon.getId(),
                     coupon.getName(),
                     coupon.getDiscountType().name(),
                     coupon.getDiscountValue(),
                     coupon.getMinOrderAmount(),
                     model.getStatus().name(),
                     coupon.getExpiredAt(),
-                    model.getUsedAt());
+                    model.getUsedAt(),
+                    model.getCreatedAt());
         }
     }
 }

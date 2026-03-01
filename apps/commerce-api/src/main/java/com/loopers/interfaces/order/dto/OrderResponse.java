@@ -9,6 +9,8 @@ public class OrderResponse {
     public record OrderSummary(
         Long orderId,
         int totalPrice,
+        int originalTotalPrice,
+        int discountAmount,
         String status,
         ZonedDateTime createdAt
     ) {
@@ -16,6 +18,8 @@ public class OrderResponse {
             return new OrderSummary(
                     result.orderId(),
                     result.totalPrice(),
+                    result.originalTotalPrice(),
+                    result.discountAmount(),
                     result.status(),
                     result.createdAt());
         }

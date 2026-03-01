@@ -10,6 +10,8 @@ public class OrderResult {
     public record OrderSummary(
         Long orderId,
         int totalPrice,
+        int originalTotalPrice,
+        int discountAmount,
         String status,
         ZonedDateTime createdAt
     ) {
@@ -17,6 +19,8 @@ public class OrderResult {
             return new OrderSummary(
                     model.getId(),
                     model.getTotalPrice(),
+                    model.getOriginalTotalPrice(),
+                    model.getDiscountAmount(),
                     model.getStatus().name(),
                     model.getCreatedAt());
         }
