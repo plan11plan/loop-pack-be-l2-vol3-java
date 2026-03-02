@@ -34,6 +34,9 @@ public class UserModel extends BaseEntity {
     @Column(name = "email")
     private String email;
 
+    @Column(name = "point")
+    private long point;
+
     // === 생성 === //
 
     private UserModel(String loginId, String password, String name, LocalDate birthDate, String email) {
@@ -42,6 +45,7 @@ public class UserModel extends BaseEntity {
         this.name = name;
         this.birthDate = birthDate;
         this.email = email;
+        this.point = 0L;
     }
 
     public static UserModel create(String loginId, String encryptedPassword,
@@ -57,6 +61,23 @@ public class UserModel extends BaseEntity {
 
     public void changePassword(String newEncryptedPassword) {
         this.password = newEncryptedPassword;
+    }
+
+    public void addPoint(long amount) {
+        if (amount <= 0) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "포인트 증가량은 0보다 커야 합니다.");
+        }
+        this.point += amount;
+    }
+
+    public void deductPoint(long amount) {
+        if (amount <= 0) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "포인트 차감량은 0보다 커야 합니다.");
+        }
+        if (this.point < amount) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "포인트가 부족합니다.");
+        }
+        this.point -= amount;
     }
 
     public String getBirthDateString() {
