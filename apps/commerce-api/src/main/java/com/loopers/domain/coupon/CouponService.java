@@ -51,7 +51,8 @@ public class CouponService {
 
     @Transactional
     public OwnedCouponModel issue(Long couponId, Long userId) {
-        CouponModel coupon = getById(couponId);
+        CouponModel coupon = couponRepository.findByIdWithLock(couponId)
+                .orElseThrow(() -> new CoreException(CouponErrorCode.NOT_FOUND));
         ownedCouponRepository.findByCouponIdAndUserId(couponId, userId)
                 .ifPresent(owned -> {
                     throw new CoreException(CouponErrorCode.ALREADY_ISSUED);

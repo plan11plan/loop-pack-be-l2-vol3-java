@@ -31,6 +31,11 @@ public class FakeCouponRepository implements CouponRepository {
     }
 
     @Override
+    public Optional<CouponModel> findByIdWithLock(Long id) {
+        return findById(id);
+    }
+
+    @Override
     public Page<CouponModel> findAll(Pageable pageable) {
         List<CouponModel> activeModels = store.values().stream()
                 .filter(coupon -> coupon.getDeletedAt() == null)
