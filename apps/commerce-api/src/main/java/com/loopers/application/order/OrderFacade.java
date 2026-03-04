@@ -7,8 +7,8 @@ import com.loopers.domain.coupon.CouponService;
 import com.loopers.domain.order.OrderItemModel;
 import com.loopers.domain.order.OrderModel;
 import com.loopers.domain.order.OrderService;
+import com.loopers.domain.order.dto.OrderCommand;
 import com.loopers.domain.product.ProductService;
-import com.loopers.domain.product.dto.ProductCommand;
 import com.loopers.domain.product.dto.ProductInfo;
 import com.loopers.domain.user.UserService;
 import java.util.List;
@@ -34,35 +34,22 @@ public class OrderFacade {
 
     @Retryable(
             retryFor = ObjectOptimisticLockingFailureException.class,
-            maxAttempts = 50,
+            maxAttempts = 10,
             backoff = @Backoff(delay = 50, random = true))
     @Transactional
     public OrderResult.OrderSummary createOrder(Long userId, OrderCriteria.Create criteria) {
-        List<ProductInfo.StockDeduction> deductionInfos = productService.validateAndDeductStock(
-                criteria.items().stream()
-                        .map(item -> new ProductCommand.StockDeduction(
-                                item.productId(), item.quantity(), item.expectedPrice()))
-                        .toList());
+        List<ProductInfo.StockDeduction> deductionInfos =
+                productService.validateAndDeductStock(criteria.toStockDeductions());
 
         Map<Long, String> brandNameMap = brandService.getNameMapByIds(
-                deductionInfos.stream()
-                        .map(ProductInfo.StockDeduction::brandId)
-                        .distinct()
-                        .toList());
+                ProductInfo.StockDeduction.extractDistinctBrandIds(deductionInfos));
 
-        List<OrderItemModel> items = deductionInfos.stream()
-                .map(info -> OrderItemModel.create(
-                        info.productId(),
-                        info.price(),
-                        info.quantity(),
-                        info.name(),
-                        brandNameMap.get(info.brandId())))
-                .toList();
-
-        OrderModel order = orderService.createOrder(userId, items);
+        OrderModel order = orderService.createOrder(
+                userId, OrderCommand.CreateItem.from(deductionInfos, brandNameMap));
 
         if (criteria.ownedCouponId() != null) {
-            order.applyDiscount(
+            orderService.applyDiscount(
+                    order,
                     (int) couponService.useAndCalculateDiscount(
                             criteria.ownedCouponId(), userId, order.getId(),
                             order.getOriginalTotalPrice()));
@@ -100,7 +87,7 @@ public class OrderFacade {
     @Transactional
     public void cancelMyOrderItem(Long userId, Long orderId, Long orderItemId) {
         OrderModel order = orderService.getByIdAndUserId(orderId, userId);
-        OrderItemModel cancelledItem = orderService.cancelItem(orderId, orderItemId);
+        OrderItemModel cancelledItem = orderService.cancelItem(order, orderItemId);
         productService.increaseStock(cancelledItem.getProductId(), cancelledItem.getQuantity());
         if (order.isCancelled()) {
             couponService.restoreByOrderId(orderId);
@@ -110,7 +97,7 @@ public class OrderFacade {
     @Transactional
     public void cancelOrderItem(Long orderId, Long orderItemId) {
         OrderModel order = orderService.getById(orderId);
-        OrderItemModel cancelledItem = orderService.cancelItem(orderId, orderItemId);
+        OrderItemModel cancelledItem = orderService.cancelItem(order, orderItemId);
         productService.increaseStock(cancelledItem.getProductId(), cancelledItem.getQuantity());
         if (order.isCancelled()) {
             couponService.restoreByOrderId(orderId);

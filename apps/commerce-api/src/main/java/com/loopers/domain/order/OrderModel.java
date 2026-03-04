@@ -107,10 +107,11 @@ public class OrderModel extends BaseEntity {
     }
 
     public void recalculateTotalPrice() {
-        this.totalPrice = items.stream()
+        int remainingItemTotal = items.stream()
                 .filter(item -> item.getStatus() == OrderItemStatus.ORDERED)
                 .mapToInt(item -> item.getOrderPrice() * item.getQuantity())
                 .sum();
+        this.totalPrice = Math.max(0, remainingItemTotal - this.discountAmount);
     }
 
     public void validateOwner(Long userId) {
