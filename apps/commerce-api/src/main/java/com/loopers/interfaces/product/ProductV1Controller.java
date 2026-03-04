@@ -25,13 +25,19 @@ public class ProductV1Controller implements ProductV1ApiSpec {
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size
     ) {
-        Page<ProductResult> productPage = "likes_desc".equals(sort)
-                ? productFacade.getProductsWithActiveBrandSortedByLikes(brandId, page, size)
-                : brandId != null
-                        ? productFacade.getProductsWithActiveBrandByBrandId(
-                                brandId, PageRequest.of(page, size, toSort(sort)))
-                        : productFacade.getProductsWithActiveBrand(
-                                PageRequest.of(page, size, toSort(sort)));
+        Page<ProductResult> productPage;
+        if ("likes_desc".equals(sort)) {
+            productPage = brandId != null
+                    ? productFacade.getProductsWithActiveBrandByBrandIdSortedByLikes(brandId, page, size)
+                    : productFacade.getProductsWithActiveBrandSortedByLikes(page, size);
+        } else {
+            PageRequest pageable = PageRequest.of(page, size, "price_asc".equals(sort)
+                    ? Sort.by(Sort.Direction.ASC, "price.value")
+                    : Sort.by(Sort.Direction.DESC, "createdAt"));
+            productPage = brandId != null
+                    ? productFacade.getProductsWithActiveBrandByBrandId(brandId, pageable)
+                    : productFacade.getProductsWithActiveBrand(pageable);
+        }
 
         return ApiResponse.success(
                 new ProductV1Dto.ListResponse(
@@ -51,12 +57,5 @@ public class ProductV1Controller implements ProductV1ApiSpec {
     ) {
         ProductResult result = productFacade.getProduct(productId);
         return ApiResponse.success(ProductV1Dto.DetailResponse.from(result));
-    }
-
-    private Sort toSort(String sort) {
-        return switch (sort) {
-            case "price_asc" -> Sort.by(Sort.Direction.ASC, "price.value");
-            default -> Sort.by(Sort.Direction.DESC, "createdAt");
-        };
     }
 }
