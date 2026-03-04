@@ -1,5 +1,6 @@
 package com.loopers.domain.coupon;
 
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -67,11 +68,32 @@ public class FakeOwnedCouponRepository implements OwnedCouponRepository {
         return new PageImpl<>(pageContent, pageable, filtered.size());
     }
 
+    @Override
+    public int useByIdWhenAvailable(Long id, Long orderId, ZonedDateTime usedAt) {
+        OwnedCouponModel owned = store.get(id);
+        if (owned == null || owned.getOrderId() != null) {
+            return 0;
+        }
+        setField(owned, "orderId", orderId);
+        setField(owned, "usedAt", usedAt);
+        return 1;
+    }
+
     private void setId(Object target, Long id) {
         try {
             var field = target.getClass().getSuperclass().getDeclaredField("id");
             field.setAccessible(true);
             field.set(target, id);
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void setField(Object target, String fieldName, Object value) {
+        try {
+            var field = target.getClass().getDeclaredField(fieldName);
+            field.setAccessible(true);
+            field.set(target, value);
         } catch (NoSuchFieldException | IllegalAccessException e) {
             throw new RuntimeException(e);
         }

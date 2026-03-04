@@ -7,7 +7,6 @@ import com.loopers.domain.brand.BrandModel;
 import com.loopers.domain.coupon.CouponDiscountType;
 import com.loopers.domain.coupon.CouponModel;
 import com.loopers.domain.coupon.OwnedCouponModel;
-import com.loopers.domain.coupon.OwnedCouponStatus;
 import com.loopers.domain.product.ProductModel;
 import com.loopers.infrastructure.brand.BrandJpaRepository;
 import com.loopers.infrastructure.coupon.CouponJpaRepository;
@@ -232,7 +231,7 @@ class OrderCouponV1ApiE2ETest {
 
             // assert
             OwnedCouponModel updated = ownedCouponJpaRepository.findById(owned.getId()).orElseThrow();
-            assertThat(updated.getStatus()).isEqualTo(OwnedCouponStatus.USED);
+            assertThat(updated.getStatus()).isEqualTo("USED");
         }
     }
 
@@ -270,7 +269,7 @@ class OrderCouponV1ApiE2ETest {
 
             // assert
             OwnedCouponModel updated = ownedCouponJpaRepository.findById(owned.getId()).orElseThrow();
-            assertThat(updated.getStatus()).isEqualTo(OwnedCouponStatus.AVAILABLE);
+            assertThat(updated.getStatus()).isEqualTo("AVAILABLE");
         }
     }
 }

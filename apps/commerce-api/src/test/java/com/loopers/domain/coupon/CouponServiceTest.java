@@ -155,7 +155,7 @@ class CouponServiceTest {
             assertAll(
                     () -> assertThat(result.getCouponId()).isEqualTo(coupon.getId()),
                     () -> assertThat(result.getUserId()).isEqualTo(100L),
-                    () -> assertThat(result.getStatus()).isEqualTo(OwnedCouponStatus.AVAILABLE),
+                    () -> assertThat(result.isAvailable()).isTrue(),
                     () -> assertThat(coupon.getIssuedQuantity()).isEqualTo(1));
         }
 
@@ -180,7 +180,7 @@ class CouponServiceTest {
     @Nested
     class UseAndCalculateDiscount {
 
-        @DisplayName("성공하면 쿠폰 상태가 USED로 변경되고 할인 금액이 반환된다")
+        @DisplayName("성공하면 CAS Update로 orderId가 기록되고 할인 금액이 반환된다")
         @Test
         void useAndCalculateDiscount_success() {
             // arrange
@@ -197,7 +197,8 @@ class CouponServiceTest {
             // assert
             assertAll(
                     () -> assertThat(discount).isEqualTo(5000L),
-                    () -> assertThat(owned.getStatus()).isEqualTo(OwnedCouponStatus.USED));
+                    () -> assertThat(owned.isUsed()).isTrue(),
+                    () -> assertThat(owned.getOrderId()).isEqualTo(1L));
         }
     }
 
@@ -205,7 +206,7 @@ class CouponServiceTest {
     @Nested
     class Restore {
 
-        @DisplayName("orderId로 복원하면 쿠폰 상태가 AVAILABLE로 복원된다")
+        @DisplayName("orderId로 복원하면 orderId/usedAt이 초기화된다")
         @Test
         void restoreByOrderId_success() {
             // arrange
@@ -221,7 +222,7 @@ class CouponServiceTest {
 
             // assert
             assertAll(
-                    () -> assertThat(owned.getStatus()).isEqualTo(OwnedCouponStatus.AVAILABLE),
+                    () -> assertThat(owned.isAvailable()).isTrue(),
                     () -> assertThat(owned.getUsedAt()).isNull(),
                     () -> assertThat(owned.getOrderId()).isNull());
         }

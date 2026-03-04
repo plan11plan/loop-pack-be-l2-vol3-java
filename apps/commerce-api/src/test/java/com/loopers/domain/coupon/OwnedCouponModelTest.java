@@ -38,7 +38,8 @@ class OwnedCouponModelTest {
                     () -> assertThat(owned.getDiscountType()).isEqualTo(CouponDiscountType.FIXED),
                     () -> assertThat(owned.getDiscountValue()).isEqualTo(5000L),
                     () -> assertThat(owned.getUserId()).isEqualTo(100L),
-                    () -> assertThat(owned.getStatus()).isEqualTo(OwnedCouponStatus.AVAILABLE),
+                    () -> assertThat(owned.isAvailable()).isTrue(),
+                    () -> assertThat(owned.getOrderId()).isNull(),
                     () -> assertThat(owned.getUsedAt()).isNull());
         }
     }
@@ -47,7 +48,7 @@ class OwnedCouponModelTest {
     @Nested
     class Use {
 
-        @DisplayName("AVAILABLE 상태이고 본인 소유이면 USED로 전이되고 usedAt이 기록된다")
+        @DisplayName("미사용 상태이고 본인 소유이면 orderId/usedAt이 기록된다")
         @Test
         void use_success() {
             // arrange
@@ -58,7 +59,7 @@ class OwnedCouponModelTest {
 
             // assert
             assertAll(
-                    () -> assertThat(owned.getStatus()).isEqualTo(OwnedCouponStatus.USED),
+                    () -> assertThat(owned.isUsed()).isTrue(),
                     () -> assertThat(owned.getUsedAt()).isNotNull(),
                     () -> assertThat(owned.getOrderId()).isEqualTo(1L));
         }
@@ -106,9 +107,9 @@ class OwnedCouponModelTest {
     @Nested
     class Restore {
 
-        @DisplayName("유효기간 내이면 AVAILABLE로 복원된다")
+        @DisplayName("사용된 쿠폰이면 orderId/usedAt이 초기화된다")
         @Test
-        void restore_whenNotExpired() {
+        void restore_whenUsed() {
             // arrange
             OwnedCouponModel owned = OwnedCouponModel.create(createCoupon(), 100L);
             owned.use(100L, 1L);
@@ -118,11 +119,12 @@ class OwnedCouponModelTest {
 
             // assert
             assertAll(
-                    () -> assertThat(owned.getStatus()).isEqualTo(OwnedCouponStatus.AVAILABLE),
-                    () -> assertThat(owned.getUsedAt()).isNull());
+                    () -> assertThat(owned.getOrderId()).isNull(),
+                    () -> assertThat(owned.getUsedAt()).isNull(),
+                    () -> assertThat(owned.isAvailable()).isTrue());
         }
 
-        @DisplayName("만료된 쿠폰이면 EXPIRED로 복원된다")
+        @DisplayName("만료된 쿠폰을 복원하면 파생 상태가 EXPIRED이다")
         @Test
         void restore_whenExpired() {
             // arrange
@@ -134,10 +136,13 @@ class OwnedCouponModelTest {
             owned.restore();
 
             // assert
-            assertThat(owned.getStatus()).isEqualTo(OwnedCouponStatus.EXPIRED);
+            assertAll(
+                    () -> assertThat(owned.getOrderId()).isNull(),
+                    () -> assertThat(owned.isExpired()).isTrue(),
+                    () -> assertThat(owned.getStatus()).isEqualTo("EXPIRED"));
         }
 
-        @DisplayName("USED 상태가 아니면 예외가 발생한다")
+        @DisplayName("미사용 쿠폰을 복원하면 예외가 발생한다")
         @Test
         void restore_whenNotUsed() {
             // arrange

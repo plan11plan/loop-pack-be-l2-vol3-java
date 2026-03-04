@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import com.loopers.domain.coupon.CouponDiscountType;
 import com.loopers.domain.coupon.CouponModel;
 import com.loopers.domain.coupon.OwnedCouponModel;
-import com.loopers.domain.coupon.OwnedCouponStatus;
 import com.loopers.infrastructure.coupon.CouponJpaRepository;
 import com.loopers.infrastructure.coupon.OwnedCouponJpaRepository;
 import com.loopers.interfaces.api.ApiResponse;
@@ -174,7 +173,7 @@ class CouponV1ApiE2ETest {
                     () -> assertThat(response.getBody().data().items().get(0).couponName())
                             .isEqualTo("테스트 쿠폰"),
                     () -> assertThat(response.getBody().data().items().get(0).status())
-                            .isEqualTo(OwnedCouponStatus.AVAILABLE.name()));
+                            .isEqualTo("AVAILABLE"));
         }
     }
 }
