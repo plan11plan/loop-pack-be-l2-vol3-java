@@ -4,9 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -258,7 +260,7 @@ class OrderFacadeTest {
 
             when(orderService.getByIdAndUserId(1L, 1L)).thenReturn(
                     OrderModel.create(1L, List.of(cancelledItem)));
-            when(orderService.cancelItem(1L, 100L)).thenReturn(cancelledItem);
+            when(orderService.cancelItem(any(OrderModel.class), eq(100L))).thenReturn(cancelledItem);
 
             // act
             orderFacade.cancelMyOrderItem(1L, 1L, 100L);
@@ -266,7 +268,7 @@ class OrderFacadeTest {
             // assert
             assertAll(
                     () -> verify(orderService).getByIdAndUserId(1L, 1L),
-                    () -> verify(orderService).cancelItem(1L, 100L),
+                    () -> verify(orderService).cancelItem(any(OrderModel.class), eq(100L)),
                     () -> verify(productService).increaseStock(10L, 2));
         }
 
@@ -301,6 +303,10 @@ class OrderFacadeTest {
             setId(order, 1L);
             when(orderService.createOrder(anyLong(), anyList()))
                     .thenReturn(order);
+            doAnswer(invocation -> {
+                ((OrderModel) invocation.getArgument(0)).applyDiscount(invocation.getArgument(1));
+                return null;
+            }).when(orderService).applyDiscount(any(OrderModel.class), anyInt());
             when(couponService.useAndCalculateDiscount(5L, 1L, 1L, 50000L))
                     .thenReturn(5000L);
 
@@ -313,6 +319,7 @@ class OrderFacadeTest {
             // assert
             assertAll(
                     () -> verify(couponService).useAndCalculateDiscount(5L, 1L, 1L, 50000L),
+                    () -> verify(orderService).applyDiscount(any(OrderModel.class), eq(5000)),
                     () -> assertThat(result.totalPrice()).isEqualTo(45000));
         }
 
@@ -330,6 +337,10 @@ class OrderFacadeTest {
             setId(order, 1L);
             when(orderService.createOrder(anyLong(), anyList()))
                     .thenReturn(order);
+            doAnswer(invocation -> {
+                ((OrderModel) invocation.getArgument(0)).applyDiscount(invocation.getArgument(1));
+                return null;
+            }).when(orderService).applyDiscount(any(OrderModel.class), anyInt());
             when(couponService.useAndCalculateDiscount(5L, 1L, 1L, 50000L))
                     .thenReturn(5000L);
 
@@ -342,6 +353,7 @@ class OrderFacadeTest {
             // assert
             assertAll(
                     () -> verify(couponService).useAndCalculateDiscount(5L, 1L, 1L, 50000L),
+                    () -> verify(orderService).applyDiscount(any(OrderModel.class), eq(5000)),
                     () -> assertThat(result.totalPrice()).isEqualTo(45000));
         }
 
@@ -491,7 +503,7 @@ class OrderFacadeTest {
             OrderModel order = OrderModel.create(1L, List.of(item), 5000);
 
             when(orderService.getByIdAndUserId(1L, 1L)).thenReturn(order);
-            when(orderService.cancelItem(1L, 100L)).thenAnswer(invocation -> {
+            when(orderService.cancelItem(any(OrderModel.class), eq(100L))).thenAnswer(invocation -> {
                 return order.cancelItem(100L);
             });
 
@@ -517,7 +529,7 @@ class OrderFacadeTest {
             OrderModel order = OrderModel.create(1L, List.of(item1, item2), 5000);
 
             when(orderService.getByIdAndUserId(1L, 1L)).thenReturn(order);
-            when(orderService.cancelItem(1L, 100L)).thenAnswer(invocation -> {
+            when(orderService.cancelItem(any(OrderModel.class), eq(100L))).thenAnswer(invocation -> {
                 return order.cancelItem(100L);
             });
 
@@ -527,6 +539,56 @@ class OrderFacadeTest {
             // assert
             assertAll(
                     () -> verify(couponService, never()).restoreByOrderId(anyLong()),
+                    () -> verify(productService).increaseStock(10L, 1));
+        }
+    }
+
+    @DisplayName("관리자 아이템 취소할 때, ")
+    @Nested
+    class CancelOrderItem {
+
+        @DisplayName("소유권 검증 없이 아이템 취소 + 재고 복구가 수행된다")
+        @Test
+        void cancelOrderItem_admin_success() {
+            // arrange
+            OrderItemModel item = OrderItemModel.create(
+                    10L, 25000, 2, "상품A", "브랜드A");
+            setId(item, 100L);
+            OrderModel order = OrderModel.create(1L, List.of(item));
+
+            when(orderService.getById(1L)).thenReturn(order);
+            when(orderService.cancelItem(any(OrderModel.class), eq(100L))).thenReturn(item);
+
+            // act
+            orderFacade.cancelOrderItem(1L, 100L);
+
+            // assert
+            assertAll(
+                    () -> verify(orderService).getById(1L),
+                    () -> verify(orderService).cancelItem(any(OrderModel.class), eq(100L)),
+                    () -> verify(productService).increaseStock(10L, 2));
+        }
+
+        @DisplayName("전체 취소 시 쿠폰이 복원된다")
+        @Test
+        void cancelOrderItem_admin_allCancelled_restoresCoupon() {
+            // arrange
+            OrderItemModel item = OrderItemModel.create(
+                    10L, 50000, 1, "상품A", "브랜드A");
+            setId(item, 100L);
+            OrderModel order = OrderModel.create(1L, List.of(item), 5000);
+
+            when(orderService.getById(1L)).thenReturn(order);
+            when(orderService.cancelItem(any(OrderModel.class), eq(100L))).thenAnswer(invocation -> {
+                return order.cancelItem(100L);
+            });
+
+            // act
+            orderFacade.cancelOrderItem(1L, 100L);
+
+            // assert
+            assertAll(
+                    () -> verify(couponService).restoreByOrderId(1L),
                     () -> verify(productService).increaseStock(10L, 1));
         }
     }

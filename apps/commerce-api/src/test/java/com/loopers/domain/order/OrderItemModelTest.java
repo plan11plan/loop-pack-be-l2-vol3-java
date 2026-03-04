@@ -31,6 +31,57 @@ class OrderItemModelTest {
                     () -> assertThat(orderItem.getProductName()).isEqualTo("상품A"),
                     () -> assertThat(orderItem.getBrandName()).isEqualTo("브랜드A"));
         }
+
+        @DisplayName("productId가 null이면 예외가 발생한다")
+        @Test
+        void create_withNullProductId_throwsException() {
+            assertThatThrownBy(() -> OrderItemModel.create(
+                    null, 25000, 2, "상품A", "브랜드A"))
+                    .isInstanceOf(CoreException.class);
+        }
+
+        @DisplayName("orderPrice가 음수이면 예외가 발생한다")
+        @Test
+        void create_withNegativeOrderPrice_throwsException() {
+            assertThatThrownBy(() -> OrderItemModel.create(
+                    10L, -1, 2, "상품A", "브랜드A"))
+                    .isInstanceOf(CoreException.class);
+        }
+
+        @DisplayName("quantity가 0이면 예외가 발생한다")
+        @Test
+        void create_withZeroQuantity_throwsException() {
+            assertThatThrownBy(() -> OrderItemModel.create(
+                    10L, 25000, 0, "상품A", "브랜드A"))
+                    .isInstanceOf(CoreException.class);
+        }
+
+        @DisplayName("productName이 빈 문자열이면 예외가 발생한다")
+        @Test
+        void create_withBlankProductName_throwsException() {
+            assertThatThrownBy(() -> OrderItemModel.create(
+                    10L, 25000, 2, "  ", "브랜드A"))
+                    .isInstanceOf(CoreException.class);
+        }
+
+        @DisplayName("brandName이 null이면 예외가 발생한다")
+        @Test
+        void create_withNullBrandName_throwsException() {
+            assertThatThrownBy(() -> OrderItemModel.create(
+                    10L, 25000, 2, "상품A", null))
+                    .isInstanceOf(CoreException.class);
+        }
+
+        @DisplayName("orderPrice가 0이면 정상 생성된다")
+        @Test
+        void create_withZeroOrderPrice_succeeds() {
+            // act
+            OrderItemModel item = OrderItemModel.create(
+                    10L, 0, 1, "상품A", "브랜드A");
+
+            // assert
+            assertThat(item.getOrderPrice()).isZero();
+        }
     }
 
     @DisplayName("취소할 때, ")

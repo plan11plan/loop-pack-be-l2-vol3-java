@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
 
+import com.loopers.domain.order.dto.OrderCommand;
 import com.loopers.support.error.CoreException;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,9 +28,9 @@ class OrderServiceTest {
         orderService = new OrderService(fakeOrderRepository, fakeOrderItemRepository);
     }
 
-    private List<OrderItemModel> createSampleItems() {
+    private List<OrderCommand.CreateItem> createSampleCommands() {
         return List.of(
-                OrderItemModel.create(10L, 25000, 2, "상품A", ("브랜드A")));
+                new OrderCommand.CreateItem(10L, 25000, 2, "상품A", "브랜드A"));
     }
 
     @DisplayName("주문을 생성할 때, ")
@@ -40,7 +41,7 @@ class OrderServiceTest {
         @Test
         void createOrder_savesOrder() {
             // act
-            OrderModel order = orderService.createOrder(1L, createSampleItems());
+            OrderModel order = orderService.createOrder(1L, createSampleCommands());
 
             // assert
             assertAll(
@@ -67,7 +68,7 @@ class OrderServiceTest {
         @Test
         void getById_returnsOrder() {
             // arrange
-            OrderModel savedOrder = orderService.createOrder(1L, createSampleItems());
+            OrderModel savedOrder = orderService.createOrder(1L, createSampleCommands());
 
             // act
             OrderModel foundOrder = orderService.getById(savedOrder.getId());
@@ -87,7 +88,7 @@ class OrderServiceTest {
         @Test
         void getByIdAndUserId_returnsOrder() {
             // arrange
-            OrderModel savedOrder = orderService.createOrder(1L, createSampleItems());
+            OrderModel savedOrder = orderService.createOrder(1L, createSampleCommands());
 
             // act
             OrderModel foundOrder = orderService.getByIdAndUserId(savedOrder.getId(), 1L);
@@ -100,7 +101,7 @@ class OrderServiceTest {
         @Test
         void getByIdAndUserId_notOwner_throwsException() {
             // arrange
-            OrderModel savedOrder = orderService.createOrder(1L, createSampleItems());
+            OrderModel savedOrder = orderService.createOrder(1L, createSampleCommands());
 
             // act & assert
             assertThatThrownBy(() -> orderService.getByIdAndUserId(savedOrder.getId(), 999L))
@@ -116,7 +117,7 @@ class OrderServiceTest {
         @Test
         void getOrdersByUserIdAndPeriod_returnsOrders() {
             // arrange
-            orderService.createOrder(1L, createSampleItems());
+            orderService.createOrder(1L, createSampleCommands());
 
             // act
             List<OrderModel> orders = orderService.getOrdersByUserIdAndPeriod(
@@ -137,9 +138,9 @@ class OrderServiceTest {
         @Test
         void getAllOrders_returnsPage() {
             // arrange
-            orderService.createOrder(1L, createSampleItems());
+            orderService.createOrder(1L, createSampleCommands());
             orderService.createOrder(2L, List.of(
-                    OrderItemModel.create(20L, 30000, 1, "상품B", ("브랜드B"))));
+                    new OrderCommand.CreateItem(20L, 30000, 1, "상품B", "브랜드B")));
 
             // act
             Page<OrderModel> page = orderService.getAllOrders(PageRequest.of(0, 10));
@@ -159,17 +160,76 @@ class OrderServiceTest {
         @Test
         void cancelItem_success() {
             // arrange
-            OrderModel order = orderService.createOrder(1L, createSampleItems());
+            OrderModel order = orderService.createOrder(1L, createSampleCommands());
             Long orderItemId = order.getItems().get(0).getId();
 
             // act
-            OrderItemModel cancelledItem = orderService.cancelItem(order.getId(), orderItemId);
+            OrderItemModel cancelledItem = orderService.cancelItem(order, orderItemId);
 
             // assert
             assertAll(
                     () -> assertThat(cancelledItem.getStatus()).isEqualTo(OrderItemStatus.CANCELLED),
                     () -> assertThat(order.getTotalPrice()).isEqualTo(0),
                     () -> assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELLED));
+        }
+
+        @DisplayName("여러 아이템 중 하나만 취소하면 나머지 가격이 유지된다")
+        @Test
+        void cancelItem_partialCancel_recalculatesTotalPrice() {
+            // arrange
+            List<OrderCommand.CreateItem> commands = List.of(
+                    new OrderCommand.CreateItem(10L, 25000, 2, "상품A", "브랜드A"),
+                    new OrderCommand.CreateItem(20L, 30000, 1, "상품B", "브랜드B"));
+            OrderModel order = orderService.createOrder(1L, commands);
+            Long firstItemId = order.getItems().get(0).getId();
+
+            // act
+            orderService.cancelItem(order, firstItemId);
+
+            // assert
+            assertAll(
+                    () -> assertThat(order.getTotalPrice()).isEqualTo(30000),
+                    () -> assertThat(order.getStatus()).isEqualTo(OrderStatus.ORDERED));
+        }
+    }
+
+    @DisplayName("할인을 적용할 때, ")
+    @Nested
+    class ApplyDiscount {
+
+        @DisplayName("할인 금액이 totalPrice에 반영된다")
+        @Test
+        void applyDiscount_success() {
+            // arrange
+            OrderModel order = orderService.createOrder(1L, createSampleCommands());
+
+            // act
+            orderService.applyDiscount(order, 5000);
+
+            // assert
+            assertAll(
+                    () -> assertThat(order.getTotalPrice()).isEqualTo(45000),
+                    () -> assertThat(order.getDiscountAmount()).isEqualTo(5000));
+        }
+
+        @DisplayName("할인 적용 후 부분 취소 시 할인이 유지된다")
+        @Test
+        void applyDiscount_thenPartialCancel_maintainsDiscount() {
+            // arrange
+            List<OrderCommand.CreateItem> commands = List.of(
+                    new OrderCommand.CreateItem(10L, 30000, 1, "상품A", "브랜드A"),
+                    new OrderCommand.CreateItem(20L, 20000, 1, "상품B", "브랜드B"));
+            OrderModel order = orderService.createOrder(1L, commands);
+            orderService.applyDiscount(order, 5000);
+            Long firstItemId = order.getItems().get(0).getId();
+
+            // act
+            orderService.cancelItem(order, firstItemId);
+
+            // assert — 남은 20000 - 할인 5000 = 15000
+            assertAll(
+                    () -> assertThat(order.getTotalPrice()).isEqualTo(15000),
+                    () -> assertThat(order.getStatus()).isEqualTo(OrderStatus.ORDERED));
         }
     }
 }
