@@ -17,6 +17,11 @@ public class UserRepositoryImpl implements UserRepository {
     }
 
     @Override
+    public Optional<UserModel> findById(Long id) {
+        return userJpaRepository.findByIdAndDeletedAtIsNull(id);
+    }
+
+    @Override
     public Optional<UserModel> findByLoginId(String loginId) {
         return userJpaRepository.findByLoginIdAndDeletedAtIsNull(loginId);
     }

@@ -40,21 +40,30 @@ public class OrderModel extends BaseEntity {
     @OneToMany(mappedBy = "order", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     private List<OrderItemModel> items = new ArrayList<>();
 
-    private OrderModel(Long userId, int totalPrice, OrderStatus status) {
+    @Column(name = "discount_amount", nullable = false)
+    private int discountAmount;
+
+    private OrderModel(Long userId, int originalTotalPrice,
+                       int discountAmount, OrderStatus status) {
         this.userId = userId;
-        this.totalPrice = totalPrice;
-        this.originalTotalPrice = totalPrice;
+        this.originalTotalPrice = originalTotalPrice;
+        this.discountAmount = discountAmount;
+        this.totalPrice = originalTotalPrice - discountAmount;
         this.status = status;
     }
 
     public static OrderModel create(Long userId, List<OrderItemModel> items) {
+        return create(userId, items, 0);
+    }
+
+    public static OrderModel create(Long userId, List<OrderItemModel> items,
+                                    int discountAmount) {
         validateUserId(userId);
         validateItems(items);
-        OrderModel order = new OrderModel(userId, 0, OrderStatus.ORDERED);
+        OrderModel order = new OrderModel(
+                userId, OrderItemModel.calculateTotalPrice(items),
+                discountAmount, OrderStatus.ORDERED);
         items.forEach(order::addItem);
-        int calculatedPrice = order.calculateTotalPrice();
-        order.totalPrice = calculatedPrice;
-        order.originalTotalPrice = calculatedPrice;
         return order;
     }
 
@@ -84,17 +93,25 @@ public class OrderModel extends BaseEntity {
                 .allMatch(item -> item.getStatus() == OrderItemStatus.CANCELLED);
     }
 
+    public boolean isCancelled() {
+        return this.status == OrderStatus.CANCELLED;
+    }
+
+    public void applyDiscount(int discountAmount) {
+        this.discountAmount = discountAmount;
+        this.totalPrice = Math.max(0, this.originalTotalPrice - discountAmount);
+    }
+
     public int calculateTotalPrice() {
-        return items.stream()
-                .mapToInt(item -> item.getOrderPrice() * item.getQuantity())
-                .sum();
+        return OrderItemModel.calculateTotalPrice(items);
     }
 
     public void recalculateTotalPrice() {
-        this.totalPrice = items.stream()
+        int remainingItemTotal = items.stream()
                 .filter(item -> item.getStatus() == OrderItemStatus.ORDERED)
                 .mapToInt(item -> item.getOrderPrice() * item.getQuantity())
                 .sum();
+        this.totalPrice = Math.max(0, remainingItemTotal - this.discountAmount);
     }
 
     public void validateOwner(Long userId) {

@@ -6,6 +6,8 @@ import com.loopers.support.error.ErrorType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
+import java.util.List;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -27,6 +29,10 @@ public class ProductModel extends BaseEntity {
 
     @Column(name = "stock", nullable = false)
     private int stock;
+
+    @Version
+    private Long version;
+
 
     // === 생성 === //
 
@@ -81,6 +87,21 @@ public class ProductModel extends BaseEntity {
 
     public boolean isSoldOut() {
         return this.stock == 0;
+    }
+
+    // === 컬렉션 유틸 === //
+
+    public static List<Long> extractDistinctBrandIds(List<ProductModel> products) {
+        return products.stream()
+                .map(ProductModel::getBrandId)
+                .distinct()
+                .toList();
+    }
+
+    public static List<Long> extractIds(List<ProductModel> products) {
+        return products.stream()
+                .map(ProductModel::getId)
+                .toList();
     }
 
     // === 검증 === //

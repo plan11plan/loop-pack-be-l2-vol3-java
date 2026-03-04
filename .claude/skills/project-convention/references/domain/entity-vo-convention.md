@@ -92,6 +92,49 @@ public Order(Long memberId, int price) { ... }
 - 불변식(invariant)을 생성 시점부터 보장한다
 - private 생성자로 필드 초기화가 한 곳에서 완결되어 의도가 명확하다
 
+### 순서 의존성이 있는 생성: 계산 먼저, 생성자에서 완결
+
+하위 엔티티(items 등)로부터 파생되는 필드가 있어도, **Aggregate는 생성 시점부터 완전해야 한다**(DDD Aggregate 불변식). 계산을 생성자 호출 전에 끝내고, 생성자에 모든 값을 넘긴다.
+
+```java
+// ❌ 불완전한 객체를 만든 뒤 나중에 채운다
+public static OrderModel create(Long userId, List<OrderItemModel> items,
+                                int discountAmount) {
+    OrderModel order = new OrderModel(userId, OrderStatus.ORDERED); // 가격 정보 없음
+    items.forEach(order::addItem);
+    order.originalTotalPrice = calculatedPrice;       // 생성 후 직접 할당
+    order.discountAmount = discountAmount;             // 생성 후 직접 할당
+    order.totalPrice = calculatedPrice - discountAmount; // 생성 후 직접 할당
+    return order;
+}
+
+// ✅ 계산을 먼저 하고, 생성자에서 모든 필드를 완결한다
+public static OrderModel create(Long userId, List<OrderItemModel> items,
+                                int discountAmount) {
+    validateUserId(userId);
+    validateItems(items);
+    int originalTotalPrice = OrderItemModel.calculateTotalPrice(items);
+    OrderModel order = new OrderModel(
+            userId, originalTotalPrice, discountAmount, OrderStatus.ORDERED);
+    items.forEach(order::addItem); // JPA 연관관계 설정만 (비즈니스 상태 아님)
+    return order;
+}
+
+private OrderModel(Long userId, int originalTotalPrice,
+                   int discountAmount, OrderStatus status) {
+    this.userId = userId;
+    this.originalTotalPrice = originalTotalPrice;
+    this.discountAmount = discountAmount;
+    this.totalPrice = originalTotalPrice - discountAmount;
+    this.status = status;
+}
+```
+
+왜 "계산 먼저, 생성자에서 완결"인가:
+- Aggregate는 생성 시점부터 유효한 상태여야 한다 — 불완전한 구간이 존재하면 안 된다
+- 생성자에 모든 값이 들어가므로 **불변식을 한 곳에서 보장**할 수 있다
+- `addItem`은 JPA 양방향 관계 설정일 뿐, Aggregate의 비즈니스 상태를 바꾸지 않는다
+
 ### 접근 제어
 
 | 규칙 | 설정 |

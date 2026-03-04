@@ -94,4 +94,75 @@ class UserModelTest {
             assertThat(user.getPassword()).isEqualTo("ENCODED_NewPass123!@");
         }
     }
+
+    @DisplayName("포인트를 증가할 때, ")
+    @Nested
+    class AddPoint {
+
+        @DisplayName("양수 금액이 주어지면 포인트가 증가한다.")
+        @Test
+        void addPoint_success() {
+            // arrange
+            UserModel user = UserModel.create(validLoginId, validEncryptedPassword, validName, validBirthDate, validEmail);
+
+            // act
+            user.addPoint(1000L);
+
+            // assert
+            assertThat(user.getPoint()).isEqualTo(1000L);
+        }
+
+        @DisplayName("0 이하의 금액이면 예외가 발생한다.")
+        @Test
+        void addPoint_zeroOrNegative_throwsException() {
+            // arrange
+            UserModel user = UserModel.create(validLoginId, validEncryptedPassword, validName, validBirthDate, validEmail);
+
+            // act & assert
+            assertThatThrownBy(() -> user.addPoint(0L))
+                    .isInstanceOf(CoreException.class);
+        }
+    }
+
+    @DisplayName("포인트를 차감할 때, ")
+    @Nested
+    class DeductPoint {
+
+        @DisplayName("보유 포인트 이하의 금액이면 차감된다.")
+        @Test
+        void deductPoint_success() {
+            // arrange
+            UserModel user = UserModel.create(validLoginId, validEncryptedPassword, validName, validBirthDate, validEmail);
+            user.addPoint(5000L);
+
+            // act
+            user.deductPoint(3000L);
+
+            // assert
+            assertThat(user.getPoint()).isEqualTo(2000L);
+        }
+
+        @DisplayName("보유 포인트보다 큰 금액이면 예외가 발생한다.")
+        @Test
+        void deductPoint_insufficientPoint_throwsException() {
+            // arrange
+            UserModel user = UserModel.create(validLoginId, validEncryptedPassword, validName, validBirthDate, validEmail);
+            user.addPoint(1000L);
+
+            // act & assert
+            assertThatThrownBy(() -> user.deductPoint(2000L))
+                    .isInstanceOf(CoreException.class);
+        }
+
+        @DisplayName("0 이하의 금액이면 예외가 발생한다.")
+        @Test
+        void deductPoint_zeroOrNegative_throwsException() {
+            // arrange
+            UserModel user = UserModel.create(validLoginId, validEncryptedPassword, validName, validBirthDate, validEmail);
+
+            // act & assert
+            assertThatThrownBy(() -> user.deductPoint(0L))
+                    .isInstanceOf(CoreException.class);
+        }
+    }
 }

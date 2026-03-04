@@ -41,7 +41,7 @@ class AdminOrderV1ControllerTest {
         void list_returnsPageResponse() {
             // arrange
             OrderResult.OrderSummary summary = new OrderResult.OrderSummary(
-                1L, 50000, "ORDERED", ZonedDateTime.now()
+                1L, 50000, 50000, 0, "ORDERED", ZonedDateTime.now()
             );
             Page<OrderResult.OrderSummary> page = new PageImpl<>(
                 List.of(summary), PageRequest.of(0, 20), 1

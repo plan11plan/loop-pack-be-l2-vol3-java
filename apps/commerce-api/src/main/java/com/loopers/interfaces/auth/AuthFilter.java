@@ -27,10 +27,12 @@ public class AuthFilter extends OncePerRequestFilter {
     private static final Set<String> AUTH_REQUIRED_URLS = Set.of(
         "/api/v1/users/me",
         "/api/v1/users/password",
-        "/api/v1/users/me/likes"
+        "/api/v1/users/me/likes",
+        "/api/v1/users/me/coupons"
     );
     private static final String AUTH_REQUIRED_SUFFIX = "/likes";
     private static final String AUTH_REQUIRED_PREFIX_ORDERS = "/api/v1/orders";
+    private static final String AUTH_REQUIRED_PREFIX_COUPONS = "/api/v1/coupons/";
 
     private final AuthenticationService authenticationService;
     private final ObjectMapper objectMapper;
@@ -66,7 +68,8 @@ public class AuthFilter extends OncePerRequestFilter {
     private boolean requiresAuth(String uri) {
         return AUTH_REQUIRED_URLS.contains(uri)
             || (uri.startsWith("/api/v1/products/") && uri.endsWith(AUTH_REQUIRED_SUFFIX))
-            || uri.startsWith(AUTH_REQUIRED_PREFIX_ORDERS);
+            || uri.startsWith(AUTH_REQUIRED_PREFIX_ORDERS)
+            || uri.startsWith(AUTH_REQUIRED_PREFIX_COUPONS);
     }
 
     private void writeUnauthorizedResponse(HttpServletResponse response, String message) throws IOException {

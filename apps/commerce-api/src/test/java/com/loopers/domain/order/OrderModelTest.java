@@ -75,6 +75,13 @@ class OrderModelTest {
             assertThatThrownBy(() -> OrderModel.create(null, items))
                     .isInstanceOf(CoreException.class);
         }
+
+        @DisplayName("items가 null이면 예외가 발생한다")
+        @Test
+        void create_withNullItems_throwsException() {
+            assertThatThrownBy(() -> OrderModel.create(1L, null))
+                    .isInstanceOf(CoreException.class);
+        }
     }
 
     @DisplayName("소유자 검증할 때, ")
@@ -157,6 +164,94 @@ class OrderModelTest {
             // act & assert
             assertThatThrownBy(() -> order.cancelItem(item.getId()))
                     .isInstanceOf(CoreException.class);
+        }
+
+        @DisplayName("할인 적용 주문에서 부분 취소 시 할인이 유지된다")
+        @Test
+        void cancelItem_withDiscount_maintainsDiscount() {
+            // arrange
+            OrderItemModel item1 = createItemWithId(10L, 30000, 1, "상품A", "브랜드A");
+            OrderItemModel item2 = createItemWithId(20L, 20000, 1, "상품B", "브랜드B");
+            OrderModel order = OrderModel.create(1L, List.of(item1, item2), 5000);
+            // originalTotalPrice=50000, totalPrice=45000
+
+            // act
+            order.cancelItem(item1.getId());
+
+            // assert — 남은 아이템 20000 - 할인 5000 = 15000
+            assertAll(
+                    () -> assertThat(order.getTotalPrice()).isEqualTo(15000),
+                    () -> assertThat(order.getOriginalTotalPrice()).isEqualTo(50000),
+                    () -> assertThat(order.getStatus()).isEqualTo(OrderStatus.ORDERED));
+        }
+
+        @DisplayName("할인이 남은 아이템 합보다 클 때 totalPrice는 0이다")
+        @Test
+        void cancelItem_withDiscountExceedingRemaining_totalPriceIsZero() {
+            // arrange
+            OrderItemModel item1 = createItemWithId(10L, 8000, 1, "상품A", "브랜드A");
+            OrderItemModel item2 = createItemWithId(20L, 2000, 1, "상품B", "브랜드B");
+            OrderModel order = OrderModel.create(1L, List.of(item1, item2), 5000);
+
+            // act — 8000짜리 취소 → 남은 2000 - 할인 5000 = -3000 → 0
+            order.cancelItem(item1.getId());
+
+            // assert
+            assertThat(order.getTotalPrice()).isZero();
+        }
+
+        @DisplayName("전체 취소 후 originalTotalPrice는 변하지 않는다")
+        @Test
+        void cancelItem_allCancelled_originalTotalPriceUnchanged() {
+            // arrange
+            OrderItemModel item1 = createItemWithId(10L, 25000, 2, "상품A", "브랜드A");
+            OrderItemModel item2 = createItemWithId(20L, 30000, 1, "상품B", "브랜드B");
+            OrderModel order = OrderModel.create(1L, List.of(item1, item2));
+
+            // act
+            order.cancelItem(item1.getId());
+            order.cancelItem(item2.getId());
+
+            // assert
+            assertAll(
+                    () -> assertThat(order.getTotalPrice()).isZero(),
+                    () -> assertThat(order.getOriginalTotalPrice()).isEqualTo(80000));
+        }
+    }
+
+    @DisplayName("할인을 적용할 때, ")
+    @Nested
+    class ApplyDiscount {
+
+        @DisplayName("totalPrice가 originalTotalPrice - discountAmount로 계산된다")
+        @Test
+        void applyDiscount_calculatesTotalPrice() {
+            // arrange
+            OrderModel order = OrderModel.create(1L, List.of(
+                    OrderItemModel.create(10L, 50000, 1, "상품A", "브랜드A")));
+
+            // act
+            order.applyDiscount(5000);
+
+            // assert
+            assertAll(
+                    () -> assertThat(order.getTotalPrice()).isEqualTo(45000),
+                    () -> assertThat(order.getOriginalTotalPrice()).isEqualTo(50000),
+                    () -> assertThat(order.getDiscountAmount()).isEqualTo(5000));
+        }
+
+        @DisplayName("할인이 총액보다 커도 totalPrice는 0이다")
+        @Test
+        void applyDiscount_exceedsTotalPrice_totalPriceIsZero() {
+            // arrange
+            OrderModel order = OrderModel.create(1L, List.of(
+                    OrderItemModel.create(10L, 3000, 1, "상품A", "브랜드A")));
+
+            // act
+            order.applyDiscount(5000);
+
+            // assert
+            assertThat(order.getTotalPrice()).isZero();
         }
     }
 }

@@ -54,10 +54,7 @@ public class ProductFacade {
     public Page<ProductResult> getProducts(Pageable pageable) {
         Page<ProductModel> products = productService.getAll(pageable);
         Map<Long, String> brandNameMap = brandService.getNameMapByIds(
-                products.getContent().stream()
-                        .map(ProductModel::getBrandId)
-                        .distinct()
-                        .toList());
+                ProductModel.extractDistinctBrandIds(products.getContent()));
         return products.map(product -> ProductResult.of(product, brandNameMap.get(product.getBrandId())));
     }
 
@@ -72,39 +69,25 @@ public class ProductFacade {
     public Page<ProductResult> getProductsWithActiveBrand(Pageable pageable) {
         Page<ProductModel> products = productService.getAll(pageable);
         Map<Long, String> brandNameMap = brandService.getActiveNameMapByIds(
-                products.getContent().stream()
-                        .map(ProductModel::getBrandId)
-                        .distinct()
-                        .toList());
+                ProductModel.extractDistinctBrandIds(products.getContent()));
         Map<Long, Long> likeCountMap = productLikeService.countLikesByProductIds(
-                products.getContent().stream()
-                        .map(ProductModel::getId)
-                        .toList());
-        List<ProductResult> results = products.getContent().stream()
-                .filter(product -> brandNameMap.containsKey(product.getBrandId()))
-                .map(product -> ProductResult.of(
-                        product,
-                        brandNameMap.get(product.getBrandId()),
-                        likeCountMap.getOrDefault(product.getId(), 0L)))
-                .toList();
-        return new PageImpl<>(results, products.getPageable(), products.getTotalElements());
+                ProductModel.extractIds(products.getContent()));
+        return new PageImpl<>(
+                ProductResult.fromWithActiveBrand(products.getContent(), brandNameMap, likeCountMap),
+                products.getPageable(),
+                products.getTotalElements());
     }
 
     @Transactional(readOnly = true)
     public Page<ProductResult> getProductsWithActiveBrandByBrandId(Long brandId, Pageable pageable) {
-        String brandName = brandService.getById(brandId).getName();
         Page<ProductModel> products = productService.getAllByBrandId(brandId, pageable);
+        Map<Long, String> brandNameMap = brandService.getActiveNameMapByIds(List.of(brandId));
         Map<Long, Long> likeCountMap = productLikeService.countLikesByProductIds(
-                products.getContent().stream()
-                        .map(ProductModel::getId)
-                        .toList());
-        List<ProductResult> results = products.getContent().stream()
-                .map(product -> ProductResult.of(
-                        product,
-                        brandName,
-                        likeCountMap.getOrDefault(product.getId(), 0L)))
-                .toList();
-        return new PageImpl<>(results, products.getPageable(), products.getTotalElements());
+                ProductModel.extractIds(products.getContent()));
+        return new PageImpl<>(
+                ProductResult.fromWithActiveBrand(products.getContent(), brandNameMap, likeCountMap),
+                products.getPageable(),
+                products.getTotalElements());
     }
 
     @Transactional(readOnly = true)
@@ -113,26 +96,18 @@ public class ProductFacade {
                 ? productService.getAllByBrandId(brandId)
                 : productService.getAll();
         Map<Long, String> brandNameMap = brandService.getActiveNameMapByIds(
-                products.stream()
-                        .map(ProductModel::getBrandId)
-                        .distinct()
-                        .toList());
+                ProductModel.extractDistinctBrandIds(products));
         Map<Long, Long> likeCountMap = productLikeService.countLikesByProductIds(
-                products.stream()
-                        .map(ProductModel::getId)
-                        .toList());
-        List<ProductResult> sorted = products.stream()
-                .filter(product -> brandNameMap.containsKey(product.getBrandId()))
-                .map(product -> ProductResult.of(
-                        product,
-                        brandNameMap.get(product.getBrandId()),
-                        likeCountMap.getOrDefault(product.getId(), 0L)))
-                .sorted(Comparator.comparingLong(ProductResult::likeCount).reversed())
-                .toList();
+                ProductModel.extractIds(products));
+        List<ProductResult> sorted =
+                ProductResult.fromWithActiveBrand(products, brandNameMap, likeCountMap).stream()
+                        .sorted(Comparator.comparingLong(ProductResult::likeCount).reversed())
+                        .toList();
         int start = page * size;
-        int end = Math.min(start + size, sorted.size());
         return new PageImpl<>(
-                start >= sorted.size() ? List.of() : sorted.subList(start, end),
+                start >= sorted.size()
+                        ? List.of()
+                        : sorted.subList(start, Math.min(start + size, sorted.size())),
                 PageRequest.of(page, size),
                 sorted.size());
     }

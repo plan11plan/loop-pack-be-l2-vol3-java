@@ -1,5 +1,6 @@
 package com.loopers.domain.order;
 
+import com.loopers.domain.order.dto.OrderCommand;
 import com.loopers.support.error.CoreException;
 import java.time.ZonedDateTime;
 import java.util.List;
@@ -17,8 +18,18 @@ public class OrderService {
     private final OrderItemRepository orderItemRepository;
 
     @Transactional
-    public OrderModel createOrder(Long userId, List<OrderItemModel> items) {
+    public OrderModel createOrder(Long userId, List<OrderCommand.CreateItem> commands) {
+        List<OrderItemModel> items = commands.stream()
+                .map(cmd -> OrderItemModel.create(
+                        cmd.productId(), cmd.price(), cmd.quantity(),
+                        cmd.productName(), cmd.brandName()))
+                .toList();
         return orderRepository.save(OrderModel.create(userId, items));
+    }
+
+    @Transactional
+    public void applyDiscount(OrderModel order, int discountAmount) {
+        order.applyDiscount(discountAmount);
     }
 
     @Transactional(readOnly = true)
@@ -40,8 +51,7 @@ public class OrderService {
     }
 
     @Transactional
-    public OrderItemModel cancelItem(Long orderId, Long orderItemId) {
-        OrderModel order = getById(orderId);
+    public OrderItemModel cancelItem(OrderModel order, Long orderItemId) {
         return order.cancelItem(orderItemId);
     }
 

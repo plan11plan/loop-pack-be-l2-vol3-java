@@ -22,14 +22,16 @@ public class OrderRequest {
     public record Create(
         @NotEmpty(message = "주문 항목은 필수 입력값입니다.")
         @Valid
-        List<OrderItemRequest> items
+        List<OrderItemRequest> items,
+        Long couponId
     ) {
         public OrderCriteria.Create toCriteria() {
             return new OrderCriteria.Create(
                     items.stream()
                             .map(item -> new OrderCriteria.Create.CreateItem(
                                     item.productId(), item.quantity(), item.expectedPrice()))
-                            .toList());
+                            .toList(),
+                    couponId);
         }
     }
 

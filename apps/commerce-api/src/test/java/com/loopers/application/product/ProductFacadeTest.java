@@ -117,4 +117,55 @@ class ProductFacadeTest {
             assertThat(result.getTotalPages()).isEqualTo(2);
         }
     }
+
+    @DisplayName("브랜드ID로 활성 브랜드 상품 목록을 조회할 때, ")
+    @Nested
+    class GetProductsWithActiveBrandByBrandId {
+
+        @DisplayName("비활성 브랜드이면 빈 결과를 반환한다.")
+        @Test
+        void getProductsWithActiveBrandByBrandId_inactiveBrand_returnsEmpty() {
+            // arrange
+            ProductModel product = ProductModel.create(1L, "에어맥스", 150000, 100);
+            PageRequest pageable = PageRequest.of(0, 20);
+
+            when(productService.getAllByBrandId(1L, pageable))
+                    .thenReturn(new PageImpl<>(List.of(product), pageable, 1));
+            when(brandService.getActiveNameMapByIds(List.of(1L)))
+                    .thenReturn(Map.of());
+            when(productLikeService.countLikesByProductIds(anyList()))
+                    .thenReturn(Map.of());
+
+            // act
+            Page<ProductResult> result =
+                    productFacade.getProductsWithActiveBrandByBrandId(1L, pageable);
+
+            // assert
+            assertThat(result.getContent()).isEmpty();
+        }
+
+        @DisplayName("활성 브랜드이면 좋아요 수가 포함된 결과를 반환한다.")
+        @Test
+        void getProductsWithActiveBrandByBrandId_activeBrand_returnsResults() {
+            // arrange
+            ProductModel product = ProductModel.create(1L, "에어맥스", 150000, 100);
+            PageRequest pageable = PageRequest.of(0, 20);
+
+            when(productService.getAllByBrandId(1L, pageable))
+                    .thenReturn(new PageImpl<>(List.of(product), pageable, 1));
+            when(brandService.getActiveNameMapByIds(List.of(1L)))
+                    .thenReturn(Map.of(1L, "나이키"));
+            when(productLikeService.countLikesByProductIds(anyList()))
+                    .thenReturn(Map.of(0L, 10L));
+
+            // act
+            Page<ProductResult> result =
+                    productFacade.getProductsWithActiveBrandByBrandId(1L, pageable);
+
+            // assert
+            assertThat(result.getContent()).hasSize(1);
+            assertThat(result.getContent().get(0).brandName()).isEqualTo("나이키");
+            assertThat(result.getContent().get(0).likeCount()).isEqualTo(10L);
+        }
+    }
 }
