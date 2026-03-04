@@ -25,11 +25,6 @@ public class CouponRepositoryImpl implements CouponRepository {
     }
 
     @Override
-    public Optional<CouponModel> findByIdWithLock(Long id) {
-        return couponJpaRepository.findByIdWithLock(id);
-    }
-
-    @Override
     public Page<CouponModel> findAll(Pageable pageable) {
         return couponJpaRepository.findAllByDeletedAtIsNull(pageable);
     }
