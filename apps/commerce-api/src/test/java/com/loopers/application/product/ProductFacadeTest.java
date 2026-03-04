@@ -109,7 +109,7 @@ class ProductFacadeTest {
 
             // act
             Page<ProductResult> result =
-                    productFacade.getProductsWithActiveBrandSortedByLikes(null, 0, 2);
+                    productFacade.getProductsWithActiveBrandSortedByLikes(0, 2);
 
             // assert
             assertThat(result.getContent()).hasSize(2);
