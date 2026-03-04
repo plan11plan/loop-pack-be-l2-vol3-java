@@ -6,7 +6,6 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -77,7 +76,7 @@ class OrderFacadeTest {
 
             OrderModel order = OrderModel.create(1L, List.of(
                     OrderItemModel.create(10L, 25000, 1, "상품A", ("브랜드A"))));
-            when(orderService.createOrder(anyLong(), anyList(), anyInt())).thenReturn(order);
+            when(orderService.createOrder(anyLong(), anyList())).thenReturn(order);
 
             OrderCriteria.Create criteria = new OrderCriteria.Create(List.of(
                     new OrderCriteria.Create.CreateItem(10L, 1, 25000)));
@@ -89,7 +88,7 @@ class OrderFacadeTest {
             assertAll(
                     () -> verify(productService).validateAndDeductStock(anyList()),
                     () -> verify(brandService).getNameMapByIds(List.of(brandId)),
-                    () -> verify(orderService).createOrder(anyLong(), anyList(), anyInt()),
+                    () -> verify(orderService).createOrder(anyLong(), anyList()),
                     () -> verify(userService).deductPoint(1L, 25000),
                     () -> assertThat(result.totalPrice()).isEqualTo(25000));
         }
@@ -300,7 +299,7 @@ class OrderFacadeTest {
             OrderModel order = OrderModel.create(1L, List.of(
                     OrderItemModel.create(10L, 50000, 1, "상품A", "브랜드A")));
             setId(order, 1L);
-            when(orderService.createOrder(anyLong(), anyList(), eq(0)))
+            when(orderService.createOrder(anyLong(), anyList()))
                     .thenReturn(order);
             when(couponService.useAndCalculateDiscount(5L, 1L, 1L, 50000L))
                     .thenReturn(5000L);
@@ -329,7 +328,7 @@ class OrderFacadeTest {
             OrderModel order = OrderModel.create(1L, List.of(
                     OrderItemModel.create(10L, 50000, 1, "상품A", "브랜드A")));
             setId(order, 1L);
-            when(orderService.createOrder(anyLong(), anyList(), eq(0)))
+            when(orderService.createOrder(anyLong(), anyList()))
                     .thenReturn(order);
             when(couponService.useAndCalculateDiscount(5L, 1L, 1L, 50000L))
                     .thenReturn(5000L);
@@ -358,7 +357,7 @@ class OrderFacadeTest {
             OrderModel order = OrderModel.create(1L, List.of(
                     OrderItemModel.create(10L, 50000, 1, "상품A", "브랜드A")));
             setId(order, 1L);
-            when(orderService.createOrder(anyLong(), anyList(), eq(0))).thenReturn(order);
+            when(orderService.createOrder(anyLong(), anyList())).thenReturn(order);
             when(couponService.useAndCalculateDiscount(eq(5L), eq(1L), anyLong(), eq(50000L)))
                     .thenThrow(new CoreException(CouponErrorCode.ALREADY_USED));
 
@@ -383,7 +382,7 @@ class OrderFacadeTest {
 
             OrderModel order = OrderModel.create(1L, List.of(
                     OrderItemModel.create(10L, 50000, 1, "상품A", "브랜드A")));
-            when(orderService.createOrder(anyLong(), anyList(), anyInt()))
+            when(orderService.createOrder(anyLong(), anyList()))
                     .thenReturn(order);
 
             OrderCriteria.Create criteria = new OrderCriteria.Create(List.of(
@@ -411,7 +410,7 @@ class OrderFacadeTest {
             OrderModel order = OrderModel.create(1L, List.of(
                     OrderItemModel.create(10L, 50000, 1, "상품A", "브랜드A")));
             setId(order, 1L);
-            when(orderService.createOrder(anyLong(), anyList(), eq(0))).thenReturn(order);
+            when(orderService.createOrder(anyLong(), anyList())).thenReturn(order);
             when(couponService.useAndCalculateDiscount(eq(999L), eq(1L), anyLong(), eq(50000L)))
                     .thenThrow(new CoreException(CouponErrorCode.NOT_FOUND));
 
@@ -437,7 +436,7 @@ class OrderFacadeTest {
             OrderModel order = OrderModel.create(1L, List.of(
                     OrderItemModel.create(10L, 50000, 1, "상품A", "브랜드A")));
             setId(order, 1L);
-            when(orderService.createOrder(anyLong(), anyList(), eq(0))).thenReturn(order);
+            when(orderService.createOrder(anyLong(), anyList())).thenReturn(order);
             when(couponService.useAndCalculateDiscount(eq(5L), eq(1L), anyLong(), eq(50000L)))
                     .thenThrow(new CoreException(CouponErrorCode.NOT_OWNED));
 
@@ -463,7 +462,7 @@ class OrderFacadeTest {
             OrderModel order = OrderModel.create(1L, List.of(
                     OrderItemModel.create(10L, 10000, 1, "상품A", "브랜드A")));
             setId(order, 1L);
-            when(orderService.createOrder(anyLong(), anyList(), eq(0))).thenReturn(order);
+            when(orderService.createOrder(anyLong(), anyList())).thenReturn(order);
             when(couponService.useAndCalculateDiscount(eq(5L), eq(1L), anyLong(), eq(10000L)))
                     .thenThrow(new CoreException(CouponErrorCode.MIN_ORDER_AMOUNT_NOT_MET));
 
