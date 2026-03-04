@@ -1,16 +1,16 @@
-package com.loopers.interfaces.like.dto;
+package com.loopers.interfaces.product.dto;
 
-import com.loopers.application.like.dto.LikeResult;
+import com.loopers.application.product.dto.ProductLikeResult;
 import java.time.ZonedDateTime;
 import java.util.List;
 
-public class LikeV1Dto {
+public class ProductLikeV1Dto {
 
     public record LikeResponse(
         Long productId,
         ZonedDateTime createdAt
     ) {
-        public static LikeResponse from(LikeResult result) {
+        public static LikeResponse from(ProductLikeResult result) {
             return new LikeResponse(result.productId(), result.createdAt());
         }
     }
@@ -22,7 +22,7 @@ public class LikeV1Dto {
             Long productId,
             ZonedDateTime createdAt
         ) {
-            public static ListItem from(LikeResult result) {
+            public static ListItem from(ProductLikeResult result) {
                 return new ListItem(result.productId(), result.createdAt());
             }
         }

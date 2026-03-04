@@ -1,14 +1,14 @@
-package com.loopers.interfaces.like;
+package com.loopers.interfaces.product;
 
 import com.loopers.interfaces.api.ApiResponse;
 import com.loopers.interfaces.auth.LoginUser;
-import com.loopers.interfaces.like.dto.LikeV1Dto;
+import com.loopers.interfaces.product.dto.ProductLikeV1Dto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
 @Tag(name = "Like V1 API", description = "좋아요 API 입니다.")
-public interface LikeV1ApiSpec {
+public interface ProductLikeV1ApiSpec {
 
     @Operation(
         summary = "상품 좋아요 등록",
@@ -32,7 +32,7 @@ public interface LikeV1ApiSpec {
         summary = "내가 좋아요한 상품 목록 조회",
         description = "로그인한 사용자가 좋아요한 상품 목록을 조회합니다."
     )
-    ApiResponse<LikeV1Dto.ListResponse> getMyLikes(
+    ApiResponse<ProductLikeV1Dto.ListResponse> getMyLikes(
         @Parameter(hidden = true) LoginUser loginUser
     );
 }

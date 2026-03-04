@@ -1,6 +1,6 @@
-package com.loopers.infrastructure.like;
+package com.loopers.infrastructure.product;
 
-import com.loopers.domain.like.ProductLikeModel;
+import com.loopers.domain.product.ProductLikeModel;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;

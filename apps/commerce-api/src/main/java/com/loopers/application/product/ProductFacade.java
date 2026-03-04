@@ -3,7 +3,7 @@ package com.loopers.application.product;
 import com.loopers.application.product.dto.ProductCriteria;
 import com.loopers.application.product.dto.ProductResult;
 import com.loopers.domain.brand.BrandService;
-import com.loopers.domain.like.ProductLikeService;
+import com.loopers.domain.product.ProductLikeService;
 import com.loopers.domain.product.ProductModel;
 import com.loopers.domain.product.ProductService;
 import java.util.Comparator;

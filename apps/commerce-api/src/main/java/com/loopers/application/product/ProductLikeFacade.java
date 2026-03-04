@@ -1,7 +1,7 @@
-package com.loopers.application.like;
+package com.loopers.application.product;
 
-import com.loopers.application.like.dto.LikeResult;
-import com.loopers.domain.like.ProductLikeService;
+import com.loopers.application.product.dto.ProductLikeResult;
+import com.loopers.domain.product.ProductLikeService;
 import com.loopers.domain.product.ProductService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -10,7 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-public class LikeFacade {
+public class ProductLikeFacade {
     private final ProductLikeService productLikeService;
     private final ProductService productService;
 
@@ -26,10 +26,10 @@ public class LikeFacade {
     }
 
     @Transactional(readOnly = true)
-    public List<LikeResult> getMyLikedProducts(Long userId) {
+    public List<ProductLikeResult> getMyLikedProducts(Long userId) {
         return productLikeService.getLikesByUserId(userId).stream()
             .filter(like -> productService.existsById(like.getProductId()))
-            .map(LikeResult::from)
+            .map(ProductLikeResult::from)
             .toList();
     }
 }

@@ -1,20 +1,20 @@
-package com.loopers.interfaces.like;
+package com.loopers.interfaces.product;
 
-import com.loopers.application.like.LikeFacade;
-import com.loopers.application.like.dto.LikeResult;
+import com.loopers.application.product.ProductLikeFacade;
+import com.loopers.application.product.dto.ProductLikeResult;
 import com.loopers.interfaces.api.ApiResponse;
 import com.loopers.interfaces.auth.Login;
 import com.loopers.interfaces.auth.LoginUser;
-import com.loopers.interfaces.like.dto.LikeV1Dto;
+import com.loopers.interfaces.product.dto.ProductLikeV1Dto;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 @RequiredArgsConstructor
 @RestController
-public class LikeV1Controller implements LikeV1ApiSpec {
+public class ProductLikeV1Controller implements ProductLikeV1ApiSpec {
 
-    private final LikeFacade likeFacade;
+    private final ProductLikeFacade productLikeFacade;
 
     @PostMapping("/api/v1/products/{productId}/likes")
     @Override
@@ -22,7 +22,7 @@ public class LikeV1Controller implements LikeV1ApiSpec {
         @Login LoginUser loginUser,
         @PathVariable Long productId
     ) {
-        likeFacade.like(loginUser.id(), productId);
+        productLikeFacade.like(loginUser.id(), productId);
         return ApiResponse.success();
     }
 
@@ -32,21 +32,21 @@ public class LikeV1Controller implements LikeV1ApiSpec {
         @Login LoginUser loginUser,
         @PathVariable Long productId
     ) {
-        likeFacade.unlike(loginUser.id(), productId);
+        productLikeFacade.unlike(loginUser.id(), productId);
         return ApiResponse.success();
     }
 
     @GetMapping("/api/v1/users/me/likes")
     @Override
-    public ApiResponse<LikeV1Dto.ListResponse> getMyLikes(
+    public ApiResponse<ProductLikeV1Dto.ListResponse> getMyLikes(
         @Login LoginUser loginUser
     ) {
-        List<LikeResult> results = likeFacade.getMyLikedProducts(loginUser.id());
+        List<ProductLikeResult> results = productLikeFacade.getMyLikedProducts(loginUser.id());
 
         return ApiResponse.success(
-                new LikeV1Dto.ListResponse(
+                new ProductLikeV1Dto.ListResponse(
                         results.stream()
-                                .map(LikeV1Dto.ListResponse.ListItem::from)
+                                .map(ProductLikeV1Dto.ListResponse.ListItem::from)
                                 .toList()));
     }
 }

@@ -1,7 +1,7 @@
-package com.loopers.infrastructure.like;
+package com.loopers.infrastructure.product;
 
-import com.loopers.domain.like.ProductLikeModel;
-import com.loopers.domain.like.ProductLikeRepository;
+import com.loopers.domain.product.ProductLikeModel;
+import com.loopers.domain.product.ProductLikeRepository;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
