@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
 
 import com.loopers.domain.order.dto.OrderCommand;
+import com.loopers.domain.order.dto.OrderInfo;
 import com.loopers.support.error.CoreException;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -164,11 +165,13 @@ class OrderServiceTest {
             Long orderItemId = order.getItems().get(0).getId();
 
             // act
-            OrderItemModel cancelledItem = orderService.cancelItem(order, orderItemId);
+            OrderInfo.CancelledItem result = orderService.cancelItem(order, orderItemId);
 
             // assert
             assertAll(
-                    () -> assertThat(cancelledItem.getStatus()).isEqualTo(OrderItemStatus.CANCELLED),
+                    () -> assertThat(result.productId()).isEqualTo(10L),
+                    () -> assertThat(result.quantity()).isEqualTo(2),
+                    () -> assertThat(result.orderFullyCancelled()).isTrue(),
                     () -> assertThat(order.getTotalPrice()).isEqualTo(0),
                     () -> assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELLED));
         }
@@ -184,10 +187,11 @@ class OrderServiceTest {
             Long firstItemId = order.getItems().get(0).getId();
 
             // act
-            orderService.cancelItem(order, firstItemId);
+            OrderInfo.CancelledItem result = orderService.cancelItem(order, firstItemId);
 
             // assert
             assertAll(
+                    () -> assertThat(result.orderFullyCancelled()).isFalse(),
                     () -> assertThat(order.getTotalPrice()).isEqualTo(30000),
                     () -> assertThat(order.getStatus()).isEqualTo(OrderStatus.ORDERED));
         }

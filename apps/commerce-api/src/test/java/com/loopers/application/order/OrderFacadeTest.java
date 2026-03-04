@@ -22,6 +22,7 @@ import com.loopers.domain.order.OrderErrorCode;
 import com.loopers.domain.order.OrderItemModel;
 import com.loopers.domain.order.OrderModel;
 import com.loopers.domain.order.OrderService;
+import com.loopers.domain.order.dto.OrderInfo;
 import com.loopers.domain.product.ProductErrorCode;
 import com.loopers.domain.product.ProductService;
 import com.loopers.domain.product.dto.ProductInfo;
@@ -255,12 +256,11 @@ class OrderFacadeTest {
         @Test
         void cancelMyOrderItem_success() {
             // arrange
-            OrderItemModel cancelledItem = OrderItemModel.create(
-                    10L, 25000, 2, "상품A", ("브랜드A"));
-
             when(orderService.getByIdAndUserId(1L, 1L)).thenReturn(
-                    OrderModel.create(1L, List.of(cancelledItem)));
-            when(orderService.cancelItem(any(OrderModel.class), eq(100L))).thenReturn(cancelledItem);
+                    OrderModel.create(1L, List.of(
+                            OrderItemModel.create(10L, 25000, 2, "상품A", "브랜드A"))));
+            when(orderService.cancelItem(any(OrderModel.class), eq(100L)))
+                    .thenReturn(new OrderInfo.CancelledItem(10L, 2, false));
 
             // act
             orderFacade.cancelMyOrderItem(1L, 1L, 100L);
@@ -497,15 +497,11 @@ class OrderFacadeTest {
         @Test
         void cancelOrderItem_whenAllCancelled_restoresCoupon() {
             // arrange
-            OrderItemModel item = OrderItemModel.create(
-                    10L, 50000, 1, "상품A", "브랜드A");
-            setId(item, 100L);
-            OrderModel order = OrderModel.create(1L, List.of(item), 5000);
-
-            when(orderService.getByIdAndUserId(1L, 1L)).thenReturn(order);
-            when(orderService.cancelItem(any(OrderModel.class), eq(100L))).thenAnswer(invocation -> {
-                return order.cancelItem(100L);
-            });
+            when(orderService.getByIdAndUserId(1L, 1L)).thenReturn(
+                    OrderModel.create(1L, List.of(
+                            OrderItemModel.create(10L, 50000, 1, "상품A", "브랜드A")), 5000));
+            when(orderService.cancelItem(any(OrderModel.class), eq(100L)))
+                    .thenReturn(new OrderInfo.CancelledItem(10L, 1, true));
 
             // act
             orderFacade.cancelMyOrderItem(1L, 1L, 100L);
@@ -520,18 +516,12 @@ class OrderFacadeTest {
         @Test
         void cancelOrderItem_whenPartiallyCancelled_doesNotRestoreCoupon() {
             // arrange
-            OrderItemModel item1 = OrderItemModel.create(
-                    10L, 30000, 1, "상품A", "브랜드A");
-            OrderItemModel item2 = OrderItemModel.create(
-                    20L, 20000, 1, "상품B", "브랜드A");
-            setId(item1, 100L);
-            setId(item2, 200L);
-            OrderModel order = OrderModel.create(1L, List.of(item1, item2), 5000);
-
-            when(orderService.getByIdAndUserId(1L, 1L)).thenReturn(order);
-            when(orderService.cancelItem(any(OrderModel.class), eq(100L))).thenAnswer(invocation -> {
-                return order.cancelItem(100L);
-            });
+            when(orderService.getByIdAndUserId(1L, 1L)).thenReturn(
+                    OrderModel.create(1L, List.of(
+                            OrderItemModel.create(10L, 30000, 1, "상품A", "브랜드A"),
+                            OrderItemModel.create(20L, 20000, 1, "상품B", "브랜드A")), 5000));
+            when(orderService.cancelItem(any(OrderModel.class), eq(100L)))
+                    .thenReturn(new OrderInfo.CancelledItem(10L, 1, false));
 
             // act
             orderFacade.cancelMyOrderItem(1L, 1L, 100L);
@@ -551,13 +541,11 @@ class OrderFacadeTest {
         @Test
         void cancelOrderItem_admin_success() {
             // arrange
-            OrderItemModel item = OrderItemModel.create(
-                    10L, 25000, 2, "상품A", "브랜드A");
-            setId(item, 100L);
-            OrderModel order = OrderModel.create(1L, List.of(item));
-
-            when(orderService.getById(1L)).thenReturn(order);
-            when(orderService.cancelItem(any(OrderModel.class), eq(100L))).thenReturn(item);
+            when(orderService.getById(1L)).thenReturn(
+                    OrderModel.create(1L, List.of(
+                            OrderItemModel.create(10L, 25000, 2, "상품A", "브랜드A"))));
+            when(orderService.cancelItem(any(OrderModel.class), eq(100L)))
+                    .thenReturn(new OrderInfo.CancelledItem(10L, 2, false));
 
             // act
             orderFacade.cancelOrderItem(1L, 100L);
@@ -573,15 +561,11 @@ class OrderFacadeTest {
         @Test
         void cancelOrderItem_admin_allCancelled_restoresCoupon() {
             // arrange
-            OrderItemModel item = OrderItemModel.create(
-                    10L, 50000, 1, "상품A", "브랜드A");
-            setId(item, 100L);
-            OrderModel order = OrderModel.create(1L, List.of(item), 5000);
-
-            when(orderService.getById(1L)).thenReturn(order);
-            when(orderService.cancelItem(any(OrderModel.class), eq(100L))).thenAnswer(invocation -> {
-                return order.cancelItem(100L);
-            });
+            when(orderService.getById(1L)).thenReturn(
+                    OrderModel.create(1L, List.of(
+                            OrderItemModel.create(10L, 50000, 1, "상품A", "브랜드A")), 5000));
+            when(orderService.cancelItem(any(OrderModel.class), eq(100L)))
+                    .thenReturn(new OrderInfo.CancelledItem(10L, 1, true));
 
             // act
             orderFacade.cancelOrderItem(1L, 100L);
