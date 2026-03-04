@@ -12,6 +12,7 @@ import com.loopers.infrastructure.brand.BrandJpaRepository;
 import com.loopers.infrastructure.coupon.CouponJpaRepository;
 import com.loopers.infrastructure.coupon.OwnedCouponJpaRepository;
 import com.loopers.infrastructure.product.ProductJpaRepository;
+import com.loopers.infrastructure.user.UserJpaRepository;
 import com.loopers.interfaces.api.ApiResponse;
 import com.loopers.interfaces.order.dto.OrderRequest;
 import com.loopers.interfaces.order.dto.OrderResponse;
@@ -47,6 +48,7 @@ class OrderCouponV1ApiE2ETest {
     private final ProductJpaRepository productJpaRepository;
     private final CouponJpaRepository couponJpaRepository;
     private final OwnedCouponJpaRepository ownedCouponJpaRepository;
+    private final UserJpaRepository userJpaRepository;
     private final DatabaseCleanUp databaseCleanUp;
 
     private Long userId;
@@ -59,6 +61,7 @@ class OrderCouponV1ApiE2ETest {
         ProductJpaRepository productJpaRepository,
         CouponJpaRepository couponJpaRepository,
         OwnedCouponJpaRepository ownedCouponJpaRepository,
+        UserJpaRepository userJpaRepository,
         DatabaseCleanUp databaseCleanUp
     ) {
         this.testRestTemplate = testRestTemplate;
@@ -66,6 +69,7 @@ class OrderCouponV1ApiE2ETest {
         this.productJpaRepository = productJpaRepository;
         this.couponJpaRepository = couponJpaRepository;
         this.ownedCouponJpaRepository = ownedCouponJpaRepository;
+        this.userJpaRepository = userJpaRepository;
         this.databaseCleanUp = databaseCleanUp;
     }
 
@@ -80,6 +84,11 @@ class OrderCouponV1ApiE2ETest {
                         new HttpEntity<>(signupRequest),
                         new ParameterizedTypeReference<>() {});
         userId = signupResponse.getBody().data().id();
+
+        // 포인트 충전
+        com.loopers.domain.user.UserModel user = userJpaRepository.findById(userId).orElseThrow();
+        user.addPoint(10_000_000);
+        userJpaRepository.save(user);
 
         // 브랜드 + 상품
         BrandModel brand = brandJpaRepository.save(BrandModel.create("ACNE STUDIOS"));

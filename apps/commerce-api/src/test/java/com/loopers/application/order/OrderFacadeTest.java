@@ -24,6 +24,7 @@ import com.loopers.domain.order.OrderService;
 import com.loopers.domain.product.ProductErrorCode;
 import com.loopers.domain.product.ProductService;
 import com.loopers.domain.product.dto.ProductInfo;
+import com.loopers.domain.user.UserService;
 import com.loopers.support.error.CoreException;
 import java.time.ZonedDateTime;
 import java.util.List;
@@ -54,6 +55,9 @@ class OrderFacadeTest {
 
     @Mock
     private CouponService couponService;
+
+    @Mock
+    private UserService userService;
 
     @InjectMocks
     private OrderFacade orderFacade;
@@ -86,6 +90,7 @@ class OrderFacadeTest {
                     () -> verify(productService).validateAndDeductStock(anyList()),
                     () -> verify(brandService).getNameMapByIds(List.of(brandId)),
                     () -> verify(orderService).createOrder(anyLong(), anyList(), anyInt()),
+                    () -> verify(userService).deductPoint(1L, 25000),
                     () -> assertThat(result.totalPrice()).isEqualTo(25000));
         }
 
