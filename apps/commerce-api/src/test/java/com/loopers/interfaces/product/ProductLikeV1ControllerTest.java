@@ -1,4 +1,4 @@
-package com.loopers.interfaces.like;
+package com.loopers.interfaces.product;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -8,12 +8,12 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.loopers.application.like.LikeFacade;
-import com.loopers.application.like.dto.LikeResult;
+import com.loopers.application.product.ProductLikeFacade;
+import com.loopers.application.product.dto.ProductLikeResult;
 import com.loopers.domain.product.ProductErrorCode;
 import com.loopers.interfaces.api.ApiResponse;
 import com.loopers.interfaces.auth.LoginUser;
-import com.loopers.interfaces.like.dto.LikeV1Dto;
+import com.loopers.interfaces.product.dto.ProductLikeV1Dto;
 import com.loopers.support.error.CoreException;
 import java.time.ZonedDateTime;
 import java.util.List;
@@ -25,15 +25,15 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-@DisplayName("LikeV1Controller 단위 테스트")
+@DisplayName("ProductLikeV1Controller 단위 테스트")
 @ExtendWith(MockitoExtension.class)
-class LikeV1ControllerTest {
+class ProductLikeV1ControllerTest {
 
     @Mock
-    private LikeFacade likeFacade;
+    private ProductLikeFacade productLikeFacade;
 
     @InjectMocks
-    private LikeV1Controller likeV1Controller;
+    private ProductLikeV1Controller productLikeV1Controller;
 
     private final LoginUser loginUser = new LoginUser(1L, "testuser", "테스터");
 
@@ -41,18 +41,18 @@ class LikeV1ControllerTest {
     @Nested
     class Like {
 
-        @DisplayName("좋아요 등록 요청이면, likeFacade.like를 호출하고 성공 응답을 반환한다.")
+        @DisplayName("좋아요 등록 요청이면, productLikeFacade.like를 호출하고 성공 응답을 반환한다.")
         @Test
         void like_callsFacadeLike() {
             // arrange
             Long productId = 10L;
-            doNothing().when(likeFacade).like(1L, 10L);
+            doNothing().when(productLikeFacade).like(1L, 10L);
 
             // act
-            ApiResponse<Object> response = likeV1Controller.like(loginUser, productId);
+            ApiResponse<Object> response = productLikeV1Controller.like(loginUser, productId);
 
             // assert
-            verify(likeFacade).like(1L, 10L);
+            verify(productLikeFacade).like(1L, 10L);
             assertThat(response.meta().result()).isEqualTo(ApiResponse.Metadata.Result.SUCCESS);
         }
 
@@ -62,11 +62,11 @@ class LikeV1ControllerTest {
             // arrange
             Long productId = 999L;
             doThrow(new CoreException(ProductErrorCode.NOT_FOUND))
-                .when(likeFacade).like(1L, 999L);
+                .when(productLikeFacade).like(1L, 999L);
 
             // act & assert
             assertThatThrownBy(
-                () -> likeV1Controller.like(loginUser, productId)
+                () -> productLikeV1Controller.like(loginUser, productId)
             ).isInstanceOf(CoreException.class);
         }
     }
@@ -75,18 +75,18 @@ class LikeV1ControllerTest {
     @Nested
     class Unlike {
 
-        @DisplayName("좋아요 취소 요청이면, likeFacade.unlike를 호출하고 성공 응답을 반환한다.")
+        @DisplayName("좋아요 취소 요청이면, productLikeFacade.unlike를 호출하고 성공 응답을 반환한다.")
         @Test
         void unlike_callsFacadeUnlike() {
             // arrange
             Long productId = 10L;
-            doNothing().when(likeFacade).unlike(1L, 10L);
+            doNothing().when(productLikeFacade).unlike(1L, 10L);
 
             // act
-            ApiResponse<Object> response = likeV1Controller.unlike(loginUser, productId);
+            ApiResponse<Object> response = productLikeV1Controller.unlike(loginUser, productId);
 
             // assert
-            verify(likeFacade).unlike(1L, 10L);
+            verify(productLikeFacade).unlike(1L, 10L);
             assertThat(response.meta().result()).isEqualTo(ApiResponse.Metadata.Result.SUCCESS);
         }
     }
@@ -95,18 +95,18 @@ class LikeV1ControllerTest {
     @Nested
     class GetMyLikes {
 
-        @DisplayName("좋아요 목록을 조회하면, LikeV1Dto.ListResponse를 반환한다.")
+        @DisplayName("좋아요 목록을 조회하면, ProductLikeV1Dto.ListResponse를 반환한다.")
         @Test
         void getMyLikes_returnsListResponse() {
             // arrange
-            List<LikeResult> results = List.of(
-                new LikeResult(1L, 1L, 10L, ZonedDateTime.now()),
-                new LikeResult(2L, 1L, 20L, ZonedDateTime.now())
+            List<ProductLikeResult> results = List.of(
+                new ProductLikeResult(1L, 1L, 10L, ZonedDateTime.now()),
+                new ProductLikeResult(2L, 1L, 20L, ZonedDateTime.now())
             );
-            when(likeFacade.getMyLikedProducts(1L)).thenReturn(results);
+            when(productLikeFacade.getMyLikedProducts(1L)).thenReturn(results);
 
             // act
-            ApiResponse<LikeV1Dto.ListResponse> response = likeV1Controller.getMyLikes(loginUser);
+            ApiResponse<ProductLikeV1Dto.ListResponse> response = productLikeV1Controller.getMyLikes(loginUser);
 
             // assert
             assertAll(
@@ -121,10 +121,10 @@ class LikeV1ControllerTest {
         @Test
         void getMyLikes_returnsEmptyList_whenNoLikes() {
             // arrange
-            when(likeFacade.getMyLikedProducts(1L)).thenReturn(List.of());
+            when(productLikeFacade.getMyLikedProducts(1L)).thenReturn(List.of());
 
             // act
-            ApiResponse<LikeV1Dto.ListResponse> response = likeV1Controller.getMyLikes(loginUser);
+            ApiResponse<ProductLikeV1Dto.ListResponse> response = productLikeV1Controller.getMyLikes(loginUser);
 
             // assert
             assertAll(

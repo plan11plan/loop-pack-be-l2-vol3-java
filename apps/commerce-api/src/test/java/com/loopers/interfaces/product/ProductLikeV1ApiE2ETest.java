@@ -1,4 +1,4 @@
-package com.loopers.interfaces.like;
+package com.loopers.interfaces.product;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertAll;
@@ -7,10 +7,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import com.loopers.domain.brand.BrandModel;
 import com.loopers.domain.product.ProductModel;
 import com.loopers.infrastructure.brand.BrandJpaRepository;
-import com.loopers.infrastructure.like.ProductLikeJpaRepository;
+import com.loopers.infrastructure.product.ProductLikeJpaRepository;
 import com.loopers.infrastructure.product.ProductJpaRepository;
 import com.loopers.interfaces.api.ApiResponse;
-import com.loopers.interfaces.like.dto.LikeV1Dto;
+import com.loopers.interfaces.product.dto.ProductLikeV1Dto;
 import com.loopers.interfaces.user.dto.UserV1Dto;
 import com.loopers.utils.DatabaseCleanUp;
 import org.junit.jupiter.api.AfterEach;
@@ -29,7 +29,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-class LikeV1ApiE2ETest {
+class ProductLikeV1ApiE2ETest {
 
     private static final String ENDPOINT_SIGNUP = "/api/v1/users/signup";
     private static final String HEADER_LOGIN_ID = "X-Loopers-LoginId";
@@ -44,7 +44,7 @@ class LikeV1ApiE2ETest {
     private Long productId;
 
     @Autowired
-    public LikeV1ApiE2ETest(
+    public ProductLikeV1ApiE2ETest(
         TestRestTemplate testRestTemplate,
         BrandJpaRepository brandJpaRepository,
         ProductJpaRepository productJpaRepository,
@@ -278,8 +278,8 @@ class LikeV1ApiE2ETest {
             likeProduct(productId);
 
             // act
-            ParameterizedTypeReference<ApiResponse<LikeV1Dto.ListResponse>> responseType = new ParameterizedTypeReference<>() {};
-            ResponseEntity<ApiResponse<LikeV1Dto.ListResponse>> response =
+            ParameterizedTypeReference<ApiResponse<ProductLikeV1Dto.ListResponse>> responseType = new ParameterizedTypeReference<>() {};
+            ResponseEntity<ApiResponse<ProductLikeV1Dto.ListResponse>> response =
                 testRestTemplate.exchange(ENDPOINT_MY_LIKES, HttpMethod.GET, new HttpEntity<>(null, authHeaders()), responseType);
 
             // assert
@@ -295,8 +295,8 @@ class LikeV1ApiE2ETest {
         @Test
         void returnsEmptyList_whenNoLikesExist() {
             // act
-            ParameterizedTypeReference<ApiResponse<LikeV1Dto.ListResponse>> responseType = new ParameterizedTypeReference<>() {};
-            ResponseEntity<ApiResponse<LikeV1Dto.ListResponse>> response =
+            ParameterizedTypeReference<ApiResponse<ProductLikeV1Dto.ListResponse>> responseType = new ParameterizedTypeReference<>() {};
+            ResponseEntity<ApiResponse<ProductLikeV1Dto.ListResponse>> response =
                 testRestTemplate.exchange(ENDPOINT_MY_LIKES, HttpMethod.GET, new HttpEntity<>(null, authHeaders()), responseType);
 
             // assert
@@ -317,8 +317,8 @@ class LikeV1ApiE2ETest {
             testRestTemplate.exchange(likeEndpoint(productId), HttpMethod.DELETE, new HttpEntity<>(null, authHeaders()), unlikeType);
 
             // act
-            ParameterizedTypeReference<ApiResponse<LikeV1Dto.ListResponse>> responseType = new ParameterizedTypeReference<>() {};
-            ResponseEntity<ApiResponse<LikeV1Dto.ListResponse>> response =
+            ParameterizedTypeReference<ApiResponse<ProductLikeV1Dto.ListResponse>> responseType = new ParameterizedTypeReference<>() {};
+            ResponseEntity<ApiResponse<ProductLikeV1Dto.ListResponse>> response =
                 testRestTemplate.exchange(ENDPOINT_MY_LIKES, HttpMethod.GET, new HttpEntity<>(null, authHeaders()), responseType);
 
             // assert

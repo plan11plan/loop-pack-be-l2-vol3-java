@@ -5,10 +5,10 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.loopers.domain.brand.BrandModel;
-import com.loopers.domain.like.ProductLikeModel;
+import com.loopers.domain.product.ProductLikeModel;
 import com.loopers.domain.product.ProductModel;
 import com.loopers.infrastructure.brand.BrandJpaRepository;
-import com.loopers.infrastructure.like.ProductLikeJpaRepository;
+import com.loopers.infrastructure.product.ProductLikeJpaRepository;
 import com.loopers.infrastructure.product.ProductJpaRepository;
 import com.loopers.interfaces.api.ApiResponse;
 import com.loopers.interfaces.product.dto.ProductV1Dto;

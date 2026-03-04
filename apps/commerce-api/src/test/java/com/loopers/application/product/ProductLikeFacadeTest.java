@@ -1,12 +1,12 @@
-package com.loopers.application.like;
+package com.loopers.application.product;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.loopers.application.like.dto.LikeResult;
-import com.loopers.domain.like.ProductLikeModel;
-import com.loopers.domain.like.ProductLikeService;
+import com.loopers.application.product.dto.ProductLikeResult;
+import com.loopers.domain.product.ProductLikeModel;
+import com.loopers.domain.product.ProductLikeService;
 import com.loopers.domain.product.ProductService;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -17,9 +17,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-@DisplayName("LikeFacade 단위 테스트")
+@DisplayName("ProductLikeFacade 단위 테스트")
 @ExtendWith(MockitoExtension.class)
-class LikeFacadeTest {
+class ProductLikeFacadeTest {
 
     @Mock
     private ProductLikeService productLikeService;
@@ -28,7 +28,7 @@ class LikeFacadeTest {
     private ProductService productService;
 
     @InjectMocks
-    private LikeFacade likeFacade;
+    private ProductLikeFacade productLikeFacade;
 
     @DisplayName("좋아요를 등록할 때, ")
     @Nested
@@ -38,7 +38,7 @@ class LikeFacadeTest {
         @Test
         void like_validatesProductAndCallsLike() {
             // act
-            likeFacade.like(1L, 2L);
+            productLikeFacade.like(1L, 2L);
 
             // assert
             verify(productService).validateExists(2L);
@@ -54,7 +54,7 @@ class LikeFacadeTest {
         @Test
         void unlike_callsUnlike() {
             // act
-            likeFacade.unlike(1L, 2L);
+            productLikeFacade.unlike(1L, 2L);
 
             // assert
             verify(productLikeService).unlike(1L, 2L);
@@ -65,9 +65,9 @@ class LikeFacadeTest {
     @Nested
     class GetLikesByUserId {
 
-        @DisplayName("사용자의 좋아요 목록을 조회하면, LikeResult 목록을 반환한다.")
+        @DisplayName("사용자의 좋아요 목록을 조회하면, ProductLikeResult 목록을 반환한다.")
         @Test
-        void getLikesByUserId_returnsLikeResultList() {
+        void getLikesByUserId_returnsProductLikeResultList() {
             // arrange
             Long userId = 1L;
             List<ProductLikeModel> likes = List.of(
@@ -79,7 +79,7 @@ class LikeFacadeTest {
             when(productService.existsById(20L)).thenReturn(true);
 
             // act
-            List<LikeResult> result = likeFacade.getMyLikedProducts(userId);
+            List<ProductLikeResult> result = productLikeFacade.getMyLikedProducts(userId);
 
             // assert
             assertThat(result).hasSize(2);
@@ -99,7 +99,7 @@ class LikeFacadeTest {
             when(productService.existsById(20L)).thenReturn(false);
 
             // act
-            List<LikeResult> result = likeFacade.getMyLikedProducts(userId);
+            List<ProductLikeResult> result = productLikeFacade.getMyLikedProducts(userId);
 
             // assert
             assertThat(result).hasSize(1);

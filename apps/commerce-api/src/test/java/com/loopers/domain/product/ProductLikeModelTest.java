@@ -1,4 +1,4 @@
-package com.loopers.domain.like;
+package com.loopers.domain.product;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
