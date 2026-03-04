@@ -93,6 +93,10 @@ public class OrderModel extends BaseEntity {
                 .allMatch(item -> item.getStatus() == OrderItemStatus.CANCELLED);
     }
 
+    public boolean isCancelled() {
+        return this.status == OrderStatus.CANCELLED;
+    }
+
     public void applyDiscount(int discountAmount) {
         this.discountAmount = discountAmount;
         this.totalPrice = Math.max(0, this.originalTotalPrice - discountAmount);

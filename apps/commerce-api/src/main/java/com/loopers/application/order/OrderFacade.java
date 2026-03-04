@@ -7,7 +7,6 @@ import com.loopers.domain.coupon.CouponService;
 import com.loopers.domain.order.OrderItemModel;
 import com.loopers.domain.order.OrderModel;
 import com.loopers.domain.order.OrderService;
-import com.loopers.domain.order.OrderStatus;
 import com.loopers.domain.product.ProductService;
 import com.loopers.domain.product.dto.ProductCommand;
 import com.loopers.domain.product.dto.ProductInfo;
@@ -60,13 +59,13 @@ public class OrderFacade {
                         brandNameMap.get(info.brandId())))
                 .toList();
 
-        OrderModel order = orderService.createOrder(userId, items, 0);
+        OrderModel order = orderService.createOrder(userId, items);
 
         if (criteria.ownedCouponId() != null) {
             order.applyDiscount(
                     (int) couponService.useAndCalculateDiscount(
                             criteria.ownedCouponId(), userId, order.getId(),
-                            OrderItemModel.calculateTotalPrice(items)));
+                            order.getOriginalTotalPrice()));
         }
 
         userService.deductPoint(userId, order.getTotalPrice());
@@ -103,7 +102,7 @@ public class OrderFacade {
         OrderModel order = orderService.getByIdAndUserId(orderId, userId);
         OrderItemModel cancelledItem = orderService.cancelItem(orderId, orderItemId);
         productService.increaseStock(cancelledItem.getProductId(), cancelledItem.getQuantity());
-        if (order.getStatus() == OrderStatus.CANCELLED) {
+        if (order.isCancelled()) {
             couponService.restoreByOrderId(orderId);
         }
     }
@@ -113,7 +112,7 @@ public class OrderFacade {
         OrderModel order = orderService.getById(orderId);
         OrderItemModel cancelledItem = orderService.cancelItem(orderId, orderItemId);
         productService.increaseStock(cancelledItem.getProductId(), cancelledItem.getQuantity());
-        if (order.getStatus() == OrderStatus.CANCELLED) {
+        if (order.isCancelled()) {
             couponService.restoreByOrderId(orderId);
         }
     }
