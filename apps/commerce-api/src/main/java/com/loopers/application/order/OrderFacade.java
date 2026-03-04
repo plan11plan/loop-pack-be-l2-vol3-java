@@ -11,11 +11,15 @@ import com.loopers.domain.order.OrderStatus;
 import com.loopers.domain.product.ProductService;
 import com.loopers.domain.product.dto.ProductCommand;
 import com.loopers.domain.product.dto.ProductInfo;
+import com.loopers.domain.user.UserService;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,7 +31,12 @@ public class OrderFacade {
     private final BrandService brandService;
     private final OrderService orderService;
     private final CouponService couponService;
+    private final UserService userService;
 
+    @Retryable(
+            retryFor = ObjectOptimisticLockingFailureException.class,
+            maxAttempts = 50,
+            backoff = @Backoff(delay = 50, random = true))
     @Transactional
     public OrderResult.OrderSummary createOrder(Long userId, OrderCriteria.Create criteria) {
         List<ProductInfo.StockDeduction> deductionInfos = productService.validateAndDeductStock(
@@ -59,6 +68,8 @@ public class OrderFacade {
                             criteria.ownedCouponId(), userId, order.getId(),
                             OrderItemModel.calculateTotalPrice(items)));
         }
+
+        userService.deductPoint(userId, order.getTotalPrice());
 
         return OrderResult.OrderSummary.from(order);
     }

@@ -58,6 +58,13 @@ public class UserService {
         userRepository.save(user);
     }
 
+    @Transactional
+    public void deductPoint(Long userId, long amount) {
+        UserModel user = userRepository.findById(userId)
+                .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "사용자를 찾을 수 없습니다."));
+        user.deductPoint(amount);
+    }
+
     private void validatePasswordFormat(String rawPassword) {
         if (rawPassword == null || !PASSWORD_PATTERN.matcher(rawPassword).matches()) {
             throw new CoreException(ErrorType.BAD_REQUEST, "비밀번호는 8~16자의 영문 대소문자, 숫자, 특수문자 조합이어야 합니다.");

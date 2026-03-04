@@ -6,6 +6,7 @@ import com.loopers.support.error.ErrorType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -27,6 +28,10 @@ public class ProductModel extends BaseEntity {
 
     @Column(name = "stock", nullable = false)
     private int stock;
+
+    @Version
+    private Long version;
+
 
     // === 생성 === //
 
