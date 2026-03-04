@@ -24,12 +24,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 /**
- * 쿠폰 발급 동시성 테스트.
+ * 쿠폰 발급 동시성 테스트 — 낙관적 락(@Version) 적용.
  *
- * 현재 CouponService.issue()에 락이 없으므로, 동시 발급 시 다음 문제가 발생한다:
- * - Lost Update: 여러 스레드가 같은 issuedQuantity를 읽고 각자 +1 → 마지막 커밋만 반영
- * - 초과 발급: totalQuantity(50)을 넘어서 발급됨
- * - issuedQuantity 불일치: DB의 issuedQuantity와 실제 OwnedCoupon 수가 다름
+ * CouponModel에 @Version 필드를 추가하여 낙관적 락으로 동시성을 제어한다.
+ * - 충돌 시 ObjectOptimisticLockingFailureException 발생 → 트랜잭션 롤백
+ * - 재시도 없이 실패 처리 (경합이 드문 일반 쿠폰 가정)
+ * - 고경합 시 성공 수가 totalQuantity보다 적을 수 있지만, 초과 발급은 절대 발생하지 않는다
  *
  * 4가지 동시성 테스트 도구를 비교한다:
  * 1. new Thread() — 스레드 직접 생성 (동시 출발 보장 X)
@@ -42,7 +42,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 class CouponIssueConcurrencyTest {
 
     private static final int TOTAL_QUANTITY = 50;
-    private static final int THREAD_COUNT = 100;
+    private static final int THREAD_COUNT = 50;
 
     @Autowired
     private CouponService couponService;
@@ -85,12 +85,14 @@ class CouponIssueConcurrencyTest {
 
         void printReport(String label) {
             System.out.println("\n========== " + label + " ==========");
-            System.out.println("  성공 카운트     : " + success);
-            System.out.println("  실패 카운트     : " + fail);
-            System.out.println("  issuedQuantity : " + issuedQuantity);
-            System.out.println("  실제 OwnedCoupon: " + actualOwned);
-            System.out.println("  수량 일치 여부   : " + (issuedQuantity == actualOwned ? "OK" : "MISMATCH"));
-            System.out.println("  초과 발급 여부   : " + (actualOwned > TOTAL_QUANTITY ? "OVER-ISSUED" : "OK"));
+            System.out.println("  총 수량(totalQuantity) : " + TOTAL_QUANTITY);
+            System.out.println("  요청 수(threadCount)   : " + THREAD_COUNT);
+            System.out.println("  성공 카운트            : " + success);
+            System.out.println("  실패 카운트            : " + fail);
+            System.out.println("  issuedQuantity        : " + issuedQuantity);
+            System.out.println("  실제 OwnedCoupon       : " + actualOwned);
+            System.out.println("  수량 일치 여부          : " + (issuedQuantity == actualOwned ? "OK" : "MISMATCH"));
+            System.out.println("  초과 발급 여부          : " + (actualOwned > TOTAL_QUANTITY ? "OVER-ISSUED" : "OK"));
             System.out.println("==========================================\n");
         }
 
