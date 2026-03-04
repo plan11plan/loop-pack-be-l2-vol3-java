@@ -4,9 +4,9 @@ import com.loopers.application.order.dto.OrderCriteria;
 import com.loopers.application.order.dto.OrderResult;
 import com.loopers.domain.brand.BrandService;
 import com.loopers.domain.coupon.CouponService;
-import com.loopers.domain.order.OrderItemModel;
 import com.loopers.domain.order.OrderModel;
 import com.loopers.domain.order.OrderService;
+import com.loopers.domain.order.dto.OrderInfo;
 import com.loopers.domain.order.dto.OrderCommand;
 import com.loopers.domain.product.ProductService;
 import com.loopers.domain.product.dto.ProductInfo;
@@ -87,9 +87,9 @@ public class OrderFacade {
     @Transactional
     public void cancelMyOrderItem(Long userId, Long orderId, Long orderItemId) {
         OrderModel order = orderService.getByIdAndUserId(orderId, userId);
-        OrderItemModel cancelledItem = orderService.cancelItem(order, orderItemId);
-        productService.increaseStock(cancelledItem.getProductId(), cancelledItem.getQuantity());
-        if (order.isCancelled()) {
+        OrderInfo.CancelledItem cancelledItem = orderService.cancelItem(order, orderItemId);
+        productService.increaseStock(cancelledItem.productId(), cancelledItem.quantity());
+        if (cancelledItem.orderFullyCancelled()) {
             couponService.restoreByOrderId(orderId);
         }
     }
@@ -97,9 +97,9 @@ public class OrderFacade {
     @Transactional
     public void cancelOrderItem(Long orderId, Long orderItemId) {
         OrderModel order = orderService.getById(orderId);
-        OrderItemModel cancelledItem = orderService.cancelItem(order, orderItemId);
-        productService.increaseStock(cancelledItem.getProductId(), cancelledItem.getQuantity());
-        if (order.isCancelled()) {
+        OrderInfo.CancelledItem cancelledItem = orderService.cancelItem(order, orderItemId);
+        productService.increaseStock(cancelledItem.productId(), cancelledItem.quantity());
+        if (cancelledItem.orderFullyCancelled()) {
             couponService.restoreByOrderId(orderId);
         }
     }

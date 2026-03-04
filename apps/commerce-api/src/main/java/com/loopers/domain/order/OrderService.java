@@ -1,6 +1,7 @@
 package com.loopers.domain.order;
 
 import com.loopers.domain.order.dto.OrderCommand;
+import com.loopers.domain.order.dto.OrderInfo;
 import com.loopers.support.error.CoreException;
 import java.time.ZonedDateTime;
 import java.util.List;
@@ -51,8 +52,9 @@ public class OrderService {
     }
 
     @Transactional
-    public OrderItemModel cancelItem(OrderModel order, Long orderItemId) {
-        return order.cancelItem(orderItemId);
+    public OrderInfo.CancelledItem cancelItem(OrderModel order, Long orderItemId) {
+        return OrderInfo.CancelledItem.from(
+                order.cancelItem(orderItemId), order);
     }
 
     @Transactional(readOnly = true)
