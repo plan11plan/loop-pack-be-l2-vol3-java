@@ -282,6 +282,7 @@ Facade의 readOnly가 하위로 전파되므로, 조회 Facade에서 변경 Serv
 Controller → Facade                       ✅
 Facade → 자기 도메인 Service               ✅
 Facade → 타 도메인 Service                 ✅
+Facade → Entity getter (재료 추출)         ✅  Service 호출의 인자 준비, DTO 변환용
 Domain Service → 자기 도메인 Repository     ✅
 Entity → Entity (같은 Aggregate 내부)      ✅
 ```
@@ -289,6 +290,8 @@ Entity → Entity (같은 Aggregate 내부)      ✅
 ### 금지되는 호출
 
 ```
+Facade → Entity 상태 변경 메서드 직접 호출  ❌  Domain Service를 통해 호출
+Facade → Entity 정적 팩토리 메서드 직접 호출 ❌  Entity 생성은 Domain Service가 담당
 Facade → 타 Facade                        ❌  순환 의존, 트랜잭션 경계 혼란
 Domain Service → 타 도메인 Service          ❌  도메인 간 결합
 Domain Service → Facade                    ❌  하위 → 상위 역방향
@@ -342,6 +345,9 @@ OrderQueryFacade      // 조회, 검색, 목록
 **Facade**
 - [ ] Facade에 비즈니스 규칙/검증 로직이 없는가? (Domain Service나 Entity에 있어야 함)
 - [ ] Facade에 계산/집계 로직이 없는가? (금액 합산, 수량 집계 등은 Entity 메서드로 이동)
+- [ ] Facade에서 Entity의 상태 변경 메서드를 직접 호출하지 않는가? (Domain Service를 통해 호출)
+- [ ] Facade에서 Entity의 정적 팩토리 메서드를 직접 호출하지 않는가? (Entity 생성은 Domain Service가 담당)
+- [ ] Facade에서 Entity의 getter만 사용하는가? (Service 호출의 인자 준비, DTO 변환 용도)
 - [ ] Facade에 private 메서드가 없는가? (있다면 Domain Service 또는 Entity로 이동)
 - [ ] Facade에서 Repository를 직접 호출하지 않는가?
 - [ ] Facade가 타 Facade를 호출하지 않는가?
