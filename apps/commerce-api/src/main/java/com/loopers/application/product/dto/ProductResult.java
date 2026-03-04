@@ -2,6 +2,8 @@ package com.loopers.application.product.dto;
 
 import com.loopers.domain.product.ProductModel;
 import java.time.ZonedDateTime;
+import java.util.List;
+import java.util.Map;
 
 public record ProductResult(
     Long id,
@@ -31,5 +33,17 @@ public record ProductResult(
                 model.getCreatedAt(),
                 model.getUpdatedAt(),
                 model.getDeletedAt());
+    }
+
+    public static List<ProductResult> fromWithActiveBrand(
+            List<ProductModel> products, Map<Long, String> brandNameMap,
+            Map<Long, Long> likeCountMap) {
+        return products.stream()
+                .filter(product -> brandNameMap.containsKey(product.getBrandId()))
+                .map(product -> ProductResult.of(
+                        product,
+                        brandNameMap.get(product.getBrandId()),
+                        likeCountMap.getOrDefault(product.getId(), 0L)))
+                .toList();
     }
 }
