@@ -2,6 +2,7 @@ package com.loopers.domain.coupon;
 
 import com.loopers.domain.coupon.dto.CouponCommand;
 import com.loopers.support.error.CoreException;
+import java.time.ZonedDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -74,7 +75,12 @@ public class CouponService {
         OwnedCouponModel owned = ownedCouponRepository.findById(ownedCouponId)
                 .orElseThrow(() -> new CoreException(CouponErrorCode.NOT_FOUND));
         owned.validateMinOrderAmount(orderAmount);
-        owned.use(userId, orderId);
+        owned.validateUsable(userId);
+        int updated = ownedCouponRepository.useByIdWhenAvailable(
+                ownedCouponId, orderId, ZonedDateTime.now());
+        if (updated == 0) {
+            throw new CoreException(CouponErrorCode.ALREADY_USED);
+        }
         return owned.calculateDiscount(orderAmount);
     }
 

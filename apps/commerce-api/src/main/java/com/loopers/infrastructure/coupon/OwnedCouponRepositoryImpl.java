@@ -2,6 +2,7 @@ package com.loopers.infrastructure.coupon;
 
 import com.loopers.domain.coupon.OwnedCouponModel;
 import com.loopers.domain.coupon.OwnedCouponRepository;
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -43,5 +44,10 @@ public class OwnedCouponRepositoryImpl implements OwnedCouponRepository {
     @Override
     public Optional<OwnedCouponModel> findByOrderId(Long orderId) {
         return ownedCouponJpaRepository.findByOrderId(orderId);
+    }
+
+    @Override
+    public int useByIdWhenAvailable(Long id, Long orderId, ZonedDateTime usedAt) {
+        return ownedCouponJpaRepository.useByIdWhenAvailable(id, orderId, usedAt);
     }
 }

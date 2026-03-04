@@ -40,10 +40,6 @@ public class OwnedCouponModel extends BaseEntity {
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
-    private OwnedCouponStatus status;
-
     @Column(name = "order_id")
     private Long orderId;
 
@@ -60,7 +56,6 @@ public class OwnedCouponModel extends BaseEntity {
         this.minOrderAmount = minOrderAmount;
         this.expiredAt = expiredAt;
         this.userId = userId;
-        this.status = OwnedCouponStatus.AVAILABLE;
     }
 
     public static OwnedCouponModel create(CouponModel coupon, Long userId) {
@@ -72,19 +67,13 @@ public class OwnedCouponModel extends BaseEntity {
 
     public void use(Long userId, Long orderId) {
         validateUsable(userId);
-        this.status = OwnedCouponStatus.USED;
         this.usedAt = ZonedDateTime.now();
         this.orderId = orderId;
     }
 
     public void restore() {
-        if (this.status != OwnedCouponStatus.USED) {
+        if (this.orderId == null) {
             throw new CoreException(CouponErrorCode.NOT_RESTORABLE);
-        }
-        if (this.expiredAt.isBefore(ZonedDateTime.now())) {
-            this.status = OwnedCouponStatus.EXPIRED;
-        } else {
-            this.status = OwnedCouponStatus.AVAILABLE;
         }
         this.orderId = null;
         this.usedAt = null;
@@ -108,11 +97,31 @@ public class OwnedCouponModel extends BaseEntity {
         if (!this.userId.equals(userId)) {
             throw new CoreException(CouponErrorCode.NOT_OWNED);
         }
-        if (this.status != OwnedCouponStatus.AVAILABLE) {
+        if (this.orderId != null) {
             throw new CoreException(CouponErrorCode.ALREADY_USED);
         }
         if (this.expiredAt.isBefore(ZonedDateTime.now())) {
             throw new CoreException(CouponErrorCode.EXPIRED);
         }
+    }
+
+    public boolean isUsed() {
+        return this.orderId != null;
+    }
+
+    public boolean isExpired() {
+        return this.orderId == null
+                && this.expiredAt.isBefore(ZonedDateTime.now());
+    }
+
+    public boolean isAvailable() {
+        return this.orderId == null
+                && !this.expiredAt.isBefore(ZonedDateTime.now());
+    }
+
+    public String getStatus() {
+        if (isUsed()) return "USED";
+        if (isExpired()) return "EXPIRED";
+        return "AVAILABLE";
     }
 }

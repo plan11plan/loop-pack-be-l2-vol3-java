@@ -45,7 +45,7 @@ public class CouponResult {
             return new IssuedDetail(
                     model.getId(),
                     model.getUserId(),
-                    model.getStatus().name(),
+                    model.getStatus(),
                     model.getUsedAt(),
                     model.getCreatedAt());
         }
@@ -71,7 +71,7 @@ public class CouponResult {
                     model.getDiscountType().name(),
                     model.getDiscountValue(),
                     model.getMinOrderAmount(),
-                    model.getStatus().name(),
+                    model.getStatus(),
                     model.getExpiredAt(),
                     model.getUsedAt(),
                     model.getCreatedAt());
