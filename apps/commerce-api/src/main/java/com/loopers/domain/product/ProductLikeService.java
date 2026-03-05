@@ -5,6 +5,7 @@ import com.loopers.support.error.ErrorType;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,7 +19,11 @@ public class ProductLikeService {
         if (productLikeRepository.findByUserIdAndProductId(userId, productId).isPresent()) {
             throw new CoreException(ErrorType.CONFLICT, "이미 좋아요한 상품입니다");
         }
-        productLikeRepository.save(ProductLikeModel.create(userId, productId));
+        try {
+            productLikeRepository.save(ProductLikeModel.create(userId, productId));
+        } catch (DataIntegrityViolationException e) {
+            throw new CoreException(ErrorType.CONFLICT, "이미 좋아요한 상품입니다");
+        }
     }
 
     @Transactional
