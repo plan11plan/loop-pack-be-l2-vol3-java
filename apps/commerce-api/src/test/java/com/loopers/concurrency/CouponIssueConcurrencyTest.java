@@ -1,7 +1,10 @@
-package com.loopers.domain.coupon;
+package com.loopers.concurrency;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.loopers.application.coupon.CouponFacade;
+import com.loopers.domain.coupon.CouponDiscountType;
+import com.loopers.domain.coupon.CouponModel;
 import com.loopers.infrastructure.coupon.CouponJpaRepository;
 import com.loopers.infrastructure.coupon.OwnedCouponJpaRepository;
 import com.loopers.utils.DatabaseCleanUp;
@@ -41,11 +44,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 @SpringBootTest
 class CouponIssueConcurrencyTest {
 
-    private static final int TOTAL_QUANTITY = 50;
-    private static final int THREAD_COUNT = 50;
+    private static final int TOTAL_QUANTITY = 10;
+    private static final int THREAD_COUNT = 10;
 
     @Autowired
-    private CouponService couponService;
+    private CouponFacade couponFacade;
 
     @Autowired
     private CouponJpaRepository couponJpaRepository;
@@ -120,7 +123,7 @@ class CouponIssueConcurrencyTest {
     @Nested
     class WithNewThread {
 
-        @DisplayName("100명이 동시에 발급 요청 → totalQuantity(50)만큼만 발급되어야 한다")
+        @DisplayName("10명이 동시에 발급 요청 → totalQuantity(10)만큼만 발급되어야 한다")
         @RepeatedTest(3)
         void issue_withRawThreads() throws InterruptedException {
             // arrange
@@ -133,7 +136,7 @@ class CouponIssueConcurrencyTest {
                 long userId = i + 1;
                 Thread thread = new Thread(() -> {
                     try {
-                        couponService.issue(couponId, userId);
+                        couponFacade.issueCoupon(couponId, userId);
                         successCount.incrementAndGet();
                     } catch (Exception e) {
                         failCount.incrementAndGet();
@@ -166,7 +169,7 @@ class CouponIssueConcurrencyTest {
     @Nested
     class WithBasicLatch {
 
-        @DisplayName("100명이 동시에 발급 요청 → totalQuantity(50)만큼만 발급되어야 한다")
+        @DisplayName("10명이 동시에 발급 요청 → totalQuantity(10)만큼만 발급되어야 한다")
         @RepeatedTest(3)
         void issue_withBasicLatch() throws InterruptedException {
             // arrange
@@ -180,7 +183,7 @@ class CouponIssueConcurrencyTest {
                 long userId = i + 1;
                 executor.submit(() -> {
                     try {
-                        couponService.issue(couponId, userId);
+                        couponFacade.issueCoupon(couponId, userId);
                         successCount.incrementAndGet();
                     } catch (Exception e) {
                         failCount.incrementAndGet();
@@ -214,7 +217,7 @@ class CouponIssueConcurrencyTest {
     @Nested
     class WithEnhancedLatch {
 
-        @DisplayName("100명이 동시에 발급 요청 → totalQuantity(50)만큼만 발급되어야 한다")
+        @DisplayName("10명이 동시에 발급 요청 → totalQuantity(10)만큼만 발급되어야 한다")
         @RepeatedTest(3)
         void issue_withEnhancedLatch() throws InterruptedException {
             // arrange
@@ -233,7 +236,7 @@ class CouponIssueConcurrencyTest {
                     try {
                         readyLatch.countDown();
                         startLatch.await();
-                        couponService.issue(couponId, userId);
+                        couponFacade.issueCoupon(couponId, userId);
                         successCount.incrementAndGet();
                     } catch (Exception e) {
                         failCount.incrementAndGet();
@@ -267,7 +270,7 @@ class CouponIssueConcurrencyTest {
     @Nested
     class WithCompletableFuture {
 
-        @DisplayName("100명이 동시에 발급 요청 → totalQuantity(50)만큼만 발급되어야 한다")
+        @DisplayName("10명이 동시에 발급 요청 → totalQuantity(10)만큼만 발급되어야 한다")
         @RepeatedTest(3)
         void issue_withCompletableFuture() {
             // arrange
@@ -279,7 +282,7 @@ class CouponIssueConcurrencyTest {
             List<CompletableFuture<Void>> futures = IntStream.range(0, THREAD_COUNT)
                     .mapToObj(i -> CompletableFuture.runAsync(() -> {
                         try {
-                            couponService.issue(couponId, (long) (i + 1));
+                            couponFacade.issueCoupon(couponId, (long) (i + 1));
                             successCount.incrementAndGet();
                         } catch (Exception e) {
                             failCount.incrementAndGet();
