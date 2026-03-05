@@ -10,6 +10,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.AccessLevel;
@@ -42,6 +43,9 @@ public class OrderModel extends BaseEntity {
 
     @Column(name = "discount_amount", nullable = false)
     private int discountAmount;
+
+    @Version
+    private Long version;
 
     private OrderModel(Long userId, int originalTotalPrice,
                        int discountAmount, OrderStatus status) {

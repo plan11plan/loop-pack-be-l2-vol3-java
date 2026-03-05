@@ -84,6 +84,10 @@ public class OrderFacade {
         return OrderResult.OrderDetail.from(orderService.getById(orderId));
     }
 
+    @Retryable(
+            retryFor = ObjectOptimisticLockingFailureException.class,
+            maxAttempts = 5,
+            backoff = @Backoff(delay = 50, random = true))
     @Transactional
     public void cancelMyOrderItem(Long userId, Long orderId, Long orderItemId) {
         OrderModel order = orderService.getByIdAndUserId(orderId, userId);
@@ -94,6 +98,10 @@ public class OrderFacade {
         }
     }
 
+    @Retryable(
+            retryFor = ObjectOptimisticLockingFailureException.class,
+            maxAttempts = 5,
+            backoff = @Backoff(delay = 50, random = true))
     @Transactional
     public void cancelOrderItem(Long orderId, Long orderItemId) {
         OrderModel order = orderService.getById(orderId);
