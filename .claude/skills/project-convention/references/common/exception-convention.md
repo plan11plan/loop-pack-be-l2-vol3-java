@@ -1,30 +1,8 @@
 # 예외처리 및 API 응답 컨벤션
 
-## 목차
-
-1. [예외 구조](#1-예외-구조)
-2. [에러코드 규칙](#2-에러코드-규칙)
-3. [API 응답 포맷](#3-api-응답-포맷)
-4. [ControllerAdvice 구조](#4-controlleradvice-구조)
-5. [예외 흐름](#5-예외-흐름)
-6. [패키지 배치](#6-패키지-배치)
-7. [도메인별 ErrorCode 추가 가이드](#7-도메인별-errorcode-추가-가이드)
-8. [체크리스트](#체크리스트)
-
----
-
 ## 1. 예외 구조
 
-### 클래스 다이어그램
-
-```
-CoreException (단일 예외 클래스)
-  └─ ErrorCode (interface)
-       ├── ErrorType (enum)          ← 공통 에러
-       ├── OrderErrorCode (enum)     ← 주문 도메인
-       ├── ProductErrorCode (enum)   ← 상품 도메인
-       └── ...                       ← 필요 시 추가
-```
+> 클래스 다이어그램은 SKILL.md Quick Reference "예외 구조" 참조
 
 ### ErrorCode 인터페이스
 
@@ -54,8 +32,8 @@ public enum ErrorType implements ErrorCode {
 }
 ```
 
-- 공통 에러의 code는 **HttpStatus reason phrase**를 그대로 사용
-- 도메인 에러와 구분: code에 `_`가 포함되면 도메인, 아니면 공통
+- 공통 에러의 code는 HttpStatus reason phrase 그대로 사용
+- code에 `_` 포함 → 도메인 에러, 미포함 → 공통 에러
 
 ### CoreException
 
@@ -105,9 +83,8 @@ public enum OrderErrorCode implements ErrorCode {
 
 ### 번호 규칙
 
-- 001부터 단순 순번
-- enum 선언 순서 = 번호 순서
-- 삭제된 번호는 결번 처리 (재사용 금지)
+- 001부터 단순 순번, enum 선언 순서 = 번호 순서
+- 삭제된 번호는 결번 처리 (재사용하지 않는다)
 
 ### 사용법
 
@@ -165,28 +142,10 @@ public record ApiResponse<T>(Metadata meta, T data) {
 ### 응답 예시
 
 ```json
-// 성공 (데이터 없음)
-{
-  "meta": { "result": "SUCCESS", "errorCode": null, "message": null },
-  "data": null
-}
-
-// 성공 (데이터 있음)
+// 성공
 {
   "meta": { "result": "SUCCESS", "errorCode": null, "message": null },
   "data": { "id": 1, "name": "상품A", "price": 50000 }
-}
-
-// 실패 — 비즈니스 에러
-{
-  "meta": { "result": "FAIL", "errorCode": "ORDER_001", "message": "이미 취소된 주문입니다." },
-  "data": null
-}
-
-// 실패 — 공통 에러
-{
-  "meta": { "result": "FAIL", "errorCode": "Not Found", "message": "존재하지 않는 요청입니다." },
-  "data": null
 }
 
 // 실패 — Validation 에러
@@ -199,9 +158,11 @@ public record ApiResponse<T>(Metadata meta, T data) {
 }
 ```
 
+> 일반 에러(`data: null`)와 도메인 에러는 위 성공/Validation 예시의 `meta` 구조와 동일하며, `data`가 `null`이다.
+
 ---
 
-## 4. ControllerAdvice 구조
+## 4. ControllerAdvice 구조 및 처리 경계
 
 ### 처리 우선순위
 
@@ -221,27 +182,22 @@ public record ApiResponse<T>(Metadata meta, T data) {
 - `CoreException` 핸들러에서 `ErrorCode` 인터페이스로 공통/도메인 에러 통합 처리
 - `HttpMessageNotReadableException`은 `InvalidFormatException`, `MismatchedInputException`, `JsonMappingException`까지 세분화
 - `Throwable` 최후 방어 핸들러 필수
-- 예외는 발생 지점에서 그대로 전파, Application에서 잡아서 변환하지 않는다
-- **`@ExceptionHandler`는 응답 생성 책임만 가진다** — DB 저장 등 부가 작업을 핸들러 내부에서 수행하면, 부가 작업 예외 시 핸들러가 삼켜져(swallowed) 디버깅이 극히 어려워진다. 부가 작업이 필요하면 `ApplicationEventPublisher` + `@Async @EventListener`로 분리한다.
+- 예외는 발생 지점에서 그대로 전파한다 (Application에서 catch/변환하지 않는다)
+- `@ExceptionHandler`는 응답 생성 책임만 가진다 — 부가 작업은 `ApplicationEventPublisher` + `@Async @EventListener`로 분리
 
-### ⚠️ `@ExceptionHandler`의 처리 경계
+### 처리 경계
 
-`@ExceptionHandler`는 `DispatcherServlet` **내부에서만** 동작한다. Filter에서 발생한 예외는 잡을 수 없다.
+`@ExceptionHandler`는 `DispatcherServlet` 내부에서만 동작한다 (Filter 예외는 잡을 수 없다).
 
-```
-WAS → Filter → DispatcherServlet → Interceptor → Controller
-       ↑                              ↑
-   @ExceptionHandler 못 잡음      @ExceptionHandler 잡음
-```
-
-Filter 예외 처리 시 `HttpServletResponse`에 직접 JSON 응답을 작성해야 하며, 이때 `ApiResponse` 형식을 맞추기 위해 `ObjectMapper`를 사용한다.
+- **DispatcherServlet 내부** (Interceptor, Controller): `@ExceptionHandler`가 처리
+- **DispatcherServlet 외부** (Filter): `HttpServletResponse`에 직접 JSON 응답 작성
 
 ```java
 // Filter 내 예외 처리 패턴
 catch (AuthenticationException e) {
     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
     response.setContentType("application/json;charset=UTF-8");
-    
+
     ApiResponse<?> errorResponse = ApiResponse.fail(
         ErrorType.UNAUTHORIZED.getCode(), e.getMessage());
     response.getWriter().write(objectMapper.writeValueAsString(errorResponse));
@@ -252,54 +208,22 @@ catch (AuthenticationException e) {
 
 ## 5. 예외 흐름
 
-### DispatcherServlet 내부 (일반 흐름)
+- Domain에서 `throw new CoreException(OrderErrorCode.STOCK_INSUFFICIENT)`
+- Application/Controller를 그대로 통과 (catch하지 않음)
+- `@RestControllerAdvice`에서 catch → `ErrorCode`에서 status/code/message 추출 → `ApiResponse.fail()` 반환
+- `@Valid` 실패 시: Controller 진입 전 `MethodArgumentNotValidException` 발생 → `FieldError` 추출 → `ApiResponse.failValidation()` 반환
 
-```
-Domain에서 throw new CoreException(OrderErrorCode.STOCK_INSUFFICIENT)
-  → Application 통과 (잡지 않음)
-    → Controller 통과
-      → @RestControllerAdvice에서 catch
-        → ErrorCode에서 status, code, message 추출
-          → ApiResponse.fail(code, message) 반환
-
-@Valid 실패 시
-  → Controller 진입 전 MethodArgumentNotValidException 발생
-    → @RestControllerAdvice에서 catch
-      → FieldError 목록 추출
-        → ApiResponse.failValidation(code, message, fieldErrors) 반환
-```
-
-### Filter 예외 (DispatcherServlet 외부)
-
-```
-Filter에서 인증 실패 등 예외 발생
-  → @RestControllerAdvice 도달 불가 (DispatcherServlet 바깥)
-    → Filter 내부에서 HttpServletResponse에 직접 JSON 작성
-      → ApiResponse.fail() 형식으로 응답 (ObjectMapper 사용)
-```
+> Filter 예외: `@RestControllerAdvice`에 도달하지 못한다. Filter 내부에서 `HttpServletResponse`에 직접 `ApiResponse.fail()` 형식으로 JSON 작성 (위 Filter 내 예외 처리 패턴 참조).
 
 ---
 
 ## 6. 패키지 배치
 
-```
-support/
-└── error/
-    ├── ErrorCode.java              ← 인터페이스
-    ├── ErrorType.java              ← 공통 에러 enum
-    └── CoreException.java          ← 단일 예외 클래스
+> 전체 패키지 구조는 SKILL.md Quick Reference 참조. 예외 관련 배치 요약:
 
-domain/
-├── order/
-│   └── OrderErrorCode.java         ← 도메인 패키지 내 배치
-└── product/
-    └── ProductErrorCode.java
-
-interfaces/
-└── api/
-    ├── ApiResponse.java            ← 공통 응답 포맷
-    └── ApiControllerAdvice.java    ← 글로벌 예외 핸들러
-```
+- `support/error/` — `ErrorCode.java`, `ErrorType.java`, `CoreException.java`
+- `domain/{domain}/` — `{Domain}ErrorCode.java`
+- `interfaces/api/` — `ApiResponse.java`, `ApiControllerAdvice.java`
 
 ---
 
@@ -309,25 +233,3 @@ interfaces/
 2. code는 `{DOMAIN}_{001}`부터 순번 부여
 3. 도메인 패키지 내 배치
 4. 사용: `throw new CoreException({Domain}ErrorCode.XXX)`
-
----
-
-## 체크리스트
-
-**예외 설계**
-- [ ] 새 에러가 공통(`ErrorType`)인가 도메인(`XxxErrorCode`)인가 판단했는가?
-- [ ] 도메인 에러코드 번호가 기존 순번 다음인가? (결번 재사용 금지)
-- [ ] `CoreException`에 `ErrorCode` 인터페이스 구현체를 넘기고 있는가?
-
-**예외 흐름**
-- [ ] Domain 예외를 Application에서 잡아서 변환하고 있지 않은가? (그대로 전파)
-- [ ] ControllerAdvice에 `Throwable` 최후 방어 핸들러가 있는가?
-- [ ] Filter 예외 처리 시 `ApiResponse` 형식으로 직접 JSON을 작성하고 있는가?
-
-**ControllerAdvice 설계**
-- [ ] `@ExceptionHandler`가 응답 생성 외 부가 작업(DB 저장 등)을 직접 수행하고 있지 않은가?
-
-**API 응답**
-- [ ] 성공 응답이 `ApiResponse.success()` 또는 `ApiResponse.success(data)`를 사용하는가?
-- [ ] Validation 에러는 `failValidation`으로 `FieldError[]`를 반환하는가?
-- [ ] 일반 에러는 `fail(code, message)`로 `data: null`을 반환하는가?

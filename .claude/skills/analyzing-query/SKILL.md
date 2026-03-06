@@ -1,18 +1,12 @@
 ---
-name: analyze-query
-description:
-  대상이 되는 코드 범위를 탐색하고, Spring @Transactional, JPA, QueryDSL 기반의 코드에 대해 트랜잭션 범위, 영속성 컨텍스트, 쿼리 실행 시점 관점에서 분석한다.
-  
-  특히 다음을 중점적으로 점검한다.
-  - 트랜잭션이 불필요하게 크게 잡혀 있지는 않은지
-  - 조회/쓰기 로직이 하나의 트랜잭션에 혼합되어 있지는 않은지
-  - JPA의 지연 로딩, flush 타이밍, 변경 감지로 인해
-    의도치 않은 쿼리 또는 락이 발생할 가능성은 없는지
-
-  단순한 정답 제시가 아니라, 현재 구조의 의도와 trade-off를 드러내고 개선 가능 지점을 선택적으로 판단할 수 있도록 돕는다.
+name: analyzing-query
+description: "Use when analyzing transaction boundaries, persistence context, and query execution in Spring @Transactional / JPA / QueryDSL code. Triggers: '쿼리 분석', 'query analysis', '트랜잭션 분석', 'N+1', '영속성 컨텍스트', '지연 로딩', 'flush 타이밍'."
 ---
 
-### 📌 Analysis Scope
+## Overview
+Spring `@Transactional` / JPA / QueryDSL 코드의 트랜잭션 경계, 영속성 컨텍스트, 쿼리 실행을 분석하고 개선안을 제시하는 스킬이다.
+
+### Analysis Scope
 이 스킬은 아래 대상에 대해 분석한다.
 - @Transactional 이 선언된 클래스 / 메서드
 - Service / Facade / Application Layer 코드
@@ -20,7 +14,7 @@ description:
 - 하나의 유즈케이스(요청 흐름) 단위
 > 컨트롤러 → 서비스 → 레포지토리 전체 흐름을 기준으로 분석하며 특정 메서드만 떼어내어 판단하지 않는다.
 
-### 🔍 Analysis Checklist
+### Analysis Checklist
 #### 1. Transaction Boundary 분석
 다음을 순서대로 확인한다.
 - 트랜잭션 시작 지점은 어디인가?
@@ -95,3 +89,22 @@ OrderFacade.placeOrder()
 - 결제 실패 시 주문 상태 관리 필요
 - 보상 트랜잭션 또는 상태 전이 설계 필요
 ```
+
+---
+
+## Output
+
+분석 결과는 아래 경로에 Markdown 파일로 생성한다:
+`.claude/report/analyzing-query/ANALYSIS-RESULT.md`
+
+---
+
+## Common Mistakes
+
+| 실수 | 해결 |
+|------|------|
+| 특정 메서드만 떼어내어 트랜잭션 범위를 판단 | 컨트롤러 -> 서비스 -> 레포지토리 전체 흐름 단위로 분석 |
+| 읽기 전용 조회에 `@Transactional(readOnly = true)` 미적용 | 조회 전용 메서드에는 반드시 `readOnly = true` 설정하여 flush/dirty checking 비용 제거 |
+| 외부 API 호출을 트랜잭션 내부에 포함 | 외부 호출은 트랜잭션 종료 후 수행하거나 별도 메서드로 분리 |
+| Entity 조회 후 DTO 변환 없이 그대로 반환 | 조회 전용에는 DTO Projection 사용하여 영속성 컨텍스트 불필요한 관리 방지 |
+| 개선안을 분석 없이 일괄 적용 | 각 개선안의 trade-off를 명시하고 선택지로 제시 (강제 적용 금지) |

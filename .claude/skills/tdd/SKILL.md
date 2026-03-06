@@ -1,14 +1,27 @@
 ---
 name: tdd
-description: |
-  TDD 방식으로 기능을 개발할 때 사용. DESIGN.md에서 테스트 케이스를 도출하고,
-  Red-Green-Refactor 루프를 기능 단위 수직 슬라이스(Domain → Application 관통)로 실행한다.
-  "TDD로 개발", "테스트 먼저", "TDD 모드", "Red-Green-Refactor" 시 트리거.
+description: "Use when developing features with TDD. Triggers: 'TDD로 개발', '테스트 먼저', 'TDD 모드', 'Red-Green-Refactor', 'TDD 시작'. DESIGN.md 기반 Red-Green-Refactor를 기능 단위 수직 슬라이스(Domain -> Application)로 실행. Solo/Pair 모드 지원."
 ---
 
 # TDD Skill
 
 DESIGN.md 기반 Red-Green-Refactor 실행 스킬. 핵심 규칙과 계층별 전략은 CLAUDE.md에 있으므로, 이 파일은 **시작 시 한 번만** 읽는다.
+
+---
+
+## Quick Reference
+
+```
+Red(실패 테스트 1개 작성 → 실행 → 실패 확인)
+ → Green(최소 코드로 통과)
+ → Refactor(개선 or skip)
+ → 진행 문서 갱신
+ → 다음 Red
+```
+
+- 수직 슬라이스: Domain → Application 관통 후 다음 기능
+- 더블 전략: Entity/VO = 없음 | Domain Service = Fake | Facade = Mockito
+- 테스트 실행: `./gradlew :apps:commerce-api:test --tests "{패키지}.{클래스}"`
 
 ---
 
@@ -61,7 +74,7 @@ TDD 시작 시 사용자에게 진행 모드를 묻는다.
 
 스킬 실행 전 반드시 Read:
 
-1. `docs/spec/{domain}/DESIGN.md` — 유즈케이스, 시퀀스, 클래스, ERD
+1. `docs/design/{domain}/DESIGN.md` — 유즈케이스, 시퀀스, 클래스, ERD
 2. `.claude/skills/project-convention/references/common/test-convention.md` — 테스트 구조, 네이밍, 더블 전략
 
 ---
@@ -150,43 +163,19 @@ Domain Service 테스트에서 Repository 대체 시 Fake 우선 사용. 기존 
 |------|------|
 | 도메인 | {domain} |
 | 상태 | 🟡 진행 중 |
-| DESIGN.md | docs/spec/{domain}/DESIGN.md |
-
----
 
 ## 테스트 목록표
 
 {Step 1에서 도출한 테스트 목록표}
 
----
-
 ## Round 진행 현황
 
 ### Round 1: {테스트 케이스명}
-- 🔴 Red: ⏳ 대기
-- 🟢 Green: ⏳ 대기
-- 🔵 Refactor: ⏳ 대기
-
-(모든 항목을 Round로 나열)
-
----
-
-## 전체 테스트 결과
-
-(Step 3 완료 후 기록)
-
----
+- 🔴 Red: ⏳
+- 🟢 Green: ⏳
+- 🔵 Refactor: ⏳
 
 ## 산출물
 
-(Step 4 완료 후 기록)
-
-### 테스트 파일
-- `src/test/java/.../{TestClass}.java` (new)
-
-### 프로덕션 파일
-- `src/main/java/.../{Class}.java` (new)
-
-### Fake
-- `src/test/java/.../Fake{Repository}.java` (new)
+(완료 후 테스트/프로덕션/Fake 파일 경로 기록)
 ```

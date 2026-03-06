@@ -57,11 +57,11 @@ supports/
 
 | 문서 | 경로 | 용도 |
 |------|------|------|
-| 공통 원칙 | `docs/spec/shared/CONVENTIONS.md` | 참조 방식, Soft Delete, 용어집 등 |
-| 전체 구조 | `docs/spec/shared/OVERVIEW.md` | 전체 ERD + 클래스 다이어그램 |
-| 도메인 스펙 | `docs/spec/{domain}/DESIGN.md` | 요구사항 + 유즈케이스 + 시퀀스 + ERD + 클래스 |
+| 공통 원칙 | `docs/design/_shared/CONVENTIONS.md` | 참조 방식, Soft Delete, 용어집 등 |
+| 전체 구조 | `docs/design/_shared/OVERVIEW.md` | 전체 ERD + 클래스 다이어그램 |
+| 도메인 스펙 | `docs/design/{domain}/DESIGN.md` | 요구사항 + 유즈케이스 + 시퀀스 + ERD + 클래스 |
 
-도메인: `brand`, `product`, `like`, `cart`, `order`
+도메인: `brand`, `product`, `like`, `cart`, `order`, `coupon`
 
 **참조 규칙:**
 1. 해당 도메인의 `DESIGN.md`를 읽는다
