@@ -101,11 +101,19 @@ Controller (TX 없음)
 ```
 OrderFacade.createOrder() [@Retryable(max=10) + @Transactional]
   ├─ productService.validateAndDeductStock()          [쓰기] 상품 조회 + 가격 검증 + 재고 차감
+  │     읽기: 락 없음 (MVCC 스냅샷)
+  │     쓰기: @Version 낙관적 락 (ProductModel) — flush 시 UPDATE ... WHERE version=?
   ├─ brandService.getNameMapByIds()                   [읽기] 브랜드명 조회
+  │     락 없음 (MVCC 스냅샷)
   ├─ orderService.createOrder()                       [쓰기] 주문 + 주문항목 INSERT (Cascade)
+  │     INSERT 행 X-Lock (Auto-increment)
   ├─ couponService.useAndCalculateDiscount()           [쓰기] 쿠폰 사용 (벌크 UPDATE) — 조건부
+  │     벌크 UPDATE 행 X-Lock + WHERE orderId IS NULL (원자적 CAS)
   ├─ orderService.applyDiscount()                     [쓰기] 주문 할인액 반영 (Dirty Checking) — 조건부
+  │     Dirty Checking → flush 시 행 X-Lock (신규 INSERT 엔티티이므로 @Version 충돌 없음)
   └─ userService.deductPoint()                        [쓰기] 포인트 차감 (Dirty Checking)
+        읽기: 락 없음 (MVCC 스냅샷)
+        쓰기: @Version 낙관적 락 (UserModel) — flush 시 UPDATE ... WHERE version=?
 ```
 
 **현재 트랜잭션 범위:**
@@ -128,10 +136,17 @@ OrderFacade.createOrder() [@Retryable(max=10) + @Transactional]
 ```
 OrderFacade.cancelMyOrderItem() [@Retryable(max=5) + @Transactional]
   ├─ orderService.getByIdAndUserId()                  [읽기] 주문 조회 + 소유자 검증
+  │     락 없음 (MVCC 스냅샷)
   ├─ orderService.cancelItem()                        [쓰기] 항목 취소 + 총액 재계산 + 주문 상태 변경
+  │     @Version 낙관적 락 (OrderModel) — flush 시 UPDATE ... WHERE version=?
+  │     Dirty Checking (OrderItemModel) — flush 시 행 X-Lock
   │   └─ OrderInfo.CancelledItem 반환                  [캡슐화] productId, quantity, orderFullyCancelled
   ├─ productService.increaseStock()                   [쓰기] 재고 복구
+  │     읽기: 락 없음 (MVCC 스냅샷)
+  │     쓰기: @Version 낙관적 락 (ProductModel) — flush 시 UPDATE ... WHERE version=?
   └─ couponService.restoreByOrderId()                 [쓰기] 전체 취소 시 쿠폰 복원 (조건부)
+        읽기: 락 없음 (MVCC 스냅샷)
+        쓰기: Dirty Checking (OwnedCouponModel) — flush 시 행 X-Lock
 ```
 
 **이전 대비 개선:**
@@ -155,7 +170,9 @@ OrderFacade.cancelMyOrderItem() [@Retryable(max=5) + @Transactional]
 ```
 ProductFacade.registerProduct() [@Transactional]
   ├─ brandService.validateExists()                    [읽기] 브랜드 존재 검증
+  │     락 없음 (MVCC 스냅샷)
   └─ productService.register()                        [쓰기] 상품 INSERT
+        INSERT 행 X-Lock (Auto-increment)
 ```
 
 - 읽기 검증 + 쓰기가 하나의 TX. 합리적 범위.
@@ -165,8 +182,11 @@ ProductFacade.registerProduct() [@Transactional]
 ```
 ProductFacade.getProductsWithActiveBrandSortedByLikes() [@Transactional(readOnly = true)]
   ├─ productService.getAll()                          [읽기] 전체 상품 조회 (페이지네이션 없음)
+  │     락 없음 (MVCC 스냅샷, readOnly TX)
   ├─ brandService.getActiveNameMapByIds()              [읽기] 활성 브랜드명 조회
+  │     락 없음 (MVCC 스냅샷, readOnly TX)
   ├─ productLikeService.countLikesByProductIds()       [읽기] 좋아요 수 배치 조회
+  │     락 없음 (MVCC 스냅샷, readOnly TX)
   └─ 인메모리 정렬 + 수동 페이지네이션                    [메모리] Comparator + PaginationUtils
 ```
 
@@ -187,9 +207,13 @@ ProductFacade.getProductsWithActiveBrandSortedByLikes() [@Transactional(readOnly
 CouponFacade.issueCoupon() [@Retryable(max=50) + @Transactional]
   └─ CouponService.issue() [@Transactional(REQUIRED → 합류)]
       ├─ couponRepository.findById()                   [읽기] 쿠폰 조회
+      │     락 없음 (MVCC 스냅샷)
       ├─ ownedCouponRepository.findByCouponIdAndUserId() [읽기] 중복 발급 검증
+      │     락 없음 (MVCC 스냅샷)
       ├─ coupon.issue()                                [Dirty Checking] issuedQuantity++
+      │     @Version 낙관적 락 (CouponModel) — flush 시 UPDATE ... WHERE version=?
       └─ ownedCouponRepository.save()                  [쓰기] 보유 쿠폰 INSERT
+            INSERT 행 X-Lock (Auto-increment)
 ```
 
 **이전 대비 개선:**
@@ -202,11 +226,14 @@ CouponFacade.issueCoupon() [@Retryable(max=50) + @Transactional]
 ```
 CouponService.useAndCalculateDiscount() [@Transactional(REQUIRED → 합류)]
   ├─ ownedCouponRepository.findById()                  [읽기] 보유쿠폰 조회 → 영속성 컨텍스트 등록
+  │     락 없음 (MVCC 스냅샷)
   ├─ owned.validateMinOrderAmount()                    [검증] 최소주문금액 검증
   ├─ owned.validateUsable()                            [검증] 사용 가능 여부 검증
   ├─ ownedCouponRepository.useByIdWhenAvailable()      [벌크 UPDATE] 쿠폰 사용 처리
+  │     벌크 UPDATE 행 X-Lock + WHERE orderId IS NULL (원자적 CAS)
   │   └─ @Modifying(flushAutomatically=true, clearAutomatically=true)
   └─ owned.calculateDiscount()                         [계산] 할인액 산출 (detached 엔티티)
+        락 없음 (영속성 컨텍스트에서 분리된 메모리 연산)
 ```
 
 - 이전 분석과 동일 구조
@@ -221,7 +248,11 @@ CouponService.useAndCalculateDiscount() [@Transactional(REQUIRED → 합류)]
 ```
 BrandFacade.deleteBrand() [@Transactional]
   ├─ brandService.delete()                             [쓰기] 브랜드 Soft Delete
+  │     읽기: 락 없음 (MVCC 스냅샷)
+  │     쓰기: Dirty Checking — flush 시 행 X-Lock (deletedAt UPDATE)
   └─ productService.deleteAllByBrandId()               [쓰기] 해당 브랜드 상품 전체 Soft Delete
+        읽기: 락 없음 (MVCC 스냅샷)
+        쓰기: Dirty Checking — flush 시 N건 각각 행 X-Lock (deletedAt UPDATE)
 ```
 
 - forEach Dirty Checking 기반 삭제 — 상품 수만큼 UPDATE 쿼리 발생
@@ -236,9 +267,11 @@ BrandFacade.deleteBrand() [@Transactional]
 ```
 UserService.changePassword() [@Transactional]
   ├─ userRepository.findByLoginId()                    [읽기] 사용자 조회
+  │     락 없음 (MVCC 스냅샷)
   ├─ passwordEncoder.matches() x 2                     [메모리] 비밀번호 검증
   ├─ user.changePassword()                             [Dirty Checking] 비밀번호 변경
-  └─ userRepository.save(user)                         [불필요] 이미 managed 상태
+  │     @Version 낙관적 락 (UserModel) — flush 시 UPDATE ... WHERE version=?
+  └─ userRepository.save(user)                         [불필요] 이미 managed 상태 — merge 호출이나 실질 효과 없음
 ```
 
 - 이전 분석에서 지적한 **불필요한 save** 여전히 존재 (동작에 영향 없음)
@@ -252,7 +285,9 @@ UserService.changePassword() [@Transactional]
 ```
 ProductLikeFacade.getMyLikedProducts() [@Transactional(readOnly = true)]
   ├─ productLikeService.getLikesByUserId()             [읽기] 전체 좋아요 조회
+  │     락 없음 (MVCC 스냅샷, readOnly TX)
   └─ .filter(like -> productService.existsById(...))   [읽기] 상품별 존재 검증 (N+1!)
+        락 없음 (MVCC 스냅샷, readOnly TX) — N건 개별 SELECT
 ```
 
 - 이전 분석과 동일 — N+1 쿼리 패턴 유지
@@ -323,12 +358,12 @@ return owned.calculateDiscount(orderAmount);                    // (5) detached 
 **현재 트랜잭션 내 작업:**
 ```
 OrderFacade.createOrder()
-  ├─ [쓰기] 재고 차감 (ProductModel x N개)
-  ├─ [읽기] 브랜드명 조회
-  ├─ [쓰기] 주문 생성 (OrderModel + OrderItemModel INSERT)
-  ├─ [쓰기] 쿠폰 사용 (벌크 UPDATE) — 조건부
-  ├─ [쓰기] 할인 적용 (Dirty Checking) — 조건부
-  └─ [쓰기] 포인트 차감 (Dirty Checking)
+  ├─ [쓰기] 재고 차감 (ProductModel x N개) — @Version 낙관적 락
+  ├─ [읽기] 브랜드명 조회 — 락 없음 (MVCC 스냅샷)
+  ├─ [쓰기] 주문 생성 (OrderModel + OrderItemModel INSERT) — INSERT 행 X-Lock
+  ├─ [쓰기] 쿠폰 사용 (벌크 UPDATE) — 행 X-Lock + WHERE orderId IS NULL (원자적 CAS), 조건부
+  ├─ [쓰기] 할인 적용 (Dirty Checking) — 행 X-Lock, 조건부
+  └─ [쓰기] 포인트 차감 (Dirty Checking) — @Version 낙관적 락
 ```
 
 **영향:**
