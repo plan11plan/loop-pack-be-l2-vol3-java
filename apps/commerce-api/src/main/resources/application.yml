@@ -34,6 +34,11 @@ spring:
   config:
     activate:
       on-profile: local, test
+  web:
+    resources:
+      static-locations:
+        - file:apps/commerce-api/src/main/resources/static/
+        - classpath:/static/
 
 ---
 spring:
