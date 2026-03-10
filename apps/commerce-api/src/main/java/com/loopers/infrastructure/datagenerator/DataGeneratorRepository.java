@@ -118,10 +118,86 @@ public class DataGeneratorRepository {
                 "SELECT id FROM products WHERE deleted_at IS NULL", Long.class);
     }
 
+    public List<Long> findAllBrandIds() {
+        return jdbcTemplate.queryForList(
+                "SELECT id FROM brands WHERE deleted_at IS NULL", Long.class);
+    }
+
+    public int batchInsertBrands(List<String> brandNames) {
+        if (brandNames.isEmpty()) return 0;
+        String sql = "INSERT IGNORE INTO brands (name, created_at, updated_at) VALUES (?, NOW(), NOW())";
+        jdbcTemplate.batchUpdate(sql, brandNames, 100,
+                (PreparedStatement ps, String name) -> ps.setString(1, name));
+        return brandNames.size();
+    }
+
+    public int batchInsertProducts(List<Object[]> products) {
+        if (products.isEmpty()) return 0;
+        String sql = "INSERT INTO products (brand_id, name, price, stock, version, created_at, updated_at) "
+                + "VALUES (?, ?, ?, ?, 0, NOW(), NOW())";
+        jdbcTemplate.batchUpdate(sql, products, 1000,
+                (PreparedStatement ps, Object[] p) -> {
+                    ps.setLong(1, (Long) p[0]);
+                    ps.setString(2, (String) p[1]);
+                    ps.setInt(3, (int) p[2]);
+                    ps.setInt(4, (int) p[3]);
+                });
+        return products.size();
+    }
+
     public long getMaxUserId() {
         Long maxId = jdbcTemplate.queryForObject(
                 "SELECT COALESCE(MAX(user_id), 0) FROM likes", Long.class);
         return maxId != null ? maxId : 0L;
+    }
+
+    public long getMaxOrderId() {
+        Long maxId = jdbcTemplate.queryForObject(
+                "SELECT COALESCE(MAX(id), 0) FROM orders", Long.class);
+        return maxId != null ? maxId : 0L;
+    }
+
+    public List<Map<String, Object>> findProductsForOrders(int limit) {
+        return jdbcTemplate.queryForList(
+                "SELECT p.id, p.name AS product_name, p.price, b.name AS brand_name "
+                        + "FROM products p JOIN brands b ON p.brand_id = b.id "
+                        + "LEFT JOIN (SELECT product_id, COUNT(*) AS cnt FROM likes GROUP BY product_id) lc "
+                        + "ON p.id = lc.product_id "
+                        + "WHERE p.deleted_at IS NULL AND p.stock > 0 "
+                        + "ORDER BY COALESCE(lc.cnt, 0) DESC LIMIT ?",
+                limit);
+    }
+
+    public void batchInsertOrders(List<Object[]> orders) {
+        if (orders.isEmpty()) return;
+        String sql = "INSERT INTO orders "
+                + "(user_id, total_price, original_total_price, status, discount_amount, version, created_at, updated_at) "
+                + "VALUES (?, ?, ?, ?, ?, 0, NOW(), NOW())";
+        jdbcTemplate.batchUpdate(sql, orders, 1000,
+                (PreparedStatement ps, Object[] o) -> {
+                    ps.setLong(1, (Long) o[0]);
+                    ps.setInt(2, (int) o[1]);
+                    ps.setInt(3, (int) o[2]);
+                    ps.setString(4, (String) o[3]);
+                    ps.setInt(5, (int) o[4]);
+                });
+    }
+
+    public void batchInsertOrderItems(List<Object[]> items) {
+        if (items.isEmpty()) return;
+        String sql = "INSERT INTO order_items "
+                + "(order_id, product_id, order_price, quantity, product_name, brand_name, status, created_at, updated_at) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())";
+        jdbcTemplate.batchUpdate(sql, items, 1000,
+                (PreparedStatement ps, Object[] item) -> {
+                    ps.setLong(1, (Long) item[0]);
+                    ps.setLong(2, (Long) item[1]);
+                    ps.setInt(3, (int) item[2]);
+                    ps.setInt(4, (int) item[3]);
+                    ps.setString(5, (String) item[4]);
+                    ps.setString(6, (String) item[5]);
+                    ps.setString(7, (String) item[6]);
+                });
     }
 
     private long countTable(String tableName, boolean hasSoftDelete) {

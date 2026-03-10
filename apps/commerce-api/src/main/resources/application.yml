@@ -40,6 +40,15 @@ spring:
         - file:apps/commerce-api/src/main/resources/static/
         - classpath:/static/
 
+app:
+  data-generator:
+    enabled: false
+    brand-count: 100
+    product-count: 100000
+    user-count: 10000
+    like-count: 500000
+    order-count: 100000
+
 ---
 spring:
   config:
