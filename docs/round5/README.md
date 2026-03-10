@@ -33,10 +33,20 @@ app:
 ```
 
 ### 실행
-```bash
-# 데이터 생성 (기본값: 비활성화)
-./gradlew :apps:commerce-api:bootRun --args='--app.data-generator.enabled=true'
 
+두 가지 방법으로 데이터를 생성할 수 있다.
+
+**방법 1: 서버 기동 시 자동 생성**
+```bash
+./gradlew :apps:commerce-api:bootRun --args='--app.data-generator.enabled=true'
+```
+
+**방법 2: 서버 기동 후 API 호출**
+```bash
+# 데이터 생성 요청 (비동기, 즉시 반환)
+curl -X POST -H "X-Loopers-Ldap: loopers.admin" http://localhost:8080/api-admin/v1/data-generator/bulk-init
+```
+```bash
 # 생성 현황 확인
 curl -H "X-Loopers-Ldap: loopers.admin" http://localhost:8080/api-admin/v1/data-generator/stats
 ```
