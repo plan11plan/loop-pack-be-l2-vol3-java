@@ -14,8 +14,45 @@ export async function initDashboard() {
                 <button class="btn btn-primary" onclick="document.querySelector('[data-tab=products]').click()">상품 관리</button>
                 <button class="btn btn-success" onclick="document.querySelector('[data-tab=\\'data-generator\\']').click()">데이터 생성기</button>
             </div>
+        </div>
+        <div class="panel" style="margin-top:16px">
+            <div class="panel-header"><h2>대용량 데이터 초기화</h2></div>
+            <p style="font-size:13px;color:#64748b;margin-bottom:12px">
+                100 브랜드, 10만 상품, 1만 유저, ~50만 좋아요, 10만 주문을 일괄 생성합니다.
+                이미 데이터가 있으면 해당 Phase는 건너뜁니다.
+            </p>
+            <div style="display:flex;gap:10px;align-items:center">
+                <button class="btn btn-danger" id="dash-bulk-init-btn">Bulk Init 실행</button>
+                <span id="dash-bulk-init-status" style="font-size:13px;color:#64748b"></span>
+            </div>
         </div>`;
 
+    document.getElementById('dash-bulk-init-btn').addEventListener('click', async () => {
+        const btn = document.getElementById('dash-bulk-init-btn');
+        const status = document.getElementById('dash-bulk-init-status');
+        btn.disabled = true;
+        status.textContent = '시작 중...';
+        try {
+            const result = await DataGenApi.bulkInit();
+            status.textContent = result.message;
+            // 3초마다 stats 갱신
+            const interval = setInterval(async () => {
+                try {
+                    await refreshDashStats();
+                } catch (e) { /* ignore */ }
+            }, 3000);
+            // 3분 후 자동 중지
+            setTimeout(() => { clearInterval(interval); btn.disabled = false; status.textContent = '완료 (Stats 확인)'; }, 180000);
+        } catch (e) {
+            status.textContent = '에러: ' + e.message;
+            btn.disabled = false;
+        }
+    });
+
+    await refreshDashStats();
+}
+
+async function refreshDashStats() {
     try {
         const stats = await DataGenApi.stats();
         document.getElementById('dash-stats').innerHTML = `

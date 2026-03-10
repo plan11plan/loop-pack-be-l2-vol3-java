@@ -10,6 +10,7 @@ import com.loopers.domain.product.ProductService;
 import com.loopers.domain.product.ProductModel;
 import com.loopers.domain.user.PasswordEncoder;
 import com.loopers.domain.user.UserService;
+import com.loopers.infrastructure.datagenerator.BulkDataGeneratorService;
 import com.loopers.infrastructure.datagenerator.DataGeneratorRepository;
 import com.loopers.interfaces.api.ApiResponse;
 import com.loopers.interfaces.datagenerator.dto.AdminDataGeneratorV1Dto;
@@ -19,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadLocalRandom;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,11 +33,21 @@ import org.springframework.web.bind.annotation.*;
 public class AdminDataGeneratorV1Controller {
 
     private final DataGeneratorRepository dataGeneratorRepository;
+    private final BulkDataGeneratorService bulkDataGeneratorService;
     private final PasswordEncoder passwordEncoder;
     private final UserService userService;
     private final ProductService productService;
     private final OrderFacade orderFacade;
     private final CouponFacade couponFacade;
+
+    @PostMapping("/bulk-init")
+    public ApiResponse<Map<String, String>> bulkInit() {
+        if (bulkDataGeneratorService.isRunning()) {
+            return ApiResponse.success(Map.of("message", "이미 실행 중입니다. Stats API로 진행 상황을 확인하세요."));
+        }
+        CompletableFuture.runAsync(bulkDataGeneratorService::generateAll);
+        return ApiResponse.success(Map.of("message", "데이터 생성이 시작되었습니다. Stats API로 진행 상황을 확인하세요."));
+    }
 
     @GetMapping("/stats")
     public ApiResponse<AdminDataGeneratorV1Dto.StatsResponse> getStats() {

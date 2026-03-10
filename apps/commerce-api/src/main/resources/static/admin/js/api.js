@@ -64,6 +64,7 @@ export const UserApi = {
 // === Data Generator ===
 export const DataGenApi = {
     stats: () => request('GET', '/api-admin/v1/data-generator/stats'),
+    bulkInit: () => request('POST', '/api-admin/v1/data-generator/bulk-init'),
     generateLikes: (productIds, likesPerProduct) =>
         request('POST', '/api-admin/v1/data-generator/likes', { productIds, likesPerProduct }),
     generateUsers: (prefix, count, defaultPoint) =>
