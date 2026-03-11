@@ -138,16 +138,31 @@ public class DataGeneratorRepository {
 
     public int batchInsertProducts(List<Object[]> products) {
         if (products.isEmpty()) return 0;
-        String sql = "INSERT INTO products (brand_id, name, price, stock, like_count, version, created_at, updated_at) "
-                + "VALUES (?, ?, ?, ?, 0, 0, NOW(), NOW())";
+        String sql = "INSERT INTO products (brand_id, name, price, stock, like_count, thumbnail_url, version, created_at, updated_at) "
+                + "VALUES (?, ?, ?, ?, 0, ?, 0, NOW(), NOW())";
         jdbcTemplate.batchUpdate(sql, products, 1000,
                 (PreparedStatement ps, Object[] p) -> {
                     ps.setLong(1, (Long) p[0]);
                     ps.setString(2, (String) p[1]);
                     ps.setInt(3, (int) p[2]);
                     ps.setInt(4, (int) p[3]);
+                    ps.setString(5, (String) p[4]);
                 });
         return products.size();
+    }
+
+    public int batchInsertProductImages(List<Object[]> images) {
+        if (images.isEmpty()) return 0;
+        String sql = "INSERT INTO product_images (product_id, image_url, image_type, sort_order, created_at, updated_at) "
+                + "VALUES (?, ?, ?, ?, NOW(), NOW())";
+        jdbcTemplate.batchUpdate(sql, images, 1000,
+                (PreparedStatement ps, Object[] img) -> {
+                    ps.setLong(1, (Long) img[0]);
+                    ps.setString(2, (String) img[1]);
+                    ps.setString(3, (String) img[2]);
+                    ps.setInt(4, (int) img[3]);
+                });
+        return images.size();
     }
 
     public long getMaxUserId() {

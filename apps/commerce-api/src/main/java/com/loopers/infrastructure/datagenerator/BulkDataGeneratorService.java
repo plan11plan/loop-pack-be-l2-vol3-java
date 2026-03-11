@@ -77,6 +77,14 @@ public class BulkDataGeneratorService {
                 log.info("  Phase 2.5: Product soft-delete Wave 1 already applied. Skipping.");
             }
 
+            // Phase 2.7: Product Images
+            long totalProductImages = dataGeneratorRepository.countAllInTable("product_images");
+            if (totalProductImages == 0 && totalProducts >= properties.productCount()) {
+                generateProductImages();
+            } else {
+                log.info("  Phase 2.7: Product images {} already exist. Skipping.", totalProductImages);
+            }
+
             // Phase 3: Users
             if (totalUsers < properties.userCount()) {
                 generateUsers();
@@ -180,7 +188,7 @@ public class BulkDataGeneratorService {
                 int price = FashionDataPool.generatePrice(category, random);
                 int stock = FashionDataPool.generateStock(category, random);
 
-                batch.add(new Object[]{brandId, name, price, stock});
+                batch.add(new Object[]{brandId, name, price, stock, "/image.png"});
 
                 if (batch.size() >= batchSize) {
                     dataGeneratorRepository.batchInsertProducts(batch);
@@ -198,6 +206,47 @@ public class BulkDataGeneratorService {
         }
 
         log.info("  Phase 2: Products {} created ({}s)", created, elapsed(start));
+    }
+
+    private void generateProductImages() {
+        long start = System.currentTimeMillis();
+        List<Long> productIds = dataGeneratorRepository.findAllProductIds();
+        if (productIds.isEmpty()) {
+            log.warn("  Phase 2.7: No active products. Skipping image generation.");
+            return;
+        }
+
+        String imageUrl = "/image.png";
+        int batchSize = 10_000;
+        List<Object[]> batch = new ArrayList<>(batchSize);
+        int created = 0;
+
+        for (Long productId : productIds) {
+            // MAIN 이미지 2장
+            for (int i = 0; i < 2; i++) {
+                batch.add(new Object[]{productId, imageUrl, "MAIN", i});
+            }
+            // DETAIL 이미지 3장
+            for (int i = 0; i < 3; i++) {
+                batch.add(new Object[]{productId, imageUrl, "DETAIL", i});
+            }
+
+            if (batch.size() >= batchSize) {
+                dataGeneratorRepository.batchInsertProductImages(batch);
+                created += batch.size();
+                batch.clear();
+                log.info("  Phase 2.7: Product images {}/{} ({}s)",
+                        created, productIds.size() * 5, elapsed(start));
+            }
+        }
+
+        if (!batch.isEmpty()) {
+            dataGeneratorRepository.batchInsertProductImages(batch);
+            created += batch.size();
+            batch.clear();
+        }
+
+        log.info("  Phase 2.7: Product images {} created ({}s)", created, elapsed(start));
     }
 
     private void softDeleteProductsWave1() {
