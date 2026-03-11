@@ -16,7 +16,7 @@ import lombok.NoArgsConstructor;
 @Getter
 @Entity
 @Table(name = "products", indexes = {
-        @Index(name = "idx_products_like_count", columnList = "like_count")})
+        @Index(name = "idx_products_deleted_like", columnList = "deleted_at, like_count")})
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ProductModel extends BaseEntity {
 
