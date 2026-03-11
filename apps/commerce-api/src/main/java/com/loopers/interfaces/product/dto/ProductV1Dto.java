@@ -12,17 +12,30 @@ public class ProductV1Dto {
         String name,
         int price,
         int stock,
-        long likeCount
+        long likeCount,
+        String thumbnailUrl,
+        List<ImageResponse> mainImages,
+        List<ImageResponse> detailImages
     ) {
-        public static DetailResponse from(ProductResult info) {
+        public static DetailResponse from(ProductResult.DetailWithImages detail) {
             return new DetailResponse(
-                    info.id(),
-                    info.brandId(),
-                    info.brandName(),
-                    info.name(),
-                    info.price(),
-                    info.stock(),
-                    info.likeCount());
+                    detail.product().id(),
+                    detail.product().brandId(),
+                    detail.product().brandName(),
+                    detail.product().name(),
+                    detail.product().price(),
+                    detail.product().stock(),
+                    detail.product().likeCount(),
+                    detail.product().thumbnailUrl(),
+                    detail.mainImages().stream().map(ImageResponse::from).toList(),
+                    detail.detailImages().stream().map(ImageResponse::from).toList());
+        }
+    }
+
+    public record ImageResponse(Long id, String imageUrl, String imageType, int sortOrder) {
+        public static ImageResponse from(ProductResult.ImageResult image) {
+            return new ImageResponse(
+                    image.id(), image.imageUrl(), image.imageType().name(), image.sortOrder());
         }
     }
 
@@ -39,7 +52,8 @@ public class ProductV1Dto {
             String brandName,
             String name,
             int price,
-            long likeCount
+            long likeCount,
+            String thumbnailUrl
         ) {
             public static ListItem from(ProductResult info) {
                 return new ListItem(
@@ -48,7 +62,8 @@ public class ProductV1Dto {
                         info.brandName(),
                         info.name(),
                         info.price(),
-                        info.likeCount());
+                        info.likeCount(),
+                        info.thumbnailUrl());
             }
         }
     }

@@ -55,7 +55,7 @@ public class ProductV1Controller implements ProductV1ApiSpec {
     public ApiResponse<ProductV1Dto.DetailResponse> getById(
         @PathVariable Long productId
     ) {
-        ProductResult result = productFacade.getProduct(productId);
-        return ApiResponse.success(ProductV1Dto.DetailResponse.from(result));
+        return ApiResponse.success(
+                ProductV1Dto.DetailResponse.from(productFacade.getProductDetail(productId)));
     }
 }
