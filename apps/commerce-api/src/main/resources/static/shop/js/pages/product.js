@@ -22,12 +22,26 @@ export async function initProduct(params) {
             } catch { /* ignore */ }
         }
 
+        const mainImgs = p.mainImages || [];
+        const detailImgs = p.detailImages || [];
+
         app.innerHTML = `
             <div style="margin-bottom:16px">
                 <a href="#home" class="btn btn-sm btn-outline">&larr; 상품 목록</a>
             </div>
             <div class="product-detail">
-                <div class="product-detail-img">${(p.name || '?').charAt(0)}</div>
+                <div class="product-detail-gallery">
+                    <div class="gallery-main">
+                        <img id="gallery-main-img" src="${esc(mainImgs.length ? mainImgs[0].imageUrl : (p.thumbnailUrl || ''))}" alt="${esc(p.name)}">
+                    </div>
+                    ${mainImgs.length > 1 ? `
+                    <div class="gallery-thumbs">
+                        ${mainImgs.map((img, i) => `
+                            <div class="gallery-thumb ${i === 0 ? 'active' : ''}" data-url="${esc(img.imageUrl)}">
+                                <img src="${esc(img.imageUrl)}" alt="이미지 ${i + 1}">
+                            </div>`).join('')}
+                    </div>` : ''}
+                </div>
                 <div class="product-detail-info">
                     <div class="product-detail-brand">${esc(p.brandName)}</div>
                     <h1>${esc(p.name)}</h1>
@@ -44,7 +58,24 @@ export async function initProduct(params) {
                     </div>
                     <div id="order-section"></div>
                 </div>
-            </div>`;
+            </div>
+            ${detailImgs.length ? `
+            <div class="product-detail-section">
+                <h2>상품 상세</h2>
+                <div class="detail-images">
+                    ${detailImgs.map(img => `
+                        <img src="${esc(img.imageUrl)}" alt="상품 상세 이미지">`).join('')}
+                </div>
+            </div>` : ''}`;
+
+        // Gallery thumbnail click
+        document.querySelectorAll('.gallery-thumb').forEach(thumb => {
+            thumb.addEventListener('click', () => {
+                document.getElementById('gallery-main-img').src = thumb.dataset.url;
+                document.querySelectorAll('.gallery-thumb').forEach(t => t.classList.remove('active'));
+                thumb.classList.add('active');
+            });
+        });
 
         // Like toggle
         document.getElementById('like-btn').addEventListener('click', async () => {

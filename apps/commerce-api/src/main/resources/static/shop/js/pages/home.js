@@ -62,7 +62,9 @@ async function loadProducts(page) {
         } else {
             grid.innerHTML = data.items.map(p => `
                 <a href="#product/${p.id}" class="product-card">
-                    <div class="product-card-img">${getInitial(p.name)}</div>
+                    <div class="product-card-img">${p.thumbnailUrl
+                        ? `<img src="${esc(p.thumbnailUrl)}" alt="${esc(p.name)}">`
+                        : getInitial(p.name)}</div>
                     <div class="product-card-body">
                         <div class="product-card-brand">${esc(p.brandName)}</div>
                         <div class="product-card-name">${esc(p.name)}</div>
