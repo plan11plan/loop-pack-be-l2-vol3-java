@@ -38,39 +38,77 @@ public class BulkDataGeneratorService {
                     properties.userCount(), properties.likeCount(), properties.orderCount());
 
             long totalStart = System.currentTimeMillis();
-            Map<String, Long> stats = dataGeneratorRepository.getStats();
 
-            List<Long> brandIds;
-            if (stats.get("brandCount") < properties.brandCount()) {
-                brandIds = generateBrands();
+            long totalBrands = dataGeneratorRepository.countAllInTable("brands");
+            long totalProducts = dataGeneratorRepository.countAllInTable("products");
+            long totalUsers = dataGeneratorRepository.countAllInTable("users");
+            long totalLikes = dataGeneratorRepository.countAllInTable("likes");
+            long totalOrders = dataGeneratorRepository.countAllInTable("orders");
+
+            // Phase 1: Brands
+            if (totalBrands < properties.brandCount()) {
+                generateBrands();
+                totalBrands = dataGeneratorRepository.countAllInTable("brands");
             } else {
-                brandIds = dataGeneratorRepository.findAllBrandIds();
-                log.info("  Phase 1: Brands {} already exist. Skipping.", brandIds.size());
+                log.info("  Phase 1: Brands {} already exist. Skipping.", totalBrands);
             }
 
-            if (stats.get("productCount") < properties.productCount()) {
-                generateProducts(brandIds);
+            // Phase 1.5: Soft delete 10% brands
+            if (dataGeneratorRepository.findDeletedBrandIds().isEmpty() && totalBrands >= properties.brandCount()) {
+                List<Long> activeBrandIds = dataGeneratorRepository.findAllBrandIds();
+                softDeleteBrands(activeBrandIds);
             } else {
-                log.info("  Phase 2: Products {} already exist. Skipping.", stats.get("productCount"));
+                log.info("  Phase 1.5: Brand soft-delete already applied. Skipping.");
             }
 
-            if (stats.get("userCount") < properties.userCount()) {
+            // Phase 2: Products
+            if (totalProducts < properties.productCount()) {
+                generateProducts(dataGeneratorRepository.findAllBrandIds());
+                totalProducts = dataGeneratorRepository.countAllInTable("products");
+            } else {
+                log.info("  Phase 2: Products {} already exist. Skipping.", totalProducts);
+            }
+
+            // Phase 2.5: Soft delete products Wave 1
+            if (totalProducts >= properties.productCount()
+                    && dataGeneratorRepository.getStats().get("productCount") >= properties.productCount()) {
+                softDeleteProductsWave1();
+            } else if (totalProducts >= properties.productCount()) {
+                log.info("  Phase 2.5: Product soft-delete Wave 1 already applied. Skipping.");
+            }
+
+            // Phase 3: Users
+            if (totalUsers < properties.userCount()) {
                 generateUsers();
             } else {
-                log.info("  Phase 3: Users {} already exist. Skipping.", stats.get("userCount"));
+                log.info("  Phase 3: Users {} already exist. Skipping.", totalUsers);
             }
 
-            if (stats.get("likeCount") < properties.likeCount()) {
+            // Phase 4: Likes
+            if (totalLikes < properties.likeCount()) {
                 generateLikes();
             } else {
-                log.info("  Phase 4: Likes {} already exist. Skipping.", stats.get("likeCount"));
+                log.info("  Phase 4: Likes {} already exist. Skipping.", totalLikes);
             }
 
-            if (stats.get("orderCount") < properties.orderCount()) {
+            // Phase 4.5: Soft delete products Wave 2
+            long deletedProducts = totalProducts - dataGeneratorRepository.getStats().get("productCount");
+            // Wave 1 삭제 ~13K, Wave 2 추가 2K = 총 ~15K
+            if (totalProducts >= properties.productCount() && deletedProducts > 0 && deletedProducts < 14_000) {
+                softDeleteProductsWave2();
+            } else if (deletedProducts >= 14_000) {
+                log.info("  Phase 4.5: Product soft-delete Wave 2 already applied. Skipping.");
+            }
+
+            // Phase 5: Orders
+            if (totalOrders < properties.orderCount()) {
                 generateOrders();
             } else {
-                log.info("  Phase 5: Orders {} already exist. Skipping.", stats.get("orderCount"));
+                log.info("  Phase 5: Orders {} already exist. Skipping.", totalOrders);
             }
+
+            // Phase 6: Sync like_count
+            syncLikeCounts();
 
             Map<String, Long> finalStats = dataGeneratorRepository.getStats();
             log.info("=== BulkDataGenerator DONE === elapsed={}s | brands={}, products={}, users={}, likes={}, orders={}",
@@ -84,19 +122,25 @@ public class BulkDataGeneratorService {
 
     private List<Long> generateBrands() {
         long start = System.currentTimeMillis();
-        List<String> brandNames = new ArrayList<>();
-        for (int i = 1; i <= properties.brandCount(); i++) {
-            brandNames.add(String.format("Brand_%03d", i));
-        }
-        dataGeneratorRepository.batchInsertBrands(brandNames);
+        dataGeneratorRepository.batchInsertBrands(
+                FashionDataPool.BRAND_NAMES.subList(
+                        0, Math.min(properties.brandCount(), FashionDataPool.BRAND_NAMES.size())));
         List<Long> brandIds = dataGeneratorRepository.findAllBrandIds();
         log.info("  Phase 1: Brands {} created ({}s)", brandIds.size(), elapsed(start));
         return brandIds;
     }
 
-    private void generateProducts(List<Long> brandIds) {
-        if (brandIds.isEmpty()) {
-            log.warn("  Phase 2: No brands available. Skipping product generation.");
+    private void softDeleteBrands(List<Long> allBrandIds) {
+        long start = System.currentTimeMillis();
+        int deleteCount = allBrandIds.size() / 10; // 10%
+        dataGeneratorRepository.batchSoftDeleteBrands(
+                allBrandIds.subList(allBrandIds.size() - deleteCount, allBrandIds.size()));
+        log.info("  Phase 1.5: Brands {} soft-deleted ({}s)", deleteCount, elapsed(start));
+    }
+
+    private void generateProducts(List<Long> activeBrandIds) {
+        if (activeBrandIds.isEmpty()) {
+            log.warn("  Phase 2: No active brands available. Skipping product generation.");
             return;
         }
 
@@ -105,24 +149,45 @@ public class BulkDataGeneratorService {
         int totalProducts = properties.productCount();
         int batchSize = 10_000;
 
+        // 브랜드별 상품 할당량 계산
+        int[] productsPerBrand = new int[activeBrandIds.size()];
+        int allocated = 0;
+        for (int i = 0; i < activeBrandIds.size(); i++) {
+            productsPerBrand[i] = FashionDataPool.productsPerBrand(i, totalProducts, random);
+            allocated += productsPerBrand[i];
+        }
+
+        // 총합을 totalProducts에 맞춤
+        double scale = (double) totalProducts / allocated;
+        allocated = 0;
+        for (int i = 0; i < productsPerBrand.length; i++) {
+            productsPerBrand[i] = Math.max(1, (int) (productsPerBrand[i] * scale));
+            allocated += productsPerBrand[i];
+        }
+        // 나머지를 첫 번째 브랜드에 조정
+        productsPerBrand[0] += totalProducts - allocated;
+
         List<Object[]> batch = new ArrayList<>(batchSize);
         int created = 0;
 
-        for (int i = 0; i < totalProducts; i++) {
-            int brandIndex = (int) (Math.pow(random.nextDouble(), 1.5) * brandIds.size());
-            Long brandId = brandIds.get(brandIndex);
+        for (int brandIdx = 0; brandIdx < activeBrandIds.size(); brandIdx++) {
+            Long brandId = activeBrandIds.get(brandIdx);
+            int count = productsPerBrand[brandIdx];
 
-            int price = ((int) (1000 + Math.pow(random.nextDouble(), 0.7) * 499_000) / 100) * 100;
-            int stock = random.nextDouble() < 0.05 ? 0 : random.nextInt(1001);
-            String name = "P_" + brandIndex + "_" + (i + 1);
+            for (int j = 0; j < count; j++) {
+                FashionDataPool.Category category = FashionDataPool.pickCategory(random);
+                String name = FashionDataPool.generateProductName(category, random);
+                int price = FashionDataPool.generatePrice(category, random);
+                int stock = FashionDataPool.generateStock(category, random);
 
-            batch.add(new Object[]{brandId, name, price, stock});
+                batch.add(new Object[]{brandId, name, price, stock});
 
-            if (batch.size() >= batchSize) {
-                dataGeneratorRepository.batchInsertProducts(batch);
-                created += batch.size();
-                batch.clear();
-                log.info("  Phase 2: Products {}/{} ({}s)", created, totalProducts, elapsed(start));
+                if (batch.size() >= batchSize) {
+                    dataGeneratorRepository.batchInsertProducts(batch);
+                    created += batch.size();
+                    batch.clear();
+                    log.info("  Phase 2: Products {}/{} ({}s)", created, totalProducts, elapsed(start));
+                }
             }
         }
 
@@ -133,6 +198,47 @@ public class BulkDataGeneratorService {
         }
 
         log.info("  Phase 2: Products {} created ({}s)", created, elapsed(start));
+    }
+
+    private void softDeleteProductsWave1() {
+        long start = System.currentTimeMillis();
+
+        // 삭제된 브랜드 소속 상품 연쇄 삭제
+        List<Long> deletedBrandProductIds = findDeletedBrandProductIds();
+        if (!deletedBrandProductIds.isEmpty()) {
+            dataGeneratorRepository.batchSoftDeleteProducts(deletedBrandProductIds);
+            log.info("  Phase 2.5: Cascade-deleted {} products from deleted brands ({}s)",
+                    deletedBrandProductIds.size(), elapsed(start));
+        }
+
+        // 활성 브랜드의 오래된 시즌 상품 3K 단종
+        List<Long> oldProductIds = dataGeneratorRepository.findOldestActiveProductIds(3_000);
+        if (!oldProductIds.isEmpty()) {
+            dataGeneratorRepository.batchSoftDeleteProducts(oldProductIds);
+            log.info("  Phase 2.5: Discontinued {} old season products ({}s)",
+                    oldProductIds.size(), elapsed(start));
+        }
+
+        log.info("  Phase 2.5: Product soft-delete Wave 1 completed ({}s)", elapsed(start));
+    }
+
+    private List<Long> findDeletedBrandProductIds() {
+        // 삭제된 브랜드의 ID 조회 → 해당 브랜드 상품 ID 조회
+        List<Long> deletedBrandIds = dataGeneratorRepository.findDeletedBrandIds();
+        if (deletedBrandIds.isEmpty()) return List.of();
+        return dataGeneratorRepository.findProductIdsByBrandIds(deletedBrandIds);
+    }
+
+    private void softDeleteProductsWave2() {
+        long start = System.currentTimeMillis();
+        // 좋아요가 있지만 단종된 상품 2K (like_count 낮은 순)
+        List<Long> productsWithLikes = dataGeneratorRepository.findActiveProductIdsWithLikes(2_000);
+        if (!productsWithLikes.isEmpty()) {
+            dataGeneratorRepository.batchSoftDeleteProducts(productsWithLikes);
+            log.info("  Phase 4.5: Discontinued {} products with likes ({}s)",
+                    productsWithLikes.size(), elapsed(start));
+        }
+        log.info("  Phase 4.5: Product soft-delete Wave 2 completed ({}s)", elapsed(start));
     }
 
     private void generateUsers() {
@@ -276,6 +382,12 @@ public class BulkDataGeneratorService {
         }
 
         log.info("  Phase 5: Orders {} created ({}s)", created, elapsed(start));
+    }
+
+    private void syncLikeCounts() {
+        long start = System.currentTimeMillis();
+        dataGeneratorRepository.syncLikeCounts();
+        log.info("  Phase 6: like_count synced from likes table ({}s)", elapsed(start));
     }
 
     private int flushOrderBatch(List<Object[]> orderBatch, List<List<Object[]>> itemsPerOrder) {

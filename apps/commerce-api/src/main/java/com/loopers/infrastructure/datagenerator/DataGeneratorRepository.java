@@ -123,6 +123,11 @@ public class DataGeneratorRepository {
                 "SELECT id FROM brands WHERE deleted_at IS NULL", Long.class);
     }
 
+    public List<Long> findDeletedBrandIds() {
+        return jdbcTemplate.queryForList(
+                "SELECT id FROM brands WHERE deleted_at IS NOT NULL", Long.class);
+    }
+
     public int batchInsertBrands(List<String> brandNames) {
         if (brandNames.isEmpty()) return 0;
         String sql = "INSERT IGNORE INTO brands (name, created_at, updated_at) VALUES (?, NOW(), NOW())";
@@ -133,8 +138,8 @@ public class DataGeneratorRepository {
 
     public int batchInsertProducts(List<Object[]> products) {
         if (products.isEmpty()) return 0;
-        String sql = "INSERT INTO products (brand_id, name, price, stock, version, created_at, updated_at) "
-                + "VALUES (?, ?, ?, ?, 0, NOW(), NOW())";
+        String sql = "INSERT INTO products (brand_id, name, price, stock, like_count, version, created_at, updated_at) "
+                + "VALUES (?, ?, ?, ?, 0, 0, NOW(), NOW())";
         jdbcTemplate.batchUpdate(sql, products, 1000,
                 (PreparedStatement ps, Object[] p) -> {
                     ps.setLong(1, (Long) p[0]);
@@ -198,6 +203,71 @@ public class DataGeneratorRepository {
                     ps.setString(6, (String) item[5]);
                     ps.setString(7, (String) item[6]);
                 });
+    }
+
+    public long countAllInTable(String tableName) {
+        Long count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM " + tableName, Long.class);
+        return count != null ? count : 0L;
+    }
+
+    public void batchSoftDeleteBrands(List<Long> brandIds) {
+        if (brandIds.isEmpty()) return;
+        String placeholders = String.join(",", brandIds.stream().map(id -> "?").toList());
+        jdbcTemplate.update(
+                "UPDATE brands SET deleted_at = NOW() WHERE id IN (" + placeholders + ")",
+                brandIds.toArray());
+    }
+
+    public void batchSoftDeleteProducts(List<Long> productIds) {
+        if (productIds.isEmpty()) return;
+        int batchSize = 10_000;
+        for (int i = 0; i < productIds.size(); i += batchSize) {
+            List<Long> batch = productIds.subList(i, Math.min(i + batchSize, productIds.size()));
+            String placeholders = String.join(",", batch.stream().map(id -> "?").toList());
+            jdbcTemplate.update(
+                    "UPDATE products SET deleted_at = NOW() WHERE id IN (" + placeholders + ")",
+                    batch.toArray());
+        }
+    }
+
+    public List<Long> findProductIdsByBrandIds(List<Long> brandIds) {
+        if (brandIds.isEmpty()) return List.of();
+        String placeholders = String.join(",", brandIds.stream().map(id -> "?").toList());
+        return jdbcTemplate.queryForList(
+                "SELECT id FROM products WHERE brand_id IN (" + placeholders + ")",
+                Long.class,
+                brandIds.toArray());
+    }
+
+    public List<Long> findActiveProductIdsSample(int limit, long seed) {
+        return jdbcTemplate.queryForList(
+                "SELECT id FROM products WHERE deleted_at IS NULL ORDER BY id LIMIT ? OFFSET ?",
+                Long.class,
+                limit, seed % 1000);
+    }
+
+    public List<Long> findOldestActiveProductIds(int limit) {
+        return jdbcTemplate.queryForList(
+                "SELECT id FROM products WHERE deleted_at IS NULL ORDER BY id ASC LIMIT ?",
+                Long.class,
+                limit);
+    }
+
+    public List<Long> findActiveProductIdsWithLikes(int limit) {
+        return jdbcTemplate.queryForList(
+                "SELECT id FROM products WHERE deleted_at IS NULL AND like_count > 0 "
+                        + "ORDER BY like_count ASC LIMIT ?",
+                Long.class,
+                limit);
+    }
+
+    public void syncLikeCounts() {
+        jdbcTemplate.update(
+                "UPDATE products p LEFT JOIN ("
+                        + "SELECT product_id, COUNT(*) AS cnt FROM likes GROUP BY product_id"
+                        + ") lc ON p.id = lc.product_id "
+                        + "SET p.like_count = COALESCE(lc.cnt, 0)");
     }
 
     private long countTable(String tableName, boolean hasSoftDelete) {
