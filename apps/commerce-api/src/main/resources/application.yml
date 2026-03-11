@@ -48,6 +48,10 @@ app:
     user-count: 10000
     like-count: 500000
     order-count: 100000
+    soft-delete:
+      brand-percent: 10
+      product-without-like-percent: 3
+      product-with-like-percent: 2
 
 ---
 spring:

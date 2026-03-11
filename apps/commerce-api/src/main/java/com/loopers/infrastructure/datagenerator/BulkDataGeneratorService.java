@@ -140,7 +140,7 @@ public class BulkDataGeneratorService {
 
     private void softDeleteBrands(List<Long> allBrandIds) {
         long start = System.currentTimeMillis();
-        int deleteCount = allBrandIds.size() / 10; // 10%
+        int deleteCount = allBrandIds.size() * properties.softDelete().brandPercent() / 100;
         dataGeneratorRepository.batchSoftDeleteBrands(
                 allBrandIds.subList(allBrandIds.size() - deleteCount, allBrandIds.size()));
         log.info("  Phase 1.5: Brands {} soft-deleted ({}s)", deleteCount, elapsed(start));
@@ -260,8 +260,9 @@ public class BulkDataGeneratorService {
                     deletedBrandProductIds.size(), elapsed(start));
         }
 
-        // 활성 브랜드의 오래된 시즌 상품 3K 단종
-        List<Long> oldProductIds = dataGeneratorRepository.findOldestActiveProductIds(3_000);
+        // 활성 브랜드의 오래된 시즌 상품 단종
+        int beforeLikeCount = properties.productCount() * properties.softDelete().productWithoutLikePercent() / 100;
+        List<Long> oldProductIds = dataGeneratorRepository.findOldestActiveProductIds(beforeLikeCount);
         if (!oldProductIds.isEmpty()) {
             dataGeneratorRepository.batchSoftDeleteProducts(oldProductIds);
             log.info("  Phase 2.5: Discontinued {} old season products ({}s)",
@@ -280,8 +281,9 @@ public class BulkDataGeneratorService {
 
     private void softDeleteProductsWave2() {
         long start = System.currentTimeMillis();
-        // 좋아요가 있지만 단종된 상품 2K (like_count 낮은 순)
-        List<Long> productsWithLikes = dataGeneratorRepository.findActiveProductIdsWithLikes(2_000);
+        // 좋아요가 있지만 단종된 상품 (like_count 낮은 순)
+        int afterLikeCount = properties.productCount() * properties.softDelete().productWithLikePercent() / 100;
+        List<Long> productsWithLikes = dataGeneratorRepository.findActiveProductIdsWithLikes(afterLikeCount);
         if (!productsWithLikes.isEmpty()) {
             dataGeneratorRepository.batchSoftDeleteProducts(productsWithLikes);
             log.info("  Phase 4.5: Discontinued {} products with likes ({}s)",
