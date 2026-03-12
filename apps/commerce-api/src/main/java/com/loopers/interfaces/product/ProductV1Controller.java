@@ -31,9 +31,12 @@ public class ProductV1Controller implements ProductV1ApiSpec {
                     ? productFacade.getProductsWithActiveBrandByBrandIdSortedByLikes(brandId, page, size)
                     : productFacade.getProductsWithActiveBrandSortedByLikes(page, size);
         } else {
-            PageRequest pageable = PageRequest.of(page, size, "price_asc".equals(sort)
-                    ? Sort.by(Sort.Direction.ASC, "price.value")
-                    : Sort.by(Sort.Direction.DESC, "createdAt"));
+            Sort sortOrder = switch (sort) {
+                case "price_asc" -> Sort.by(Sort.Direction.ASC, "price");
+                case "price_desc" -> Sort.by(Sort.Direction.DESC, "price");
+                default -> Sort.by(Sort.Direction.DESC, "createdAt");
+            };
+            PageRequest pageable = PageRequest.of(page, size, sortOrder);
             productPage = brandId != null
                     ? productFacade.getProductsWithActiveBrandByBrandId(brandId, pageable)
                     : productFacade.getProductsWithActiveBrand(pageable);
