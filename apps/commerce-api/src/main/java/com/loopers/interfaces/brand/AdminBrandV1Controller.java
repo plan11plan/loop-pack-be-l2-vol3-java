@@ -1,16 +1,11 @@
 package com.loopers.interfaces.brand;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.loopers.application.brand.BrandFacade;
 import com.loopers.application.brand.dto.BrandResult;
 import com.loopers.interfaces.api.ApiResponse;
 import com.loopers.interfaces.brand.dto.AdminBrandV1Dto;
-import com.loopers.support.cache.RedisCacheHelper;
 import jakarta.validation.Valid;
-import java.time.Duration;
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,11 +14,7 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api-admin/v1/brands")
 public class AdminBrandV1Controller implements AdminBrandV1ApiSpec {
 
-    private static final String BRAND_LIST_CACHE_KEY = "brand:list:all";
-    private static final Duration BRAND_LIST_TTL = Duration.ofHours(24);
-
     private final BrandFacade brandFacade;
-    private final RedisCacheHelper redisCacheHelper;
 
     @PostMapping
     @Override
@@ -31,7 +22,6 @@ public class AdminBrandV1Controller implements AdminBrandV1ApiSpec {
         @Valid @RequestBody AdminBrandV1Dto.RegisterRequest request
     ) {
         brandFacade.registerBrand(request.toCriteria());
-        redisCacheHelper.delete(BRAND_LIST_CACHE_KEY);
         return ApiResponse.success();
     }
 
@@ -41,25 +31,16 @@ public class AdminBrandV1Controller implements AdminBrandV1ApiSpec {
         @RequestParam(defaultValue = "0") int page,
         @RequestParam(defaultValue = "20") int size
     ) {
-        Optional<AdminBrandV1Dto.ListResponse> cached =
-                redisCacheHelper.get(BRAND_LIST_CACHE_KEY, new TypeReference<>() {});
-        if (cached.isPresent()) {
-            return ApiResponse.success(cached.get());
-        }
-
-        Page<BrandResult> brandInfoPage = brandFacade.getBrands(PageRequest.of(page, size));
-        AdminBrandV1Dto.ListResponse response =
+        BrandResult.ListPage listPage = brandFacade.getBrands(PageRequest.of(page, size));
+        return ApiResponse.success(
                 new AdminBrandV1Dto.ListResponse(
-                        brandInfoPage.getNumber(),
-                        brandInfoPage.getSize(),
-                        brandInfoPage.getTotalElements(),
-                        brandInfoPage.getTotalPages(),
-                        brandInfoPage.getContent().stream()
+                        listPage.page(),
+                        listPage.size(),
+                        listPage.totalElements(),
+                        listPage.totalPages(),
+                        listPage.items().stream()
                                 .map(AdminBrandV1Dto.ListResponse.ListItem::from)
-                                .toList());
-
-        redisCacheHelper.set(BRAND_LIST_CACHE_KEY, response, BRAND_LIST_TTL);
-        return ApiResponse.success(response);
+                                .toList()));
     }
 
     @GetMapping("/{brandId}")
@@ -78,7 +59,6 @@ public class AdminBrandV1Controller implements AdminBrandV1ApiSpec {
         @Valid @RequestBody AdminBrandV1Dto.UpdateRequest request
     ) {
         brandFacade.updateBrand(brandId, request.toCriteria());
-        redisCacheHelper.delete(BRAND_LIST_CACHE_KEY);
         return ApiResponse.success();
     }
 
@@ -88,7 +68,6 @@ public class AdminBrandV1Controller implements AdminBrandV1ApiSpec {
         @PathVariable Long brandId
     ) {
         brandFacade.deleteBrand(brandId);
-        redisCacheHelper.delete(BRAND_LIST_CACHE_KEY);
         return ApiResponse.success();
     }
 }
