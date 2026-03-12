@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.cache.CacheManager;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
@@ -40,6 +41,7 @@ class ProductV1ApiE2ETest {
     private final ProductLikeJpaRepository productLikeJpaRepository;
     private final ProductImageJpaRepository productImageJpaRepository;
     private final DatabaseCleanUp databaseCleanUp;
+    private final CacheManager cacheManager;
 
     private BrandModel savedBrand;
 
@@ -50,7 +52,8 @@ class ProductV1ApiE2ETest {
         ProductJpaRepository productJpaRepository,
         ProductLikeJpaRepository productLikeJpaRepository,
         ProductImageJpaRepository productImageJpaRepository,
-        DatabaseCleanUp databaseCleanUp
+        DatabaseCleanUp databaseCleanUp,
+        CacheManager cacheManager
     ) {
         this.testRestTemplate = testRestTemplate;
         this.brandJpaRepository = brandJpaRepository;
@@ -58,6 +61,7 @@ class ProductV1ApiE2ETest {
         this.productLikeJpaRepository = productLikeJpaRepository;
         this.productImageJpaRepository = productImageJpaRepository;
         this.databaseCleanUp = databaseCleanUp;
+        this.cacheManager = cacheManager;
     }
 
     @BeforeEach
@@ -69,6 +73,7 @@ class ProductV1ApiE2ETest {
     @AfterEach
     void tearDown() {
         databaseCleanUp.truncateAllTables();
+        cacheManager.getCacheNames().forEach(name -> cacheManager.getCache(name).clear());
     }
 
     private ProductModel saveProduct(String name, int price, int stock) {
