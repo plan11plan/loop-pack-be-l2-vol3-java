@@ -5,47 +5,106 @@ let currentBrandId = null;
 let currentSort = null;
 let brands = [];
 
+const SORT_OPTIONS = [
+    { value: '', label: '기본' },
+    { value: 'price_asc', label: '가격 낮은순' },
+    { value: 'price_desc', label: '가격 높은순' },
+    { value: 'likes_desc', label: '좋아요순' },
+];
+
 export async function initHome() {
     const app = document.getElementById('app');
     app.innerHTML = `
-        <div class="filter-bar" id="filter-bar">
-            <select id="filter-brand"><option value="">전체 브랜드</option></select>
-            <select id="filter-sort">
-                <option value="">기본 정렬</option>
-                <option value="price_asc">가격 낮은순</option>
-                <option value="price_desc">가격 높은순</option>
-                <option value="likes_desc">좋아요순</option>
-            </select>
-            <button class="btn btn-sm btn-primary" id="filter-apply">적용</button>
-            <span class="result-count" id="result-count"></span>
-        </div>
-        <div class="product-grid" id="product-grid"></div>
-        <div class="pagination" id="pagination"></div>`;
+        <div class="shop-layout">
+            <aside class="brand-sidebar" id="brand-sidebar">
+                <h3>Brands</h3>
+                <input type="text" class="brand-search" id="brand-search" placeholder="검색">
+                <ul class="brand-list" id="brand-list"></ul>
+            </aside>
+            <div class="shop-content">
+                <div class="filter-bar" id="filter-bar">
+                    <div class="sort-chips" id="sort-chips">
+                        ${SORT_OPTIONS.map(o => `
+                            <button class="sort-chip${o.value === (currentSort || '') ? ' active' : ''}"
+                                    data-sort="${o.value}">${o.label}</button>
+                        `).join('')}
+                    </div>
+                    <span class="result-count" id="result-count"></span>
+                </div>
+                <div class="product-grid" id="product-grid"></div>
+                <div class="pagination" id="pagination"></div>
+            </div>
+        </div>`;
 
-    await loadBrands();
-
-    document.getElementById('filter-apply').addEventListener('click', () => {
-        currentBrandId = document.getElementById('filter-brand').value || null;
-        currentSort = document.getElementById('filter-sort').value || null;
+    document.getElementById('sort-chips').addEventListener('click', (e) => {
+        const chip = e.target.closest('.sort-chip');
+        if (!chip) return;
+        document.querySelectorAll('.sort-chip').forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        currentSort = chip.dataset.sort || null;
         loadProducts(0);
     });
 
-    // restore filter state
-    if (currentBrandId) document.getElementById('filter-brand').value = currentBrandId;
-    if (currentSort) document.getElementById('filter-sort').value = currentSort;
+    document.getElementById('brand-search').addEventListener('input', (e) => {
+        filterBrandList(e.target.value.trim().toLowerCase());
+    });
 
+    await loadBrands();
     await loadProducts(currentPage);
+}
+
+function getChosung(str) {
+    const cho = ['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ',
+                 'ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+    const code = str.charCodeAt(0) - 0xAC00;
+    if (code < 0 || code > 11171) return str.charAt(0).toUpperCase();
+    return cho[Math.floor(code / 588)];
+}
+
+function sortBrands(brandList) {
+    return [...brandList].sort((a, b) => {
+        const aKor = a.name.charCodeAt(0) >= 0xAC00 && a.name.charCodeAt(0) <= 0xD7A3;
+        const bKor = b.name.charCodeAt(0) >= 0xAC00 && b.name.charCodeAt(0) <= 0xD7A3;
+        if (aKor && !bKor) return -1;
+        if (!aKor && bKor) return 1;
+        return a.name.localeCompare(b.name, aKor ? 'ko' : 'en');
+    });
 }
 
 async function loadBrands() {
     try {
         const data = await BrandApi.list(0, 200);
-        brands = data.items;
-        const sel = document.getElementById('filter-brand');
-        brands.forEach(b => {
-            sel.insertAdjacentHTML('beforeend', `<option value="${b.id}">${esc(b.name)}</option>`);
-        });
+        brands = sortBrands(data.items);
+        renderBrandList(brands);
     } catch { /* ignore */ }
+}
+
+function renderBrandList(list) {
+    const ul = document.getElementById('brand-list');
+    let html = `<li class="brand-item${currentBrandId === null ? ' active' : ''}" data-id="">전체</li>`;
+    list.forEach(b => {
+        html += `<li class="brand-item${currentBrandId == b.id ? ' active' : ''}" data-id="${b.id}">${esc(b.name)}</li>`;
+    });
+    ul.innerHTML = html;
+
+    ul.addEventListener('click', (e) => {
+        const item = e.target.closest('.brand-item');
+        if (!item) return;
+        ul.querySelectorAll('.brand-item').forEach(i => i.classList.remove('active'));
+        item.classList.add('active');
+        currentBrandId = item.dataset.id || null;
+        loadProducts(0);
+    });
+}
+
+function filterBrandList(query) {
+    const ul = document.getElementById('brand-list');
+    const items = ul.querySelectorAll('.brand-item');
+    items.forEach(item => {
+        if (!item.dataset.id) { item.style.display = ''; return; }
+        const name = item.textContent.toLowerCase();
+        item.style.display = name.includes(query) ? '' : 'none';
+    });
 }
 
 async function loadProducts(page) {
