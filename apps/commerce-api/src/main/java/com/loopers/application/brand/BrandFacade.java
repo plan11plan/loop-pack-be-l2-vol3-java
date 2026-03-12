@@ -9,6 +9,7 @@ import com.loopers.support.cache.CacheType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -33,13 +34,21 @@ public class BrandFacade {
         return BrandResult.from(brandModel);
     }
 
-    @CacheEvict(cacheNames = CacheType.Names.BRAND_LIST, allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(cacheNames = CacheType.Names.BRAND_LIST, allEntries = true),
+            @CacheEvict(cacheNames = CacheType.Names.PRODUCT_LIST_LATEST, allEntries = true),
+            @CacheEvict(cacheNames = CacheType.Names.PRODUCT_LIST_PRICE, allEntries = true),
+            @CacheEvict(cacheNames = CacheType.Names.PRODUCT_LIST_LIKES, allEntries = true)})
     @Transactional
     public void updateBrand(Long id, BrandCriteria.Update criteria) {
         brandService.update(id, criteria.name());
     }
 
-    @CacheEvict(cacheNames = CacheType.Names.BRAND_LIST, allEntries = true)
+    @Caching(evict = {
+            @CacheEvict(cacheNames = CacheType.Names.BRAND_LIST, allEntries = true),
+            @CacheEvict(cacheNames = CacheType.Names.PRODUCT_LIST_LATEST, allEntries = true),
+            @CacheEvict(cacheNames = CacheType.Names.PRODUCT_LIST_PRICE, allEntries = true),
+            @CacheEvict(cacheNames = CacheType.Names.PRODUCT_LIST_LIKES, allEntries = true)})
     @Transactional
     public void deleteBrand(Long id) {
         brandService.delete(id);

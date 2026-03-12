@@ -4,8 +4,10 @@ import com.loopers.domain.product.ImageType;
 import com.loopers.domain.product.ProductImageModel;
 import com.loopers.domain.product.ProductModel;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import org.springframework.data.domain.Page;
 
 public record ProductResult(
     Long id,
@@ -48,6 +50,20 @@ public record ProductResult(
         public static ImageResult from(ProductImageModel model) {
             return new ImageResult(
                     model.getId(), model.getImageUrl(), model.getImageType(), model.getSortOrder());
+        }
+    }
+
+    public record ListPage(
+        int page, int size, long totalElements, int totalPages,
+        List<ProductResult> items
+    ) {
+        public static ListPage from(Page<ProductResult> resultPage) {
+            return new ListPage(
+                    resultPage.getNumber(),
+                    resultPage.getSize(),
+                    resultPage.getTotalElements(),
+                    resultPage.getTotalPages(),
+                    new ArrayList<>(resultPage.getContent()));
         }
     }
 
