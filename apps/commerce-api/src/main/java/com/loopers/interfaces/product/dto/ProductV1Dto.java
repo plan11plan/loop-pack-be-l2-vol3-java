@@ -1,6 +1,7 @@
 package com.loopers.interfaces.product.dto;
 
 import com.loopers.application.product.dto.ProductResult;
+import com.loopers.application.product.dto.ProductResult.ListPage;
 import java.util.List;
 
 public class ProductV1Dto {
@@ -18,15 +19,16 @@ public class ProductV1Dto {
         List<ImageResponse> detailImages
     ) {
         public static DetailResponse from(ProductResult.DetailWithImages detail) {
+            ProductResult product = detail.product();
             return new DetailResponse(
-                    detail.product().id(),
-                    detail.product().brandId(),
-                    detail.product().brandName(),
-                    detail.product().name(),
-                    detail.product().price(),
-                    detail.product().stock(),
-                    detail.product().likeCount(),
-                    detail.product().thumbnailUrl(),
+                    product.id(),
+                    product.brandId(),
+                    product.brandName(),
+                    product.name(),
+                    product.price(),
+                    product.stock(),
+                    product.likeCount(),
+                    product.thumbnailUrl(),
                     detail.mainImages().stream().map(ImageResponse::from).toList(),
                     detail.detailImages().stream().map(ImageResponse::from).toList());
         }
@@ -46,6 +48,17 @@ public class ProductV1Dto {
         int totalPages,
         List<ListItem> items
     ) {
+        public static ListResponse from(ListPage listPage) {
+            return new ListResponse(
+                    listPage.page(),
+                    listPage.size(),
+                    listPage.totalElements(),
+                    listPage.totalPages(),
+                    listPage.items().stream()
+                            .map(ListItem::from)
+                            .toList());
+        }
+
         public record ListItem(
             Long id,
             Long brandId,
