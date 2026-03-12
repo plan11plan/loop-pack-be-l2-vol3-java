@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectMapper.DefaultTyping;
 import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
-import com.loopers.config.redis.RedisConfig;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -24,7 +23,7 @@ public class CacheConfig {
 
     @Bean
     public RedisCacheManager cacheManager(
-            @Qualifier("masterRedisConnectionFactory") LettuceConnectionFactory connectionFactory,
+            @Qualifier("redisConnectionMaster") LettuceConnectionFactory connectionFactory,
             ObjectMapper objectMapper) {
         ObjectMapper cacheMapper = objectMapper.copy()
                 .activateDefaultTyping(
