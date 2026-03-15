@@ -195,14 +195,57 @@ async function showOrderForm(product) {
             if (couponSel && couponSel.value) {
                 body.couponId = +couponSel.value;
             }
-            await OrderApi.create(body);
-            Toast.success('주문이 완료되었습니다!');
-            section.innerHTML = `
-                <div style="margin-top:24px;padding:24px;background:#ecfdf5;border-radius:12px;text-align:center">
-                    <div style="font-size:32px;margin-bottom:8px">✓</div>
-                    <p style="font-weight:600;color:#059669">주문이 완료되었습니다</p>
-                    <a href="#mypage" class="btn btn-sm btn-primary" style="margin-top:12px">주문 내역 보기</a>
-                </div>`;
+            const result = await OrderApi.create(body);
+            const popup = window.open(
+                `/shop/pg-checkout.html?orderId=${result.orderId}&amount=${result.totalPrice}`,
+                'pg-checkout', 'width=480,height=640');
+
+            if (!popup) {
+                Toast.error('팝업이 차단되었습니다. 팝업 허용 후 다시 시도해주세요.');
+                btn.disabled = false;
+                btn.textContent = '주문하기';
+                return;
+            }
+
+            btn.textContent = '결제 진행 중...';
+
+            const closedCheck = setInterval(() => {
+                if (popup.closed) {
+                    clearInterval(closedCheck);
+                    handleResult('FAILED');
+                }
+            }, 500);
+
+            let resultHandled = false;
+            function handleResult(status) {
+                if (resultHandled) return;
+                resultHandled = true;
+                clearInterval(closedCheck);
+                window.removeEventListener('message', handler);
+
+                if (status === 'SUCCESS') {
+                    section.innerHTML = `
+                        <div style="margin-top:24px;padding:24px;background:#ecfdf5;border-radius:12px;text-align:center">
+                            <div style="font-size:32px;margin-bottom:8px">✓</div>
+                            <p style="font-weight:600;color:#059669">결제가 완료되었습니다</p>
+                            <a href="#mypage" class="btn btn-sm btn-primary" style="margin-top:12px">주문 내역 보기</a>
+                        </div>`;
+                } else {
+                    section.innerHTML = `
+                        <div style="margin-top:24px;padding:24px;background:#fef2f2;border-radius:12px;text-align:center">
+                            <div style="font-size:32px;margin-bottom:8px">!</div>
+                            <p style="font-weight:600;color:#dc2626">결제가 완료되지 않았습니다</p>
+                            <p style="font-size:13px;color:#6b7280;margin-top:4px">주문 내역에서 다시 결제할 수 있습니다</p>
+                            <a href="#mypage" class="btn btn-sm btn-primary" style="margin-top:12px">주문 내역 보기</a>
+                        </div>`;
+                }
+            }
+
+            function handler(e) {
+                if (e.data?.type !== 'PG_PAYMENT_RESULT') return;
+                handleResult(e.data.status);
+            }
+            window.addEventListener('message', handler);
         } catch (e) {
             Toast.error(e.message);
             btn.disabled = false;

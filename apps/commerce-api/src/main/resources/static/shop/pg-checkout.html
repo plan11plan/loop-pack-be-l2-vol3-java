@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PG Payment - 결제</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f0f2f5;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .pg-header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+            padding: 20px 24px;
+            text-align: center;
+        }
+        .pg-header h1 { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+        .pg-header .subtitle { font-size: 12px; opacity: 0.7; }
+        .pg-amount {
+            background: white;
+            padding: 24px;
+            text-align: center;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .pg-amount .label { font-size: 13px; color: #6b7280; margin-bottom: 4px; }
+        .pg-amount .value { font-size: 32px; font-weight: 800; color: #1a1a2e; }
+        .pg-form { padding: 24px; flex: 1; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label {
+            display: block; font-size: 13px; font-weight: 600;
+            color: #374151; margin-bottom: 6px;
+        }
+        .form-group select,
+        .form-group input {
+            width: 100%; padding: 12px; border: 1px solid #d1d5db;
+            border-radius: 8px; font-size: 15px; outline: none;
+            transition: border-color 0.2s;
+        }
+        .form-group select:focus,
+        .form-group input:focus { border-color: #1a1a2e; }
+        .btn-pay {
+            width: 100%; padding: 14px; background: #1a1a2e; color: white;
+            border: none; border-radius: 8px; font-size: 16px; font-weight: 600;
+            cursor: pointer; transition: background 0.2s;
+        }
+        .btn-pay:hover { background: #16213e; }
+        .btn-pay:disabled { background: #9ca3af; cursor: not-allowed; }
+        .status-area {
+            margin-top: 16px; padding: 16px; border-radius: 8px;
+            text-align: center; font-size: 14px; display: none;
+        }
+        .status-processing { background: #eff6ff; color: #1d4ed8; }
+        .status-success { background: #ecfdf5; color: #059669; }
+        .status-fail { background: #fef2f2; color: #dc2626; }
+        .btn-retry {
+            margin-top: 12px; padding: 10px 20px; background: #dc2626;
+            color: white; border: none; border-radius: 8px; font-size: 14px; cursor: pointer;
+        }
+        .btn-retry:hover { background: #b91c1c; }
+        .btn-close {
+            margin-top: 12px; padding: 10px 20px; background: #059669;
+            color: white; border: none; border-radius: 8px; font-size: 14px; cursor: pointer;
+        }
+        .btn-close:hover { background: #047857; }
+        .pg-footer {
+            padding: 16px 24px; text-align: center; font-size: 11px;
+            color: #9ca3af; border-top: 1px solid #e5e7eb;
+        }
+        .spinner {
+            display: inline-block; width: 16px; height: 16px;
+            border: 2px solid #1d4ed8; border-top: 2px solid transparent;
+            border-radius: 50%; animation: spin 1s linear infinite;
+            vertical-align: middle; margin-right: 8px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="pg-header">
+        <h1>PG Payment Simulator</h1>
+        <div class="subtitle">테스트 결제 환경</div>
+    </div>
+
+    <div class="pg-amount">
+        <div class="label">결제 금액</div>
+        <div class="value" id="display-amount">0원</div>
+    </div>
+
+    <div class="pg-form" id="payment-form">
+        <div class="form-group">
+            <label>카드 종류</label>
+            <select id="card-type">
+                <option value="SAMSUNG">삼성카드</option>
+                <option value="KB">KB카드</option>
+                <option value="HYUNDAI">현대카드</option>
+                <option value="LOTTE">롯데카드</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>카드 번호</label>
+            <input id="card-no" type="text" placeholder="1234-5678-9012-3456" maxlength="19">
+        </div>
+        <button class="btn-pay" id="btn-pay">결제하기</button>
+        <div class="status-area" id="status-area"></div>
+    </div>
+
+    <div class="pg-footer">
+        PG Payment Simulator &copy; 2026 | 이 결제창은 테스트 용도입니다
+    </div>
+
+    <script type="module">
+        import { PaymentApi, OrderApi } from './js/api.js';
+
+        const params = new URLSearchParams(location.search);
+        const orderId = Number(params.get('orderId'));
+        const amount = Number(params.get('amount'));
+
+        if (!orderId || !amount) {
+            document.getElementById('payment-form').innerHTML =
+                '<p style="color:#dc2626;text-align:center;padding:40px 0">잘못된 접근입니다. 주문 정보가 없습니다.</p>';
+            document.getElementById('display-amount').textContent = '0원';
+        } else {
+            document.getElementById('display-amount').textContent = amount.toLocaleString() + '원';
+            initPaymentForm();
+        }
+
+        function initPaymentForm() {
+            let paymentCompleted = false;
+
+            // 팝업이 닫힐 때 부모 창에 FAILED 전송 (결제 미완료 상태에서 닫는 경우)
+            window.addEventListener('beforeunload', () => {
+                if (!paymentCompleted && window.opener) {
+                    window.opener.postMessage({
+                        type: 'PG_PAYMENT_RESULT',
+                        status: 'FAILED',
+                        orderId: orderId
+                    }, '*');
+                }
+            });
+
+            const btnPay = document.getElementById('btn-pay');
+            const statusArea = document.getElementById('status-area');
+            const cardNoInput = document.getElementById('card-no');
+
+            // 카드번호 자동 포맷 (xxxx-xxxx-xxxx-xxxx)
+            cardNoInput.addEventListener('input', (e) => {
+                let v = e.target.value.replace(/\D/g, '').substring(0, 16);
+                let formatted = v.match(/.{1,4}/g)?.join('-') || v;
+                e.target.value = formatted;
+            });
+
+            btnPay.addEventListener('click', async () => {
+                const cardType = document.getElementById('card-type').value;
+                const cardNo = cardNoInput.value.trim();
+
+                if (!cardNo || cardNo.replace(/-/g, '').length < 16) {
+                    showStatus('fail', '카드 번호 16자리를 입력해주세요.');
+                    return;
+                }
+
+                btnPay.disabled = true;
+                btnPay.textContent = '결제 처리 중...';
+                showStatus('processing', '<span class="spinner"></span>PG사에 결제를 요청하고 있습니다...');
+
+                try {
+                    await PaymentApi.request({ orderId, cardType, cardNo });
+                    showStatus('processing', '<span class="spinner"></span>결제 승인 처리 중입니다...');
+                    pollOrderStatus();
+                } catch (e) {
+                    showStatus('fail',
+                        e.message + '<br><button class="btn-retry" id="btn-retry">다시 시도</button>');
+                    document.getElementById('btn-retry').addEventListener('click', () => {
+                        btnPay.disabled = false;
+                        btnPay.textContent = '결제하기';
+                        statusArea.style.display = 'none';
+                    });
+                }
+            });
+
+            function pollOrderStatus() {
+                const maxAttempts = 15; // 2초 * 15 = 30초
+                let attempts = 0;
+
+                const interval = setInterval(async () => {
+                    attempts++;
+                    try {
+                        const order = await OrderApi.get(orderId);
+                        if (order.status === 'ORDERED') {
+                            clearInterval(interval);
+                            onPaymentComplete('SUCCESS');
+                        } else if (attempts >= maxAttempts) {
+                            clearInterval(interval);
+                            onPaymentComplete('TIMEOUT');
+                        }
+                    } catch {
+                        if (attempts >= maxAttempts) {
+                            clearInterval(interval);
+                            onPaymentComplete('TIMEOUT');
+                        }
+                    }
+                }, 2000);
+            }
+
+            function onPaymentComplete(status) {
+                paymentCompleted = true;
+                if (status === 'SUCCESS') {
+                    showStatus('success',
+                        '결제가 완료되었습니다!<br><button class="btn-close" id="btn-close">확인</button>');
+                } else {
+                    showStatus('fail',
+                        '처리 중입니다. 주문 내역에서 확인해주세요.<br>' +
+                        '<button class="btn-close" id="btn-close">닫기</button>');
+                }
+
+                document.getElementById('btn-close').addEventListener('click', () => window.close());
+
+                if (window.opener) {
+                    window.opener.postMessage({
+                        type: 'PG_PAYMENT_RESULT',
+                        status: status,
+                        orderId: orderId
+                    }, '*');
+                }
+            }
+
+            function showStatus(type, html) {
+                statusArea.className = 'status-area status-' + type;
+                statusArea.innerHTML = html;
+                statusArea.style.display = 'block';
+            }
+        }
+    </script>
+</body>
+</html>

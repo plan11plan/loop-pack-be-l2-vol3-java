@@ -1,4 +1,4 @@
-import { OrderApi, LikeApi, CouponApi, UserApi, ProductApi, PaymentApi } from '../api.js';
+import { OrderApi, LikeApi, CouponApi, UserApi, ProductApi } from '../api.js';
 import { Auth } from '../auth.js';
 
 let currentSection = 'orders';
@@ -314,67 +314,41 @@ async function loadProfile(el) {
     } catch (e) { el.innerHTML = `<h2>계정 설정</h2><p style="color:#dc2626">${esc(e.message)}</p>`; }
 }
 
-// === Payment Modal ===
-async function showPaymentModal(orderId, amount) {
-    Modal.open('결제하기', `
-        <div style="margin-bottom:20px;padding:16px;background:#f8fafc;border-radius:8px;text-align:center">
-            <div style="font-size:14px;color:#64748b">결제 금액</div>
-            <div style="font-size:28px;font-weight:800;color:#6366f1">${amount.toLocaleString()}원</div>
-        </div>
-        <div style="display:grid;gap:12px">
-            <div class="form-group">
-                <label>카드 종류</label>
-                <select id="pay-card-type" style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:8px">
-                    <option value="SAMSUNG">삼성카드</option>
-                    <option value="KB">KB카드</option>
-                    <option value="HYUNDAI">현대카드</option>
-                    <option value="LOTTE">롯데카드</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>카드 번호</label>
-                <input id="pay-card-no" type="text" placeholder="1234-5678-9012-3456" maxlength="19"
-                       style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:8px">
-            </div>
-            <button class="btn btn-primary" id="pay-submit-btn" style="width:100%;padding:12px;font-size:16px">
-                결제 요청
-            </button>
-            <div id="pay-status" style="text-align:center;font-size:14px;color:#64748b"></div>
-        </div>`);
+// === Payment (PG Popup) ===
+function showPaymentModal(orderId, amount) {
+    const popup = window.open(
+        `/shop/pg-checkout.html?orderId=${orderId}&amount=${amount}`,
+        'pg-checkout', 'width=480,height=640');
 
-    document.getElementById('pay-submit-btn').addEventListener('click', async () => {
-        const cardType = document.getElementById('pay-card-type').value;
-        const cardNo = document.getElementById('pay-card-no').value.trim();
-        const statusEl = document.getElementById('pay-status');
-        const btn = document.getElementById('pay-submit-btn');
+    if (!popup) {
+        Toast.error('팝업이 차단되었습니다. 팝업 허용 후 다시 시도해주세요.');
+        return;
+    }
 
-        if (!cardNo || cardNo.length < 16) {
-            Toast.error('카드 번호를 정확히 입력해주세요');
-            return;
+    let resultHandled = false;
+    function handleResult(status) {
+        if (resultHandled) return;
+        resultHandled = true;
+        clearInterval(closedCheck);
+        window.removeEventListener('message', handler);
+        loadOrders(document.getElementById('mypage-content'));
+        if (status === 'SUCCESS') {
+            Toast.success('결제가 완료되었습니다!');
         }
+    }
 
-        btn.disabled = true;
-        btn.textContent = '결제 처리 중...';
-        statusEl.textContent = 'PG사에 결제를 요청하고 있습니다...';
+    function handler(e) {
+        if (e.data?.type !== 'PG_PAYMENT_RESULT') return;
+        handleResult(e.data.status);
+    }
+    window.addEventListener('message', handler);
 
-        try {
-            const result = await PaymentApi.request({ orderId, cardType, cardNo });
-            statusEl.innerHTML = `
-                <div style="color:#059669;font-weight:600">결제 요청 완료!</div>
-                <div style="margin-top:4px;color:#94a3b8;font-size:12px">
-                    PG에서 비동기 처리 중입니다. 잠시 후 주문 내역을 확인해주세요.
-                </div>`;
-            btn.textContent = '요청 완료';
-            setTimeout(() => {
-                Modal.close();
-                loadOrders(document.getElementById('mypage-content'));
-            }, 2000);
-        } catch (e) {
-            statusEl.innerHTML = `<div style="color:#dc2626">${esc(e.message)}</div>`;
-            btn.disabled = false;
-            btn.textContent = '다시 시도';
+    const closedCheck = setInterval(() => {
+        if (popup.closed) {
+            clearInterval(closedCheck);
+            handleResult('FAILED');
         }
-    });
+    }, 500);
 }
 
 // === Helpers ===
