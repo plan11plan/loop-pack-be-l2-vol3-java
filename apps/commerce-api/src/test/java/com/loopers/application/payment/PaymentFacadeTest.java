@@ -1,6 +1,7 @@
 package com.loopers.application.payment;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -18,6 +19,7 @@ import com.loopers.domain.payment.PaymentStatus;
 import com.loopers.domain.payment.PgPaymentClient;
 import com.loopers.domain.payment.PgPaymentRequest;
 import com.loopers.domain.payment.PgPaymentResult;
+import com.loopers.support.error.CoreException;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import org.junit.jupiter.api.DisplayName;
@@ -63,6 +65,67 @@ class PaymentFacadeTest {
             verify(paymentTransactionService).createOrRetryPayment(any());
             verify(pgPaymentClient).requestPayment(any(PgPaymentRequest.class));
             verify(paymentTransactionService).savePaymentKey(1L, "20260316:TR:abc");
+        }
+
+        @DisplayName("PG 서버가 불안정하면 PG_SERVICE_UNAVAILABLE 예외가 발생한다.")
+        @Test
+        void requestPayment_whenPgUnavailable_throwsException() {
+            // arrange
+            PaymentModel payment = mockPayment(1L, 1L, 50000, PaymentStatus.PENDING);
+            when(paymentTransactionService.createOrRetryPayment(any()))
+                    .thenReturn(payment);
+            when(pgPaymentClient.requestPayment(any(PgPaymentRequest.class)))
+                    .thenReturn(new PgPaymentResult(false, null, "PG_UNAVAILABLE",
+                            "결제 서비스가 일시적으로 불안정합니다. 잠시 후 다시 시도해주세요."));
+
+            // act & assert
+            assertThatThrownBy(() -> paymentFacade.requestPayment(
+                    100L,
+                    new PaymentCriteria.Create(1L, CardType.SAMSUNG, "1234-5678-9814-1451")))
+                    .isInstanceOf(CoreException.class)
+                    .hasMessageContaining("결제 서비스가 일시적으로 불안정합니다");
+            verify(paymentTransactionService).failLastTransaction(
+                    eq(1L), eq("PG_REQUEST_FAILED"), anyString());
+        }
+
+        @DisplayName("PG 요청 파라미터가 잘못되면 PG_REQUEST_FAILED 예외가 발생한다.")
+        @Test
+        void requestPayment_whenPgBadRequest_throwsException() {
+            // arrange
+            PaymentModel payment = mockPayment(1L, 1L, 50000, PaymentStatus.PENDING);
+            when(paymentTransactionService.createOrRetryPayment(any()))
+                    .thenReturn(payment);
+            when(pgPaymentClient.requestPayment(any(PgPaymentRequest.class)))
+                    .thenReturn(new PgPaymentResult(false, null, "PG_BAD_REQUEST",
+                            "카드 번호는 xxxx-xxxx-xxxx-xxxx 형식이어야 합니다."));
+
+            // act & assert
+            assertThatThrownBy(() -> paymentFacade.requestPayment(
+                    100L,
+                    new PaymentCriteria.Create(1L, CardType.SAMSUNG, "invalid")))
+                    .isInstanceOf(CoreException.class)
+                    .hasMessageContaining("카드 번호는 xxxx-xxxx-xxxx-xxxx 형식이어야 합니다");
+            verify(paymentTransactionService).failLastTransaction(
+                    eq(1L), eq("PG_REQUEST_FAILED"), anyString());
+        }
+
+        @DisplayName("PG 연결이 실패하면 PG_SERVICE_UNAVAILABLE 예외가 발생한다.")
+        @Test
+        void requestPayment_whenPgConnectionFailed_throwsException() {
+            // arrange
+            PaymentModel payment = mockPayment(1L, 1L, 50000, PaymentStatus.PENDING);
+            when(paymentTransactionService.createOrRetryPayment(any()))
+                    .thenReturn(payment);
+            when(pgPaymentClient.requestPayment(any(PgPaymentRequest.class)))
+                    .thenReturn(new PgPaymentResult(false, null, "PG_UNAVAILABLE",
+                            "결제 서비스에 연결할 수 없습니다. 잠시 후 다시 시도해주세요."));
+
+            // act & assert
+            assertThatThrownBy(() -> paymentFacade.requestPayment(
+                    100L,
+                    new PaymentCriteria.Create(1L, CardType.SAMSUNG, "1234-5678-9814-1451")))
+                    .isInstanceOf(CoreException.class)
+                    .hasMessageContaining("결제 서비스에 연결할 수 없습니다");
         }
     }
 
