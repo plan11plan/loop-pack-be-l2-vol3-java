@@ -27,6 +27,14 @@ public class FakePaymentRepository implements PaymentRepository {
                 .findFirst();
     }
 
+    @Override
+    public Optional<PaymentModel> findByTransactionPaymentKey(String paymentKey) {
+        return store.values().stream()
+                .filter(p -> p.getTransactions().stream()
+                        .anyMatch(tx -> paymentKey.equals(tx.getPaymentKey())))
+                .findFirst();
+    }
+
     private void setId(PaymentModel payment, Long id) {
         try {
             Field field = payment.getClass().getSuperclass().getDeclaredField("id");

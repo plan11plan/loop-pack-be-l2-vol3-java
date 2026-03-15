@@ -12,19 +12,15 @@ import org.springframework.transaction.annotation.Transactional;
 public class PaymentService {
 
     private final PaymentRepository paymentRepository;
-    private final PaymentTransactionRepository transactionRepository;
 
     @Transactional
     public PaymentModel createPayment(Long orderId, int amount,
                                       CardType cardType, String maskedCardNo,
                                       String pgProvider) {
-        PaymentModel payment = paymentRepository.save(
-                PaymentModel.create(orderId, amount, cardType, maskedCardNo));
-        PaymentTransactionModel transaction = PaymentTransactionModel.create(
-                payment, pgProvider, LocalDateTime.now());
-        payment.addTransaction(transaction);
-        transactionRepository.save(transaction);
-        return payment;
+        PaymentModel payment = PaymentModel.create(orderId, amount, cardType, maskedCardNo);
+        payment.addTransaction(
+                PaymentTransactionModel.create(payment, pgProvider, LocalDateTime.now()));
+        return paymentRepository.save(payment);
     }
 
     @Transactional
@@ -35,25 +31,23 @@ public class PaymentService {
             throw new CoreException(PaymentErrorCode.PAYMENT_IN_PROGRESS);
         }
         payment.updateCardInfo(cardType, maskedCardNo);
-        PaymentTransactionModel transaction = PaymentTransactionModel.create(
-                payment, pgProvider, LocalDateTime.now());
-        payment.addTransaction(transaction);
-        transactionRepository.save(transaction);
+        payment.addTransaction(
+                PaymentTransactionModel.create(payment, pgProvider, LocalDateTime.now()));
         return payment;
     }
 
     @Transactional
     public PaymentModel handleCallback(String paymentKey, String pgStatus,
                                        String failureCode, String failureMessage) {
-        PaymentTransactionModel transaction = transactionRepository.findByPaymentKey(paymentKey)
+        PaymentModel payment = paymentRepository.findByTransactionPaymentKey(paymentKey)
                 .orElseThrow(() -> new CoreException(PaymentErrorCode.TRANSACTION_NOT_FOUND));
 
-        if (transaction.isCompleted()) {
-            return transaction.getPayment();
-        }
+        PaymentTransactionModel transaction = payment.getTransactions().stream()
+                .filter(tx -> paymentKey.equals(tx.getPaymentKey()))
+                .findFirst()
+                .orElseThrow(() -> new CoreException(PaymentErrorCode.TRANSACTION_NOT_FOUND));
 
-        PaymentModel payment = transaction.getPayment();
-        if (payment.isApproved() || payment.isFailed()) {
+        if (transaction.isCompleted() || payment.isApproved() || payment.isFailed()) {
             return payment;
         }
 
@@ -68,8 +62,7 @@ public class PaymentService {
 
     @Transactional
     public void failPayment(Long orderId) {
-        PaymentModel payment = getByOrderIdOrThrow(orderId);
-        payment.fail();
+        getByOrderIdOrThrow(orderId).fail();
     }
 
     @Transactional(readOnly = true)

@@ -14,13 +14,11 @@ class PaymentServiceTest {
 
     private PaymentService paymentService;
     private FakePaymentRepository paymentRepository;
-    private FakePaymentTransactionRepository transactionRepository;
 
     @BeforeEach
     void setUp() {
         paymentRepository = new FakePaymentRepository();
-        transactionRepository = new FakePaymentTransactionRepository();
-        paymentService = new PaymentService(paymentRepository, transactionRepository);
+        paymentService = new PaymentService(paymentRepository);
     }
 
     @DisplayName("결제를 생성할 때, ")

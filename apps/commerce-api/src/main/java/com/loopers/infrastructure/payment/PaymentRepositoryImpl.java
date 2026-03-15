@@ -21,4 +21,9 @@ public class PaymentRepositoryImpl implements PaymentRepository {
     public Optional<PaymentModel> findByOrderId(Long orderId) {
         return paymentJpaRepository.findByOrderIdAndDeletedAtIsNull(orderId);
     }
+
+    @Override
+    public Optional<PaymentModel> findByTransactionPaymentKey(String paymentKey) {
+        return paymentJpaRepository.findByTransactionPaymentKeyAndDeletedAtIsNull(paymentKey);
+    }
 }

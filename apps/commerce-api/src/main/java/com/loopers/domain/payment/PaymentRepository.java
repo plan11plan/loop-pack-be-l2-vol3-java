@@ -7,4 +7,6 @@ public interface PaymentRepository {
     PaymentModel save(PaymentModel payment);
 
     Optional<PaymentModel> findByOrderId(Long orderId);
+
+    Optional<PaymentModel> findByTransactionPaymentKey(String paymentKey);
 }
