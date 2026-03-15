@@ -36,10 +36,12 @@ public class PaymentFacade {
                         CALLBACK_URL,
                         String.valueOf(userId)));
 
-        // TX: paymentKey 저장
         if (pgResult.requested()) {
             paymentTransactionService.savePaymentKey(
                     payment.getOrderId(), pgResult.transactionKey());
+        } else {
+            paymentTransactionService.failLastTransaction(
+                    payment.getOrderId(), "PG_REQUEST_FAILED", "PG 요청 실패");
         }
 
         return PaymentResult.from(payment);

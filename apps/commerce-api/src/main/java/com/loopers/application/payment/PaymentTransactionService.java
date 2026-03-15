@@ -4,6 +4,7 @@ import com.loopers.domain.order.OrderModel;
 import com.loopers.domain.order.OrderService;
 import com.loopers.domain.payment.PaymentErrorCode;
 import com.loopers.domain.payment.PaymentModel;
+import com.loopers.domain.payment.PaymentRepository;
 import com.loopers.domain.payment.PaymentService;
 import com.loopers.support.error.CoreException;
 import java.util.Optional;
@@ -19,6 +20,7 @@ public class PaymentTransactionService {
 
     private final OrderService orderService;
     private final PaymentService paymentService;
+    private final PaymentRepository paymentRepository;
 
     @Transactional
     public PaymentModel createOrRetryPayment(PaymentCriteria.Create criteria) {
@@ -40,13 +42,25 @@ public class PaymentTransactionService {
     }
 
     @Transactional
-    public void savePaymentKey(Long orderId, String transactionKey) {
-        paymentService.findByOrderId(orderId)
+    public void savePaymentKey(Long orderId, String paymentKey) {
+        paymentRepository.findByOrderId(orderId)
                 .ifPresent(payment -> {
                     if (!payment.getTransactions().isEmpty()) {
                         payment.getTransactions()
                                 .get(payment.getTransactions().size() - 1)
-                                .assignPaymentKey(transactionKey);
+                                .assignPaymentKey(paymentKey);
+                    }
+                });
+    }
+
+    @Transactional
+    public void failLastTransaction(Long orderId, String failureCode, String failureMessage) {
+        paymentRepository.findByOrderId(orderId)
+                .ifPresent(payment -> {
+                    if (!payment.getTransactions().isEmpty()) {
+                        payment.getTransactions()
+                                .get(payment.getTransactions().size() - 1)
+                                .fail(failureCode, failureMessage);
                     }
                 });
     }

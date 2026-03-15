@@ -34,7 +34,8 @@ public class PgSimulatorProcessManager {
             ProcessBuilder pb = new ProcessBuilder(
                     java, "-Xms256m", "-Xmx512m",
                     "-jar", jar.getAbsolutePath(),
-                    "--spring.profiles.active=local")
+                    "--spring.profiles.active=local",
+                    "--datasource.mysql-jpa.main.jdbc-url=jdbc:mysql://localhost:3306/paymentgateway")
                     .redirectErrorStream(true)
                     .inheritIO();
 
