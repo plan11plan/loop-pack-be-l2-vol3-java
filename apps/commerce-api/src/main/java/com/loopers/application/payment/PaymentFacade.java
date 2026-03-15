@@ -1,11 +1,13 @@
 package com.loopers.application.payment;
 
 import com.loopers.domain.order.OrderService;
+import com.loopers.domain.payment.PaymentErrorCode;
 import com.loopers.domain.payment.PaymentModel;
 import com.loopers.domain.payment.PaymentService;
 import com.loopers.domain.payment.PgPaymentClient;
 import com.loopers.domain.payment.PgPaymentRequest;
 import com.loopers.domain.payment.PgPaymentResult;
+import com.loopers.support.error.CoreException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -39,12 +41,21 @@ public class PaymentFacade {
         if (pgResult.requested()) {
             paymentTransactionService.savePaymentKey(
                     payment.getOrderId(), pgResult.transactionKey());
-        } else {
-            paymentTransactionService.failLastTransaction(
-                    payment.getOrderId(), "PG_REQUEST_FAILED", "PG 요청 실패");
+            return PaymentResult.from(payment);
         }
 
-        return PaymentResult.from(payment);
+        paymentTransactionService.failLastTransaction(
+                payment.getOrderId(), "PG_REQUEST_FAILED", pgResult.errorMessage());
+        PaymentErrorCode errorCode = "PG_UNAVAILABLE".equals(pgResult.status())
+                ? PaymentErrorCode.PG_SERVICE_UNAVAILABLE
+                : PaymentErrorCode.PG_REQUEST_FAILED;
+        throw new CoreException(errorCode, pgResult.errorMessage());
+    }
+
+    public PaymentStatusResult getPaymentStatus(Long orderId) {
+        PaymentModel payment = paymentService.findByOrderId(orderId)
+                .orElseThrow(() -> new CoreException(PaymentErrorCode.PAYMENT_NOT_FOUND));
+        return PaymentStatusResult.from(payment);
     }
 
     public void handleCallback(String transactionKey, String pgStatus,

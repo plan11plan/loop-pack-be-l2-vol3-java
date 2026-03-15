@@ -56,6 +56,7 @@ public class PaymentService {
             payment.approve(LocalDateTime.now());
         } else {
             transaction.fail(failureCode, failureMessage);
+            payment.fail();
         }
         return payment;
     }

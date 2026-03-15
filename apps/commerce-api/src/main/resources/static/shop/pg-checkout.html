@@ -486,7 +486,7 @@
                         '<div class="spinner"></div>' +
                         '<div class="status-msg">결제 승인 처리 중</div>' +
                         '<div class="status-sub">Approving payment...</div>');
-                    pollOrderStatus();
+                    pollPaymentResult();
                 } catch (e) {
                     showStatus('fail',
                         '<div class="status-icon">&times;</div>' +
@@ -500,16 +500,32 @@
                 }
             });
 
-            function pollOrderStatus() {
+            function pollPaymentResult() {
                 let attempts = 0;
                 const interval = setInterval(async () => {
                     attempts++;
                     try {
-                        const order = await OrderApi.get(orderId);
-                        if (order.status === 'ORDERED') {
+                        // 주문 상태와 결제 상태를 동시 체크
+                        const [order, paymentStatus] = await Promise.all([
+                            OrderApi.get(orderId).catch(() => null),
+                            PaymentApi.status(orderId).catch(() => null),
+                        ]);
+
+                        // 결제 성공 → 주문 ORDERED
+                        if (order && order.status === 'ORDERED') {
                             clearInterval(interval);
                             onComplete('SUCCESS');
-                        } else if (attempts >= 15) {
+                            return;
+                        }
+
+                        // 결제 실패 감지 (PG 콜백으로 FAILED 처리됨)
+                        if (paymentStatus && paymentStatus.paymentStatus === 'FAILED') {
+                            clearInterval(interval);
+                            onComplete('FAILED', paymentStatus.failureMessage);
+                            return;
+                        }
+
+                        if (attempts >= 15) {
                             clearInterval(interval);
                             onComplete('TIMEOUT');
                         }
@@ -522,13 +538,25 @@
                 }, 2000);
             }
 
-            function onComplete(status) {
+            function onComplete(status, failureMessage) {
                 if (status === 'SUCCESS') {
                     showStatus('success',
                         '<div class="status-icon">&#10003;</div>' +
                         '<div class="status-msg">결제가 완료되었습니다</div>' +
                         '<div class="status-sub">Payment completed</div>' +
                         '<a class="btn-link" href="/shop/index.html#mypage">View Orders</a>');
+                } else if (status === 'FAILED') {
+                    showStatus('fail',
+                        '<div class="status-icon">&times;</div>' +
+                        '<div class="status-msg">' + (failureMessage || '결제에 실패했습니다.') + '</div>' +
+                        '<button class="btn-link outline" id="btn-retry-after-fail" style="margin-right:8px">다시 시도</button>' +
+                        '<a class="btn-link" href="/shop/index.html#mypage">주문 내역</a>');
+                    document.getElementById('btn-retry-after-fail')?.addEventListener('click', () => {
+                        btnPay.disabled = false;
+                        btnPay.textContent = 'PAY NOW';
+                        btnPay.style.display = '';
+                        statusArea.style.display = 'none';
+                    });
                 } else {
                     showStatus('fail',
                         '<div class="status-icon">!</div>' +
@@ -536,7 +564,9 @@
                         '<div class="status-sub">주문 내역에서 확인해주세요</div>' +
                         '<a class="btn-link" href="/shop/index.html#mypage">View Orders</a>');
                 }
-                btnPay.style.display = 'none';
+                if (status !== 'FAILED') {
+                    btnPay.style.display = 'none';
+                }
             }
 
             function showStatus(type, html) {

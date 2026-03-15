@@ -2,6 +2,7 @@ package com.loopers.interfaces.payment;
 
 import com.loopers.application.payment.PaymentFacade;
 import com.loopers.application.payment.PaymentResult;
+import com.loopers.application.payment.PaymentStatusResult;
 import com.loopers.interfaces.api.ApiResponse;
 import com.loopers.interfaces.auth.Login;
 import com.loopers.interfaces.auth.LoginUser;
@@ -10,9 +11,11 @@ import com.loopers.interfaces.payment.dto.PaymentResponse;
 import com.loopers.interfaces.payment.dto.PgCallbackRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RequiredArgsConstructor
@@ -21,6 +24,14 @@ import org.springframework.web.bind.annotation.RestController;
 public class PaymentV1Controller {
 
     private final PaymentFacade paymentFacade;
+
+    @GetMapping("/status")
+    public ApiResponse<PaymentResponse.PaymentStatus> getPaymentStatus(
+            @Login LoginUser loginUser,
+            @RequestParam Long orderId) {
+        PaymentStatusResult result = paymentFacade.getPaymentStatus(orderId);
+        return ApiResponse.success(PaymentResponse.PaymentStatus.from(result));
+    }
 
     @PostMapping
     public ApiResponse<PaymentResponse.PaymentSummary> requestPayment(

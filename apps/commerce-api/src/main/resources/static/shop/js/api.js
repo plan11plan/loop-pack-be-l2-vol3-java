@@ -65,6 +65,7 @@ export const CouponApi = {
 // === Payments ===
 export const PaymentApi = {
     request: (data) => request('POST', '/api/v1/payments', data, true),
+    status: (orderId) => request('GET', `/api/v1/payments/status?orderId=${orderId}`, null, true),
 };
 
 // === Users ===
