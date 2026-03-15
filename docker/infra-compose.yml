@@ -13,6 +13,28 @@ services:
       - MYSQL_COLLATE=utf8mb4_general_ci
     volumes:
       - mysql-8-data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  pg-simulator:
+    build:
+      context: ./pg-simulator
+      dockerfile: Dockerfile
+    container_name: pg-simulator
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis-master:
+        condition: service_healthy
+    ports:
+      - "8082:8082"
+      - "8083:8083"
+    environment:
+      - TZ=Asia/Seoul
 
   redis-master:
     image: redis:7.0
