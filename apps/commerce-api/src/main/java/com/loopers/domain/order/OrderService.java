@@ -25,7 +25,7 @@ public class OrderService {
                         cmd.productId(), cmd.price(), cmd.quantity(),
                         cmd.productName(), cmd.brandName()))
                 .toList();
-        return orderRepository.save(OrderModel.create(userId, items));
+        return orderRepository.save(OrderModel.createPendingPayment(userId, items));
     }
 
     @Transactional

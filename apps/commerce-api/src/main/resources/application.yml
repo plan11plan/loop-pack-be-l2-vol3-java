@@ -40,6 +40,10 @@ spring:
         - file:apps/commerce-api/src/main/resources/static/
         - classpath:/static/
 
+pg-simulator:
+  base-url: http://localhost:8082
+  jar-path: docker/pg-simulator/pg-simulator.jar
+
 app:
   data-generator:
     enabled: false

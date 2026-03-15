@@ -3,7 +3,6 @@ package com.loopers.application.payment;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
@@ -11,9 +10,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.loopers.domain.order.OrderModel;
 import com.loopers.domain.order.OrderService;
-import com.loopers.domain.order.OrderStatus;
 import com.loopers.domain.payment.CardType;
 import com.loopers.domain.payment.PaymentModel;
 import com.loopers.domain.payment.PaymentService;
@@ -23,7 +20,6 @@ import com.loopers.domain.payment.PgPaymentRequest;
 import com.loopers.domain.payment.PgPaymentResult;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
-import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -38,6 +34,7 @@ class PaymentFacadeTest {
     @Mock OrderService orderService;
     @Mock PaymentService paymentService;
     @Mock PgPaymentClient pgPaymentClient;
+    @Mock PaymentTransactionService paymentTransactionService;
     @InjectMocks PaymentFacade paymentFacade;
 
     @DisplayName("결제를 요청할 때, ")
@@ -48,15 +45,9 @@ class PaymentFacadeTest {
         @Test
         void requestPayment_firstTime_createsPaymentAndCallsPg() {
             // arrange
-            OrderModel order = mockOrder(1L, 50000);
-            when(orderService.getByIdWithLock(1L)).thenReturn(order);
-            when(paymentService.findByOrderId(1L)).thenReturn(Optional.empty());
-
             PaymentModel payment = mockPayment(1L, 1L, 50000, PaymentStatus.PENDING);
-            when(paymentService.createPayment(
-                    eq(1L), eq(50000), eq(CardType.SAMSUNG),
-                    anyString(), anyString())).thenReturn(payment);
-
+            when(paymentTransactionService.createOrRetryPayment(any()))
+                    .thenReturn(payment);
             when(pgPaymentClient.requestPayment(any(PgPaymentRequest.class)))
                     .thenReturn(new PgPaymentResult(true, "20260316:TR:abc", "PENDING"));
 
@@ -69,10 +60,9 @@ class PaymentFacadeTest {
             assertAll(
                     () -> assertThat(result.paymentId()).isEqualTo(1L),
                     () -> assertThat(result.status()).isEqualTo("PENDING"));
-            verify(paymentService).createPayment(
-                    eq(1L), eq(50000), eq(CardType.SAMSUNG),
-                    anyString(), anyString());
+            verify(paymentTransactionService).createOrRetryPayment(any());
             verify(pgPaymentClient).requestPayment(any(PgPaymentRequest.class));
+            verify(paymentTransactionService).savePaymentKey(1L, "20260316:TR:abc");
         }
     }
 
@@ -112,16 +102,6 @@ class PaymentFacadeTest {
             // assert
             verify(orderService, never()).completeOrder(any());
         }
-    }
-
-    // === Mock 헬퍼 === //
-
-    private OrderModel mockOrder(Long orderId, int totalPrice) {
-        OrderModel order = org.mockito.Mockito.mock(OrderModel.class);
-        lenient().when(order.getId()).thenReturn(orderId);
-        lenient().when(order.isPendingPayment()).thenReturn(true);
-        lenient().when(order.getTotalPrice()).thenReturn(totalPrice);
-        return order;
     }
 
     private PaymentModel mockPayment(Long paymentId, Long orderId,

@@ -9,9 +9,10 @@ import com.loopers.domain.payment.PgTransactionDetail;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.reactive.function.client.WebClient;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
 
+@Slf4j
 public class PgPaymentRestClient implements PgPaymentClient {
 
     private final WebClient webClient;
@@ -45,7 +46,8 @@ public class PgPaymentRestClient implements PgPaymentClient {
                         data.path("status").asText());
             }
             return new PgPaymentResult(false, null, null);
-        } catch (WebClientResponseException e) {
+        } catch (Exception e) {
+            log.warn("PG 결제 요청 실패: {}", e.getMessage());
             return new PgPaymentResult(false, null, null);
         }
     }

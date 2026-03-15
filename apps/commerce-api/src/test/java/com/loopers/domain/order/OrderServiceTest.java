@@ -49,7 +49,7 @@ class OrderServiceTest {
                     () -> assertThat(order.getId()).isNotEqualTo(0L),
                     () -> assertThat(order.getUserId()).isEqualTo(1L),
                     () -> assertThat(order.getTotalPrice()).isEqualTo(50000),
-                    () -> assertThat(order.getStatus()).isEqualTo(OrderStatus.ORDERED),
+                    () -> assertThat(order.getStatus()).isEqualTo(OrderStatus.PENDING_PAYMENT),
                     () -> assertThat(order.getItems()).hasSize(1));
         }
 
@@ -193,7 +193,7 @@ class OrderServiceTest {
             assertAll(
                     () -> assertThat(result.orderFullyCancelled()).isFalse(),
                     () -> assertThat(order.getTotalPrice()).isEqualTo(30000),
-                    () -> assertThat(order.getStatus()).isEqualTo(OrderStatus.ORDERED));
+                    () -> assertThat(order.getStatus()).isEqualTo(OrderStatus.PENDING_PAYMENT));
         }
     }
 
@@ -233,7 +233,7 @@ class OrderServiceTest {
             // assert — 남은 20000 - 할인 5000 = 15000
             assertAll(
                     () -> assertThat(order.getTotalPrice()).isEqualTo(15000),
-                    () -> assertThat(order.getStatus()).isEqualTo(OrderStatus.ORDERED));
+                    () -> assertThat(order.getStatus()).isEqualTo(OrderStatus.PENDING_PAYMENT));
         }
     }
 }

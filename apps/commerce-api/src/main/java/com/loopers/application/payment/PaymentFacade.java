@@ -1,65 +1,45 @@
 package com.loopers.application.payment;
 
-import com.loopers.domain.order.OrderModel;
 import com.loopers.domain.order.OrderService;
-import com.loopers.domain.payment.PaymentErrorCode;
 import com.loopers.domain.payment.PaymentModel;
 import com.loopers.domain.payment.PaymentService;
 import com.loopers.domain.payment.PgPaymentClient;
 import com.loopers.domain.payment.PgPaymentRequest;
 import com.loopers.domain.payment.PgPaymentResult;
-import com.loopers.support.error.CoreException;
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class PaymentFacade {
 
-    private static final String PG_PROVIDER = "PG_SIMULATOR";
     private static final String CALLBACK_URL = "http://localhost:8080/api/v1/payments/callback";
 
     private final OrderService orderService;
     private final PaymentService paymentService;
     private final PgPaymentClient pgPaymentClient;
+    private final PaymentTransactionService paymentTransactionService;
 
-    @Transactional
     public PaymentResult requestPayment(Long userId, PaymentCriteria.Create criteria) {
-        OrderModel order = orderService.getByIdWithLock(criteria.orderId());
-        if (!order.isPendingPayment()) {
-            throw new CoreException(PaymentErrorCode.INVALID_ORDER_STATUS);
-        }
+        // TX-B: Payment 생성 (또는 재시도) — 별도 Bean이므로 TX 정상 적용
+        PaymentModel payment = paymentTransactionService.createOrRetryPayment(criteria);
 
-        String maskedCardNo = maskCardNo(criteria.cardNo());
-        Optional<PaymentModel> existing = paymentService.findByOrderId(criteria.orderId());
-
-        PaymentModel payment;
-        if (existing.isEmpty()) {
-            payment = paymentService.createPayment(
-                    criteria.orderId(), order.getTotalPrice(),
-                    criteria.cardType(), maskedCardNo, PG_PROVIDER);
-        } else {
-            payment = paymentService.retryPayment(
-                    criteria.orderId(), criteria.cardType(), maskedCardNo, PG_PROVIDER);
-        }
-
+        // TX 밖: PG 호출
         PgPaymentResult pgResult = pgPaymentClient.requestPayment(
                 new PgPaymentRequest(
-                        String.valueOf(payment.getOrderId()),
+                        String.format("%06d", payment.getOrderId()),
                         criteria.cardType().name(),
                         criteria.cardNo(),
                         payment.getAmount(),
                         CALLBACK_URL,
                         String.valueOf(userId)));
 
-        if (pgResult.requested() && !payment.getTransactions().isEmpty()) {
-            payment.getTransactions()
-                    .get(payment.getTransactions().size() - 1)
-                    .assignPaymentKey(pgResult.transactionKey());
+        // TX: paymentKey 저장
+        if (pgResult.requested()) {
+            paymentTransactionService.savePaymentKey(
+                    payment.getOrderId(), pgResult.transactionKey());
         }
 
         return PaymentResult.from(payment);
@@ -67,9 +47,11 @@ public class PaymentFacade {
 
     public void handleCallback(String transactionKey, String pgStatus,
                                String failureCode, String failureMessage) {
+        // TX-C: Payment 도메인 갱신
         PaymentModel payment = paymentService.handleCallback(
                 transactionKey, pgStatus, failureCode, failureMessage);
 
+        // TX-D: Order 도메인 갱신
         if (payment.isApproved()) {
             try {
                 orderService.completeOrder(payment.getOrderId());
@@ -78,12 +60,5 @@ public class PaymentFacade {
                         payment.getOrderId(), e);
             }
         }
-    }
-
-    private String maskCardNo(String cardNo) {
-        if (cardNo == null || cardNo.length() < 4) {
-            return cardNo;
-        }
-        return "****-****-****-" + cardNo.substring(cardNo.length() - 4);
     }
 }
