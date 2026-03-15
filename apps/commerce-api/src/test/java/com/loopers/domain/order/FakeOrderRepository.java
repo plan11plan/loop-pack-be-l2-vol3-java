@@ -49,6 +49,11 @@ public class FakeOrderRepository implements OrderRepository {
     }
 
     @Override
+    public Optional<OrderModel> findByIdWithLock(Long id) {
+        return findById(id);
+    }
+
+    @Override
     public Page<OrderModel> findAll(Pageable pageable) {
         List<OrderModel> all = new ArrayList<>(store.values());
 

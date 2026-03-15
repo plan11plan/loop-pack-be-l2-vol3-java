@@ -32,6 +32,11 @@ public class OrderRepositoryImpl implements OrderRepository {
     }
 
     @Override
+    public Optional<OrderModel> findByIdWithLock(Long id) {
+        return orderJpaRepository.findByIdWithLockAndDeletedAtIsNull(id);
+    }
+
+    @Override
     public Page<OrderModel> findAll(Pageable pageable) {
         return orderJpaRepository.findAll(pageable);
     }

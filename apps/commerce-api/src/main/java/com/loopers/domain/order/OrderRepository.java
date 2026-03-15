@@ -14,5 +14,7 @@ public interface OrderRepository {
 
     List<OrderModel> findAllByUserIdAndCreatedAtBetween(Long userId, ZonedDateTime startAt, ZonedDateTime endAt);
 
+    Optional<OrderModel> findByIdWithLock(Long id);
+
     Page<OrderModel> findAll(Pageable pageable);
 }

@@ -66,4 +66,22 @@ public class OrderService {
     public Page<OrderModel> getAllOrders(Pageable pageable) {
         return orderRepository.findAll(pageable);
     }
+
+    @Transactional
+    public OrderModel getByIdWithLock(Long id) {
+        return orderRepository.findByIdWithLock(id)
+                .orElseThrow(() -> new CoreException(OrderErrorCode.NOT_FOUND));
+    }
+
+    @Transactional
+    public void completeOrder(Long orderId) {
+        OrderModel order = getById(orderId);
+        order.completePayment();
+    }
+
+    @Transactional
+    public void cancelOrderByPaymentFailure(Long orderId) {
+        OrderModel order = getById(orderId);
+        order.cancelByPaymentFailure();
+    }
 }
