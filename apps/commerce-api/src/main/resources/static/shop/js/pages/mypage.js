@@ -1,4 +1,4 @@
-import { OrderApi, LikeApi, CouponApi, UserApi, ProductApi } from '../api.js';
+import { OrderApi, LikeApi, CouponApi, UserApi, ProductApi, PaymentApi } from '../api.js';
 import { Auth } from '../auth.js';
 
 let currentSection = 'orders';
@@ -73,13 +73,19 @@ async function loadOrders(el) {
                         <td>${o.discountAmount.toLocaleString()}원</td>
                         <td><span class="badge ${statusBadge(o.status)}">${statusLabel(o.status)}</span></td>
                         <td>${formatDate(o.createdAt)}</td>
-                        <td><button class="btn btn-sm btn-outline" data-order-id="${o.orderId}">상세</button></td>
+                        <td>
+                            ${o.status === 'PENDING_PAYMENT' ? `<button class="btn btn-sm btn-primary pay-btn" data-order-id="${o.orderId}" data-amount="${o.totalPrice}">결제</button>` : ''}
+                            <button class="btn btn-sm btn-outline" data-order-id="${o.orderId}" data-action="detail">상세</button>
+                        </td>
                     </tr>`).join('')}
                 </tbody>
             </table></div>`;
 
-        el.querySelectorAll('[data-order-id]').forEach(btn => {
+        el.querySelectorAll('[data-action="detail"]').forEach(btn => {
             btn.addEventListener('click', () => showOrderDetail(+btn.dataset.orderId));
+        });
+        el.querySelectorAll('.pay-btn').forEach(btn => {
+            btn.addEventListener('click', () => showPaymentModal(+btn.dataset.orderId, +btn.dataset.amount));
         });
     } catch (e) { el.innerHTML = `<h2>주문 내역</h2><p style="color:#dc2626">${esc(e.message)}</p>`; }
 }
@@ -93,8 +99,12 @@ async function showOrderDetail(orderId) {
                 <td>${esc(i.brandName)}</td>
                 <td>${i.orderPrice.toLocaleString()}원</td>
                 <td>${i.quantity}개</td>
-                <td>${o.status !== 'CANCELLED' ? `<button class="btn btn-sm btn-danger cancel-item-btn" data-oid="${o.orderId}" data-iid="${i.orderItemId}">취소</button>` : '-'}</td>
+                <td>${o.status === 'ORDERED' ? `<button class="btn btn-sm btn-danger cancel-item-btn" data-oid="${o.orderId}" data-iid="${i.orderItemId}">취소</button>` : '-'}</td>
             </tr>`).join('');
+
+        const paymentBtn = o.status === 'PENDING_PAYMENT'
+            ? `<button class="btn btn-primary modal-pay-btn" data-oid="${o.orderId}" data-amount="${o.totalPrice}" style="margin-top:16px;width:100%">결제하기</button>`
+            : '';
 
         Modal.open(`주문 #${o.orderId} 상세`, `
             <div style="margin-bottom:16px">
@@ -104,8 +114,15 @@ async function showOrderDetail(orderId) {
             <div class="table-wrap"><table>
                 <thead><tr><th>상품</th><th>브랜드</th><th>가격</th><th>수량</th><th></th></tr></thead>
                 <tbody>${itemRows}</tbody>
-            </table></div>`);
+            </table></div>
+            ${paymentBtn}`);
 
+        document.querySelectorAll('.modal-pay-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                Modal.close();
+                showPaymentModal(+btn.dataset.oid, +btn.dataset.amount);
+            });
+        });
         document.querySelectorAll('.cancel-item-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
                 try {
@@ -297,14 +314,85 @@ async function loadProfile(el) {
     } catch (e) { el.innerHTML = `<h2>계정 설정</h2><p style="color:#dc2626">${esc(e.message)}</p>`; }
 }
 
+// === Payment Modal ===
+async function showPaymentModal(orderId, amount) {
+    Modal.open('결제하기', `
+        <div style="margin-bottom:20px;padding:16px;background:#f8fafc;border-radius:8px;text-align:center">
+            <div style="font-size:14px;color:#64748b">결제 금액</div>
+            <div style="font-size:28px;font-weight:800;color:#6366f1">${amount.toLocaleString()}원</div>
+        </div>
+        <div style="display:grid;gap:12px">
+            <div class="form-group">
+                <label>카드 종류</label>
+                <select id="pay-card-type" style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:8px">
+                    <option value="SAMSUNG">삼성카드</option>
+                    <option value="KB">KB카드</option>
+                    <option value="HYUNDAI">현대카드</option>
+                    <option value="LOTTE">롯데카드</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>카드 번호</label>
+                <input id="pay-card-no" type="text" placeholder="1234-5678-9012-3456" maxlength="19"
+                       style="width:100%;padding:10px;border:1px solid #d1d5db;border-radius:8px">
+            </div>
+            <button class="btn btn-primary" id="pay-submit-btn" style="width:100%;padding:12px;font-size:16px">
+                결제 요청
+            </button>
+            <div id="pay-status" style="text-align:center;font-size:14px;color:#64748b"></div>
+        </div>`);
+
+    document.getElementById('pay-submit-btn').addEventListener('click', async () => {
+        const cardType = document.getElementById('pay-card-type').value;
+        const cardNo = document.getElementById('pay-card-no').value.trim();
+        const statusEl = document.getElementById('pay-status');
+        const btn = document.getElementById('pay-submit-btn');
+
+        if (!cardNo || cardNo.length < 16) {
+            Toast.error('카드 번호를 정확히 입력해주세요');
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = '결제 처리 중...';
+        statusEl.textContent = 'PG사에 결제를 요청하고 있습니다...';
+
+        try {
+            const result = await PaymentApi.request({ orderId, cardType, cardNo });
+            statusEl.innerHTML = `
+                <div style="color:#059669;font-weight:600">결제 요청 완료!</div>
+                <div style="margin-top:4px;color:#94a3b8;font-size:12px">
+                    PG에서 비동기 처리 중입니다. 잠시 후 주문 내역을 확인해주세요.
+                </div>`;
+            btn.textContent = '요청 완료';
+            setTimeout(() => {
+                Modal.close();
+                loadOrders(document.getElementById('mypage-content'));
+            }, 2000);
+        } catch (e) {
+            statusEl.innerHTML = `<div style="color:#dc2626">${esc(e.message)}</div>`;
+            btn.disabled = false;
+            btn.textContent = '다시 시도';
+        }
+    });
+}
+
 // === Helpers ===
 function statusBadge(s) {
-    if (s === 'COMPLETED' || s === 'CONFIRMED') return 'badge-green';
+    if (s === 'ORDERED') return 'badge-green';
     if (s === 'CANCELLED') return 'badge-red';
+    if (s === 'PENDING_PAYMENT') return 'badge-yellow';
     return 'badge-gray';
 }
 function statusLabel(s) {
-    const map = { CREATED: '주문완료', COMPLETED: '처리완료', CONFIRMED: '확정', CANCELLED: '취소됨' };
+    const map = {
+        PENDING_PAYMENT: '결제 대기',
+        ORDERED: '결제 완료',
+        CANCELLED: '취소됨',
+        CREATED: '주문완료',
+        COMPLETED: '처리완료',
+        CONFIRMED: '확정',
+    };
     return map[s] || s;
 }
 function couponStatusLabel(s) {
