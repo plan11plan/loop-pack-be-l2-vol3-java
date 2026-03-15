@@ -539,6 +539,9 @@
             }
 
             function onComplete(status, failureMessage) {
+                // 결제 완료/실패 시 pendingOrder 정리
+                sessionStorage.removeItem('pendingOrder');
+
                 if (status === 'SUCCESS') {
                     showStatus('success',
                         '<div class="status-icon">&#10003;</div>' +

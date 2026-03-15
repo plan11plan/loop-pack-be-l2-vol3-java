@@ -147,6 +147,12 @@ function showOrderForm(product) {
             const result = await OrderApi.create({
                 items: [{ productId: product.id, quantity, expectedPrice: product.price }],
             });
+            // 주문 생성 후 sessionStorage에 저장 (뒤로가기 시 중복 주문 방지)
+            sessionStorage.setItem('pendingOrder', JSON.stringify({
+                orderId: result.orderId,
+                amount: result.totalPrice,
+                productId: product.id,
+            }));
             location.href = `/shop/pg-checkout.html?orderId=${result.orderId}&amount=${result.totalPrice}&returnUrl=${encodeURIComponent('/shop/index.html#product/' + product.id)}`;
         } catch (e) {
             Toast.error(e.message);
@@ -156,13 +162,38 @@ function showOrderForm(product) {
     });
 }
 
-// bfcache 복원 시 버튼 상태 리셋 (뒤로가기 대응)
+function showPendingOrderUI(section, orderBtn, pendingOrder) {
+    if (orderBtn) orderBtn.style.display = 'none';
+    section.innerHTML = `
+        <div class="order-form" style="text-align:center">
+            <p style="font-size:13px;color:#999;margin-bottom:16px">결제 대기 중인 주문이 있습니다</p>
+            <a class="btn btn-primary btn-lg" style="width:100%;text-decoration:none"
+               href="/shop/pg-checkout.html?orderId=${pendingOrder.orderId}&amount=${pendingOrder.amount}&returnUrl=${encodeURIComponent('/shop/index.html#product/' + pendingOrder.productId)}">
+                결제 계속하기
+            </a>
+            <button class="btn btn-outline btn-sm" style="width:100%;margin-top:8px" id="new-order-btn">
+                새로 주문하기
+            </button>
+        </div>`;
+    document.getElementById('new-order-btn').addEventListener('click', () => {
+        sessionStorage.removeItem('pendingOrder');
+        if (orderBtn) { orderBtn.style.display = ''; orderBtn.click(); }
+    });
+}
+
+// bfcache 복원 시 중복 주문 방지
 window.addEventListener('pageshow', (e) => {
     if (e.persisted) {
-        const btn = document.getElementById('place-order-btn');
-        if (btn) { btn.disabled = false; btn.textContent = '주문하기'; }
+        const section = document.getElementById('order-section');
         const orderBtn = document.getElementById('order-btn');
-        if (orderBtn) orderBtn.style.display = '';
+        const pending = sessionStorage.getItem('pendingOrder');
+
+        if (pending && section) {
+            showPendingOrderUI(section, orderBtn, JSON.parse(pending));
+        } else {
+            if (orderBtn) orderBtn.style.display = '';
+            if (section) section.innerHTML = '';
+        }
     }
 });
 
