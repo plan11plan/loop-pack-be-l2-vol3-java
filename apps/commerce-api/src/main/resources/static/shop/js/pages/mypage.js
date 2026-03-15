@@ -314,41 +314,9 @@ async function loadProfile(el) {
     } catch (e) { el.innerHTML = `<h2>계정 설정</h2><p style="color:#dc2626">${esc(e.message)}</p>`; }
 }
 
-// === Payment (PG Popup) ===
+// === Payment (PG Checkout Page) ===
 function showPaymentModal(orderId, amount) {
-    const popup = window.open(
-        `/shop/pg-checkout.html?orderId=${orderId}&amount=${amount}`,
-        'pg-checkout', 'width=480,height=640');
-
-    if (!popup) {
-        Toast.error('팝업이 차단되었습니다. 팝업 허용 후 다시 시도해주세요.');
-        return;
-    }
-
-    let resultHandled = false;
-    function handleResult(status) {
-        if (resultHandled) return;
-        resultHandled = true;
-        clearInterval(closedCheck);
-        window.removeEventListener('message', handler);
-        loadOrders(document.getElementById('mypage-content'));
-        if (status === 'SUCCESS') {
-            Toast.success('결제가 완료되었습니다!');
-        }
-    }
-
-    function handler(e) {
-        if (e.data?.type !== 'PG_PAYMENT_RESULT') return;
-        handleResult(e.data.status);
-    }
-    window.addEventListener('message', handler);
-
-    const closedCheck = setInterval(() => {
-        if (popup.closed) {
-            clearInterval(closedCheck);
-            handleResult('FAILED');
-        }
-    }, 500);
+    location.href = `/shop/pg-checkout.html?orderId=${orderId}&amount=${amount}&returnUrl=${encodeURIComponent('/shop/index.html#mypage')}`;
 }
 
 // === Helpers ===
