@@ -3,148 +3,327 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PG Payment - 결제</title>
+    <title>ORDER / PAYMENT</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: #f5f5f5;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #fff;
+            color: #000;
             min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
         }
-        .checkout-container {
-            max-width: 520px;
-            margin: 0 auto;
-            min-height: 100vh;
-            background: white;
-            box-shadow: 0 0 20px rgba(0,0,0,0.05);
-        }
-        .checkout-header {
-            background: #1a1a2e;
-            color: white;
-            padding: 16px 24px;
+
+        /* Header */
+        .header {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: #fff;
+            border-bottom: 1px solid #000;
             display: flex;
             align-items: center;
-            gap: 12px;
+            justify-content: space-between;
+            padding: 0 20px;
+            height: 52px;
         }
-        .checkout-header .back-btn {
-            color: white;
-            text-decoration: none;
-            font-size: 20px;
-            cursor: pointer;
+        .header-back {
             background: none;
             border: none;
-            padding: 4px 8px;
+            font-size: 22px;
+            cursor: pointer;
+            color: #000;
+            padding: 8px 0;
+            line-height: 1;
         }
-        .checkout-header h1 { font-size: 16px; font-weight: 600; }
-        .checkout-amount {
-            padding: 32px 24px;
+        .header-title {
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+        }
+        .header-spacer { width: 30px; }
+
+        /* Layout */
+        .checkout-wrap {
+            max-width: 640px;
+            margin: 0 auto;
+        }
+
+        /* Section */
+        .section {
+            border-bottom: 1px solid #e5e5e5;
+        }
+        .section-header {
+            padding: 20px 20px 0;
+        }
+        .section-title {
+            font-size: 11px;
+            font-weight: 500;
+            letter-spacing: 1.2px;
+            text-transform: uppercase;
+            color: #999;
+        }
+        .section-body {
+            padding: 16px 20px 24px;
+        }
+
+        /* Order Summary */
+        .order-summary {
+            padding: 28px 20px;
+            border-bottom: 1px solid #e5e5e5;
+        }
+        .order-number {
+            font-size: 11px;
+            color: #999;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+        .order-amount-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+        .order-amount-label {
+            font-size: 13px;
+            font-weight: 400;
+            color: #666;
+        }
+        .order-amount-value {
+            font-size: 28px;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+
+        /* Payment Method */
+        .method-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        .method-option {
+            border: 1px solid #ddd;
+            padding: 14px 12px;
             text-align: center;
-            border-bottom: 8px solid #f5f5f5;
+            font-size: 13px;
+            font-weight: 400;
+            cursor: pointer;
+            transition: all 0.15s;
+            background: #fff;
+            color: #333;
         }
-        .checkout-amount .label { font-size: 13px; color: #6b7280; margin-bottom: 8px; }
-        .checkout-amount .value { font-size: 36px; font-weight: 800; color: #1a1a2e; }
-        .checkout-amount .order-id { font-size: 12px; color: #9ca3af; margin-top: 8px; }
-        .checkout-section {
-            padding: 24px;
-            border-bottom: 8px solid #f5f5f5;
+        .method-option:hover {
+            border-color: #999;
         }
-        .checkout-section h2 {
-            font-size: 15px; font-weight: 700; color: #1f2937;
+        .method-option.selected {
+            border-color: #000;
+            background: #000;
+            color: #fff;
+            font-weight: 500;
+        }
+
+        /* Form */
+        .form-row {
             margin-bottom: 16px;
         }
-        .form-group { margin-bottom: 16px; }
-        .form-group label {
-            display: block; font-size: 13px; font-weight: 600;
-            color: #374151; margin-bottom: 6px;
+        .form-label {
+            display: block;
+            font-size: 11px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+            color: #999;
+            margin-bottom: 8px;
         }
-        .form-group select,
-        .form-group input {
-            width: 100%; padding: 14px; border: 1px solid #d1d5db;
-            border-radius: 8px; font-size: 15px; outline: none;
+        .form-input {
+            width: 100%;
+            padding: 14px 0;
+            border: none;
+            border-bottom: 1px solid #ddd;
+            font-size: 16px;
+            font-family: 'Inter', sans-serif;
+            font-weight: 400;
+            letter-spacing: 2px;
+            outline: none;
             transition: border-color 0.2s;
+            background: transparent;
         }
-        .form-group select:focus,
-        .form-group input:focus { border-color: #1a1a2e; }
-        .checkout-footer {
-            padding: 24px;
+        .form-input:focus {
+            border-bottom-color: #000;
+        }
+        .form-input::placeholder {
+            color: #ccc;
+            letter-spacing: 2px;
+        }
+
+        /* Pay Button */
+        .pay-section {
+            padding: 20px;
             position: sticky;
             bottom: 0;
-            background: white;
-            border-top: 1px solid #e5e7eb;
+            background: #fff;
+            border-top: 1px solid #e5e5e5;
         }
         .btn-pay {
-            width: 100%; padding: 16px; background: #1a1a2e; color: white;
-            border: none; border-radius: 12px; font-size: 17px; font-weight: 700;
-            cursor: pointer; transition: background 0.2s;
+            width: 100%;
+            padding: 18px;
+            background: #000;
+            color: #fff;
+            border: none;
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            font-weight: 500;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: opacity 0.2s;
         }
-        .btn-pay:hover { background: #16213e; }
-        .btn-pay:disabled { background: #9ca3af; cursor: not-allowed; }
+        .btn-pay:hover { opacity: 0.85; }
+        .btn-pay:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        /* Status */
         .status-area {
-            margin-top: 16px; padding: 16px; border-radius: 12px;
-            text-align: center; font-size: 14px; display: none;
+            margin-top: 16px;
+            padding: 20px;
+            text-align: center;
+            font-size: 13px;
+            display: none;
+            line-height: 1.6;
         }
-        .status-processing { background: #eff6ff; color: #1d4ed8; }
-        .status-success { background: #ecfdf5; color: #059669; }
-        .status-fail { background: #fef2f2; color: #dc2626; }
-        .btn-action {
-            display: inline-block; margin-top: 12px; padding: 10px 24px;
-            color: white; border: none; border-radius: 8px;
-            font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none;
+        .status-processing {
+            background: #fafafa;
+            color: #666;
         }
-        .btn-action.success { background: #059669; }
-        .btn-action.success:hover { background: #047857; }
-        .btn-action.retry { background: #dc2626; }
-        .btn-action.retry:hover { background: #b91c1c; }
-        .pg-badge {
-            text-align: center; padding: 12px; font-size: 11px; color: #9ca3af;
+        .status-success {
+            background: #fafafa;
+            color: #000;
         }
+        .status-fail {
+            background: #fafafa;
+            color: #000;
+        }
+        .status-icon {
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+        .status-msg {
+            font-size: 14px;
+            font-weight: 400;
+            margin-bottom: 4px;
+        }
+        .status-sub {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .btn-link {
+            display: inline-block;
+            margin-top: 16px;
+            padding: 12px 32px;
+            background: #000;
+            color: #fff;
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            transition: opacity 0.2s;
+        }
+        .btn-link:hover { opacity: 0.85; }
+        .btn-link.outline {
+            background: #fff;
+            color: #000;
+            border: 1px solid #000;
+        }
+
+        /* Spinner */
         .spinner {
-            display: inline-block; width: 16px; height: 16px;
-            border: 2px solid #1d4ed8; border-top: 2px solid transparent;
-            border-radius: 50%; animation: spin 1s linear infinite;
-            vertical-align: middle; margin-right: 8px;
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 1.5px solid #ddd;
+            border-top: 1.5px solid #000;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 12px;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Footer */
+        .pg-footer {
+            text-align: center;
+            padding: 24px 20px 32px;
+            font-size: 10px;
+            color: #ccc;
+            letter-spacing: 0.5px;
+        }
+
+        /* Divider */
+        .divider {
+            height: 8px;
+            background: #f7f7f7;
+            border-top: 1px solid #e5e5e5;
+            border-bottom: 1px solid #e5e5e5;
+        }
     </style>
 </head>
 <body>
-    <div class="checkout-container">
-        <div class="checkout-header">
-            <button class="back-btn" id="btn-back">&larr;</button>
-            <h1>결제하기</h1>
+    <div class="checkout-wrap">
+        <div class="header">
+            <button class="header-back" id="btn-back">&larr;</button>
+            <span class="header-title">Order / Payment</span>
+            <span class="header-spacer"></span>
         </div>
 
-        <div class="checkout-amount">
-            <div class="label">결제 금액</div>
-            <div class="value" id="display-amount">0원</div>
-            <div class="order-id" id="display-order-id"></div>
+        <div class="order-summary">
+            <div class="order-number" id="display-order-id">ORDER #</div>
+            <div class="order-amount-row">
+                <span class="order-amount-label">Total</span>
+                <span class="order-amount-value" id="display-amount">0</span>
+            </div>
         </div>
 
         <div id="payment-form">
-            <div class="checkout-section">
-                <h2>결제 수단</h2>
-                <div class="form-group">
-                    <label>카드 종류</label>
-                    <select id="card-type">
-                        <option value="SAMSUNG">삼성카드</option>
-                        <option value="KB">KB카드</option>
-                        <option value="HYUNDAI">현대카드</option>
-                        <option value="LOTTE">롯데카드</option>
-                    </select>
+            <div class="section">
+                <div class="section-header">
+                    <div class="section-title">Payment Method</div>
                 </div>
-                <div class="form-group">
-                    <label>카드 번호</label>
-                    <input id="card-no" type="text" placeholder="1234-5678-9012-3456" maxlength="19">
+                <div class="section-body">
+                    <div class="method-options" id="card-options">
+                        <div class="method-option selected" data-value="SAMSUNG">Samsung</div>
+                        <div class="method-option" data-value="KB">KB</div>
+                        <div class="method-option" data-value="HYUNDAI">Hyundai</div>
+                        <div class="method-option" data-value="LOTTE">Lotte</div>
+                    </div>
                 </div>
             </div>
 
-            <div class="checkout-footer">
-                <button class="btn-pay" id="btn-pay">결제하기</button>
+            <div class="section">
+                <div class="section-header">
+                    <div class="section-title">Card Information</div>
+                </div>
+                <div class="section-body">
+                    <div class="form-row">
+                        <label class="form-label">Card Number</label>
+                        <input class="form-input" id="card-no" type="text"
+                               placeholder="0000 - 0000 - 0000 - 0000" maxlength="19">
+                    </div>
+                </div>
+            </div>
+
+            <div class="pay-section">
+                <button class="btn-pay" id="btn-pay">Pay Now</button>
                 <div class="status-area" id="status-area"></div>
             </div>
         </div>
 
-        <div class="pg-badge">PG Payment Simulator &copy; 2026</div>
+        <div class="pg-footer">PG PAYMENT SIMULATOR</div>
     </div>
 
     <script type="module">
@@ -161,19 +340,33 @@
 
         if (!orderId || !amount) {
             document.getElementById('payment-form').innerHTML =
-                '<div style="padding:60px 24px;text-align:center;color:#dc2626">잘못된 접근입니다. 주문 정보가 없습니다.</div>';
-            document.getElementById('display-amount').textContent = '0원';
+                '<div style="padding:80px 20px;text-align:center;font-size:13px;color:#999">Invalid access. No order information.</div>';
+            document.getElementById('display-amount').textContent = '0';
         } else {
-            document.getElementById('display-amount').textContent = amount.toLocaleString() + '원';
-            document.getElementById('display-order-id').textContent = '주문번호 #' + orderId;
+            document.getElementById('display-amount').textContent =
+                amount.toLocaleString() + '원';
+            document.getElementById('display-order-id').textContent =
+                'ORDER #' + String(orderId).padStart(6, '0');
             initPaymentForm();
         }
 
         function initPaymentForm() {
+            let selectedCard = 'SAMSUNG';
             const btnPay = document.getElementById('btn-pay');
             const statusArea = document.getElementById('status-area');
             const cardNoInput = document.getElementById('card-no');
 
+            // Card type selection
+            document.querySelectorAll('.method-option').forEach(opt => {
+                opt.addEventListener('click', () => {
+                    document.querySelectorAll('.method-option')
+                        .forEach(o => o.classList.remove('selected'));
+                    opt.classList.add('selected');
+                    selectedCard = opt.dataset.value;
+                });
+            });
+
+            // Card number auto-format
             cardNoInput.addEventListener('input', (e) => {
                 let v = e.target.value.replace(/\D/g, '').substring(0, 16);
                 let formatted = v.match(/.{1,4}/g)?.join('-') || v;
@@ -181,28 +374,40 @@
             });
 
             btnPay.addEventListener('click', async () => {
-                const cardType = document.getElementById('card-type').value;
                 const cardNo = cardNoInput.value.trim();
 
                 if (!cardNo || cardNo.replace(/-/g, '').length < 16) {
-                    showStatus('fail', '카드 번호 16자리를 입력해주세요.');
+                    showStatus('fail',
+                        '<div class="status-msg">카드 번호 16자리를 입력해주세요.</div>');
                     return;
                 }
 
                 btnPay.disabled = true;
-                btnPay.textContent = '결제 처리 중...';
-                showStatus('processing', '<span class="spinner"></span>PG사에 결제를 요청하고 있습니다...');
+                btnPay.textContent = 'PROCESSING...';
+                showStatus('processing',
+                    '<div class="spinner"></div>' +
+                    '<div class="status-msg">결제를 요청하고 있습니다</div>' +
+                    '<div class="status-sub">Please wait...</div>');
 
                 try {
-                    await PaymentApi.request({ orderId, cardType, cardNo });
-                    showStatus('processing', '<span class="spinner"></span>결제 승인 처리 중입니다...');
+                    await PaymentApi.request({
+                        orderId,
+                        cardType: selectedCard,
+                        cardNo
+                    });
+                    showStatus('processing',
+                        '<div class="spinner"></div>' +
+                        '<div class="status-msg">결제 승인 처리 중</div>' +
+                        '<div class="status-sub">Approving payment...</div>');
                     pollOrderStatus();
                 } catch (e) {
                     showStatus('fail',
-                        e.message + '<br><button class="btn-action retry" id="btn-retry">다시 시도</button>');
+                        '<div class="status-icon">-</div>' +
+                        '<div class="status-msg">' + e.message + '</div>' +
+                        '<button class="btn-link outline" id="btn-retry">Retry</button>');
                     document.getElementById('btn-retry').addEventListener('click', () => {
                         btnPay.disabled = false;
-                        btnPay.textContent = '결제하기';
+                        btnPay.textContent = 'PAY NOW';
                         statusArea.style.display = 'none';
                     });
                 }
@@ -235,12 +440,16 @@
             function onPaymentComplete(status) {
                 if (status === 'SUCCESS') {
                     showStatus('success',
-                        '결제가 완료되었습니다!<br>' +
-                        '<a class="btn-action success" href="/shop/index.html#mypage">주문 내역 보기</a>');
+                        '<div class="status-icon">&#10003;</div>' +
+                        '<div class="status-msg">결제가 완료되었습니다</div>' +
+                        '<div class="status-sub">Payment completed successfully</div>' +
+                        '<a class="btn-link" href="/shop/index.html#mypage">View Orders</a>');
                 } else {
                     showStatus('fail',
-                        '처리 중입니다. 주문 내역에서 확인해주세요.<br>' +
-                        '<a class="btn-action retry" href="/shop/index.html#mypage">주문 내역 보기</a>');
+                        '<div class="status-icon">!</div>' +
+                        '<div class="status-msg">처리 중입니다</div>' +
+                        '<div class="status-sub">주문 내역에서 확인해주세요</div>' +
+                        '<a class="btn-link" href="/shop/index.html#mypage">View Orders</a>');
                 }
                 btnPay.style.display = 'none';
             }
