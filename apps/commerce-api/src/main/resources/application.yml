@@ -46,7 +46,7 @@ pg-simulator:
 
 app:
   data-generator:
-    enabled: false
+    enabled: true
     brand-count: 100
     product-count: 100000
     user-count: 10000
