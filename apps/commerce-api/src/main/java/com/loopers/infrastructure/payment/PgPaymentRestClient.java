@@ -4,7 +4,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.loopers.domain.payment.PgOrderTransactions;
 import com.loopers.domain.payment.PgPaymentClient;
 import com.loopers.domain.payment.PgPaymentRequest;
+import com.loopers.domain.payment.PgCallbackStatus;
 import com.loopers.domain.payment.PgPaymentResult;
+import com.loopers.domain.payment.PgRequestStatus;
 import com.loopers.domain.payment.PgTransactionDetail;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
@@ -41,27 +43,24 @@ public class PgPaymentRestClient implements PgPaymentClient {
 
             String metaResult = response.path("meta").path("result").asText();
             if ("SUCCESS".equals(metaResult)) {
-                JsonNode data = response.path("data");
                 return new PgPaymentResult(
                         true,
-                        data.path("transactionKey").asText(),
-                        data.path("status").asText());
+                        response.path("data").path("transactionKey").asText(),
+                        PgRequestStatus.ACCEPTED);
             }
-            String pgMessage = response.path("meta").path("message").asText("결제 요청에 실패했습니다.");
-            return new PgPaymentResult(false, null, null, pgMessage);
+            return new PgPaymentResult(false, null, PgRequestStatus.VALIDATION_ERROR,
+                    response.path("meta").path("message").asText(null));
         } catch (WebClientResponseException e) {
             String pgMessage = parsePgErrorMessage(e.getResponseBodyAsString());
             log.warn("PG 결제 요청 실패: status={}, message={}", e.getStatusCode(), pgMessage);
-            boolean isServerError = e.getStatusCode().is5xxServerError();
-            String errorMessage = isServerError
-                    ? "결제 서비스가 일시적으로 불안정합니다. 잠시 후 다시 시도해주세요."
-                    : pgMessage;
-            return new PgPaymentResult(false, null,
-                    isServerError ? "PG_UNAVAILABLE" : "PG_BAD_REQUEST", errorMessage);
+            PgRequestStatus status = e.getStatusCode().is5xxServerError()
+                    ? PgRequestStatus.SERVER_ERROR
+                    : PgRequestStatus.VALIDATION_ERROR;
+            return new PgPaymentResult(false, null, status, pgMessage);
         } catch (Exception e) {
             log.warn("PG 결제 요청 실패 (연결 오류): {}", e.getMessage());
-            return new PgPaymentResult(false, null, "PG_UNAVAILABLE",
-                    "결제 서비스에 연결할 수 없습니다. 잠시 후 다시 시도해주세요.");
+            return new PgPaymentResult(false, null, PgRequestStatus.CONNECTION_ERROR,
+                    e.getMessage());
         }
     }
 
@@ -107,6 +106,20 @@ public class PgPaymentRestClient implements PgPaymentClient {
         }
         return new PgOrderTransactions(
                 data.path("orderId").asText(), transactions);
+    }
+
+    @Override
+    public PgCallbackStatus resolveCallbackStatus(String pgStatus, String reason) {
+        if ("SUCCESS".equals(pgStatus)) {
+            return PgCallbackStatus.APPROVED;
+        }
+        if (reason != null && reason.contains("한도초과")) {
+            return PgCallbackStatus.LIMIT_EXCEEDED;
+        }
+        if (reason != null && reason.contains("잘못된 카드")) {
+            return PgCallbackStatus.INVALID_CARD;
+        }
+        return PgCallbackStatus.PG_ERROR;
     }
 
     private String parsePgErrorMessage(String responseBody) {

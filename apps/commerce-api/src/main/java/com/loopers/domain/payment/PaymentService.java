@@ -37,8 +37,8 @@ public class PaymentService {
     }
 
     @Transactional
-    public PaymentModel handleCallback(String paymentKey, String pgStatus,
-                                       String failureCode, String failureMessage) {
+    public PaymentModel handleCallback(String paymentKey, PgCallbackStatus callbackStatus,
+                                       String pgReason) {
         PaymentModel payment = paymentRepository.findByTransactionPaymentKey(paymentKey)
                 .orElseThrow(() -> new CoreException(PaymentErrorCode.TRANSACTION_NOT_FOUND));
 
@@ -51,11 +51,11 @@ public class PaymentService {
             return payment;
         }
 
-        if ("SUCCESS".equals(pgStatus)) {
+        if (callbackStatus.isSuccess()) {
             transaction.succeed(null);
             payment.approve(LocalDateTime.now());
         } else {
-            transaction.fail(failureCode, failureMessage);
+            transaction.fail(callbackStatus.name(), pgReason);
             payment.fail();
         }
         return payment;

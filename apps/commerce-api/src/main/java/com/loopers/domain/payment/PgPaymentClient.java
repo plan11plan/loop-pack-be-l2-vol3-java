@@ -7,4 +7,6 @@ public interface PgPaymentClient {
     PgTransactionDetail getPaymentStatus(String transactionKey, String userId);
 
     PgOrderTransactions getPaymentsByOrder(String orderId, String userId);
+
+    PgCallbackStatus resolveCallbackStatus(String pgStatus, String reason);
 }

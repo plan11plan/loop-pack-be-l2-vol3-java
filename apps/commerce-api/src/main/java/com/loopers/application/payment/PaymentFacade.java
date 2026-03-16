@@ -4,9 +4,11 @@ import com.loopers.domain.order.OrderService;
 import com.loopers.domain.payment.PaymentErrorCode;
 import com.loopers.domain.payment.PaymentModel;
 import com.loopers.domain.payment.PaymentService;
+import com.loopers.domain.payment.PgCallbackStatus;
 import com.loopers.domain.payment.PgPaymentClient;
 import com.loopers.domain.payment.PgPaymentRequest;
 import com.loopers.domain.payment.PgPaymentResult;
+import com.loopers.domain.payment.PgRequestStatus;
 import com.loopers.support.error.CoreException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,11 +47,11 @@ public class PaymentFacade {
         }
 
         paymentTransactionService.failLastTransaction(
-                payment.getOrderId(), "PG_REQUEST_FAILED", pgResult.errorMessage());
-        PaymentErrorCode errorCode = "PG_UNAVAILABLE".equals(pgResult.status())
-                ? PaymentErrorCode.PG_SERVICE_UNAVAILABLE
-                : PaymentErrorCode.PG_REQUEST_FAILED;
-        throw new CoreException(errorCode, pgResult.errorMessage());
+                payment.getOrderId(), "PG_REQUEST_FAILED", pgResult.pgDetail());
+        if (pgResult.status() == PgRequestStatus.VALIDATION_ERROR) {
+            throw new CoreException(PaymentErrorCode.PG_REQUEST_FAILED, pgResult.pgDetail());
+        }
+        throw new CoreException(PaymentErrorCode.PG_SERVICE_UNAVAILABLE);
     }
 
     public PaymentStatusResult getPaymentStatus(Long orderId) {
@@ -58,11 +60,13 @@ public class PaymentFacade {
         return PaymentStatusResult.from(payment);
     }
 
-    public void handleCallback(String transactionKey, String pgStatus,
-                               String failureCode, String failureMessage) {
+    public void handleCallback(String transactionKey, String pgStatus, String pgReason) {
+        PgCallbackStatus callbackStatus =
+                pgPaymentClient.resolveCallbackStatus(pgStatus, pgReason);
+
         // TX-C: Payment 도메인 갱신
         PaymentModel payment = paymentService.handleCallback(
-                transactionKey, pgStatus, failureCode, failureMessage);
+                transactionKey, callbackStatus, pgReason);
 
         // TX-D: Order 도메인 갱신
         if (payment.isApproved()) {

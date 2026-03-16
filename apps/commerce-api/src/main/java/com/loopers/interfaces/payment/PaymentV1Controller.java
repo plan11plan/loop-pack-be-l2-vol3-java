@@ -45,23 +45,8 @@ public class PaymentV1Controller {
     @PostMapping("/callback")
     public ApiResponse<Object> handleCallback(
             @RequestBody PgCallbackRequest request) {
-        String failureCode = parseFailureCode(request.reason());
         paymentFacade.handleCallback(
-                request.transactionKey(), request.status(),
-                failureCode, request.reason());
+                request.transactionKey(), request.status(), request.reason());
         return ApiResponse.success();
-    }
-
-    private String parseFailureCode(String reason) {
-        if (reason == null) {
-            return null;
-        }
-        if (reason.contains("한도초과")) {
-            return "LIMIT_EXCEEDED";
-        }
-        if (reason.contains("잘못된 카드")) {
-            return "INVALID_CARD";
-        }
-        return "PG_ERROR";
     }
 }
