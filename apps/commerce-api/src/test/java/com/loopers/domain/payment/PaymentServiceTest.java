@@ -111,9 +111,9 @@ class PaymentServiceTest {
                     () -> assertThat(payment.getApprovedAt()).isNotNull());
         }
 
-        @DisplayName("FAILED 콜백이면 Transaction과 Payment 모두 실패 처리한다.")
+        @DisplayName("FAILED 콜백이면 Transaction만 실패하고 Payment는 PENDING을 유지한다.")
         @Test
-        void handleCallback_whenFailed_failsPayment() {
+        void handleCallback_whenFailed_failsTransactionOnly() {
             // arrange
             PaymentModel payment = createPaymentWithPaymentKey("PK_002");
 
@@ -127,12 +127,12 @@ class PaymentServiceTest {
                     () -> assertThat(tx.getStatus()).isEqualTo(TransactionStatus.FAILED),
                     () -> assertThat(tx.getFailureCode()).isEqualTo("LIMIT_EXCEEDED"),
                     () -> assertThat(tx.getFailureMessage()).isEqualTo("한도초과입니다."),
-                    () -> assertThat(payment.getStatus()).isEqualTo(PaymentStatus.FAILED));
+                    () -> assertThat(payment.getStatus()).isEqualTo(PaymentStatus.PENDING));
         }
 
-        @DisplayName("INVALID_CARD 콜백이면 Transaction과 Payment 모두 실패 처리한다.")
+        @DisplayName("INVALID_CARD 콜백이면 Transaction만 실패하고 Payment는 PENDING을 유지한다.")
         @Test
-        void handleCallback_whenInvalidCard_failsPayment() {
+        void handleCallback_whenInvalidCard_failsTransactionOnly() {
             // arrange
             PaymentModel payment = createPaymentWithPaymentKey("PK_IC");
 
@@ -146,7 +146,7 @@ class PaymentServiceTest {
             assertAll(
                     () -> assertThat(tx.getStatus()).isEqualTo(TransactionStatus.FAILED),
                     () -> assertThat(tx.getFailureCode()).isEqualTo("INVALID_CARD"),
-                    () -> assertThat(payment.getStatus()).isEqualTo(PaymentStatus.FAILED));
+                    () -> assertThat(payment.getStatus()).isEqualTo(PaymentStatus.PENDING));
         }
 
         @DisplayName("이미 APPROVED인 Payment에 중복 콜백이 오면 무시한다.")

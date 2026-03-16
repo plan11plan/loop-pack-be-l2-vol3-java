@@ -56,7 +56,6 @@ public class PaymentService {
             payment.approve(LocalDateTime.now());
         } else {
             transaction.fail(callbackStatus.name(), pgReason);
-            payment.fail();
         }
         return payment;
     }
