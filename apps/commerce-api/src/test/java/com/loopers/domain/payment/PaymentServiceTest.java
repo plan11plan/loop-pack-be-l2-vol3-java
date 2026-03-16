@@ -101,7 +101,7 @@ class PaymentServiceTest {
             PaymentModel payment = createPaymentWithPaymentKey("PK_001");
 
             // act
-            paymentService.handleCallback("PK_001", "SUCCESS", null, null);
+            paymentService.handleCallback("PK_001", PgCallbackStatus.APPROVED, null);
 
             // assert
             PaymentTransactionModel tx = payment.getTransactions().get(0);
@@ -119,7 +119,7 @@ class PaymentServiceTest {
 
             // act
             paymentService.handleCallback(
-                    "PK_002", "FAILED", "LIMIT_EXCEEDED", "한도초과입니다.");
+                    "PK_002", PgCallbackStatus.LIMIT_EXCEEDED, "한도초과입니다.");
 
             // assert
             PaymentTransactionModel tx = payment.getTransactions().get(0);
@@ -138,7 +138,7 @@ class PaymentServiceTest {
 
             // act
             paymentService.handleCallback(
-                    "PK_IC", "FAILED", "INVALID_CARD",
+                    "PK_IC", PgCallbackStatus.INVALID_CARD,
                     "잘못된 카드입니다. 다른 카드를 선택해주세요.");
 
             // assert
@@ -154,12 +154,12 @@ class PaymentServiceTest {
         void handleCallback_whenAlreadyApproved_ignores() {
             // arrange
             PaymentModel payment = createPaymentWithPaymentKey("PK_003");
-            paymentService.handleCallback("PK_003", "SUCCESS", null, null);
+            paymentService.handleCallback("PK_003", PgCallbackStatus.APPROVED, null);
             assertThat(payment.getStatus()).isEqualTo(PaymentStatus.APPROVED);
 
             // act — 동일 paymentKey로 2번째 콜백
             PaymentModel result = paymentService.handleCallback(
-                    "PK_003", "SUCCESS", null, null);
+                    "PK_003", PgCallbackStatus.APPROVED, null);
 
             // assert — 상태 변경 없이 그대로 반환
             assertThat(result.getStatus()).isEqualTo(PaymentStatus.APPROVED);

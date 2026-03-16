@@ -16,9 +16,11 @@ import com.loopers.domain.payment.CardType;
 import com.loopers.domain.payment.PaymentModel;
 import com.loopers.domain.payment.PaymentService;
 import com.loopers.domain.payment.PaymentStatus;
+import com.loopers.domain.payment.PgCallbackStatus;
 import com.loopers.domain.payment.PgPaymentClient;
 import com.loopers.domain.payment.PgPaymentRequest;
 import com.loopers.domain.payment.PgPaymentResult;
+import com.loopers.domain.payment.PgRequestStatus;
 import com.loopers.support.error.CoreException;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
@@ -51,7 +53,7 @@ class PaymentFacadeTest {
             when(paymentTransactionService.createOrRetryPayment(any()))
                     .thenReturn(payment);
             when(pgPaymentClient.requestPayment(any(PgPaymentRequest.class)))
-                    .thenReturn(new PgPaymentResult(true, "20260316:TR:abc", "PENDING"));
+                    .thenReturn(new PgPaymentResult(true, "20260316:TR:abc", PgRequestStatus.ACCEPTED));
 
             // act
             PaymentResult result = paymentFacade.requestPayment(
@@ -75,15 +77,15 @@ class PaymentFacadeTest {
             when(paymentTransactionService.createOrRetryPayment(any()))
                     .thenReturn(payment);
             when(pgPaymentClient.requestPayment(any(PgPaymentRequest.class)))
-                    .thenReturn(new PgPaymentResult(false, null, "PG_UNAVAILABLE",
-                            "결제 서비스가 일시적으로 불안정합니다. 잠시 후 다시 시도해주세요."));
+                    .thenReturn(new PgPaymentResult(false, null, PgRequestStatus.SERVER_ERROR,
+                            "현재 서버가 불안정합니다."));
 
             // act & assert
             assertThatThrownBy(() -> paymentFacade.requestPayment(
                     100L,
                     new PaymentCriteria.Create(1L, CardType.SAMSUNG, "1234-5678-9814-1451")))
                     .isInstanceOf(CoreException.class)
-                    .hasMessageContaining("결제 서비스가 일시적으로 불안정합니다");
+                    .hasMessageContaining("결제 서비스가 일시적으로 지연되고 있습니다");
             verify(paymentTransactionService).failLastTransaction(
                     eq(1L), eq("PG_REQUEST_FAILED"), anyString());
         }
@@ -96,7 +98,7 @@ class PaymentFacadeTest {
             when(paymentTransactionService.createOrRetryPayment(any()))
                     .thenReturn(payment);
             when(pgPaymentClient.requestPayment(any(PgPaymentRequest.class)))
-                    .thenReturn(new PgPaymentResult(false, null, "PG_BAD_REQUEST",
+                    .thenReturn(new PgPaymentResult(false, null, PgRequestStatus.VALIDATION_ERROR,
                             "카드 번호는 xxxx-xxxx-xxxx-xxxx 형식이어야 합니다."));
 
             // act & assert
@@ -117,15 +119,15 @@ class PaymentFacadeTest {
             when(paymentTransactionService.createOrRetryPayment(any()))
                     .thenReturn(payment);
             when(pgPaymentClient.requestPayment(any(PgPaymentRequest.class)))
-                    .thenReturn(new PgPaymentResult(false, null, "PG_UNAVAILABLE",
-                            "결제 서비스에 연결할 수 없습니다. 잠시 후 다시 시도해주세요."));
+                    .thenReturn(new PgPaymentResult(false, null, PgRequestStatus.CONNECTION_ERROR,
+                            "Connection refused"));
 
             // act & assert
             assertThatThrownBy(() -> paymentFacade.requestPayment(
                     100L,
                     new PaymentCriteria.Create(1L, CardType.SAMSUNG, "1234-5678-9814-1451")))
                     .isInstanceOf(CoreException.class)
-                    .hasMessageContaining("결제 서비스에 연결할 수 없습니다");
+                    .hasMessageContaining("결제 서비스가 일시적으로 지연되고 있습니다");
         }
     }
 
@@ -138,12 +140,14 @@ class PaymentFacadeTest {
         void handleCallback_success_approvesAndCompletesOrder() {
             // arrange
             PaymentModel payment = mockPayment(1L, 1L, 50000, PaymentStatus.APPROVED);
+            when(pgPaymentClient.resolveCallbackStatus("SUCCESS", "정상 승인되었습니다."))
+                    .thenReturn(PgCallbackStatus.APPROVED);
             when(paymentService.handleCallback(
-                    eq("PK_001"), eq("SUCCESS"), any(), any()))
+                    eq("PK_001"), eq(PgCallbackStatus.APPROVED), any()))
                     .thenReturn(payment);
 
             // act
-            paymentFacade.handleCallback("PK_001", "SUCCESS", null, null);
+            paymentFacade.handleCallback("PK_001", "SUCCESS", "정상 승인되었습니다.");
 
             // assert
             verify(orderService).completeOrder(1L);
@@ -154,13 +158,14 @@ class PaymentFacadeTest {
         void handleCallback_failed_doesNotChangeOrder() {
             // arrange
             PaymentModel payment = mockPayment(1L, 1L, 50000, PaymentStatus.PENDING);
+            when(pgPaymentClient.resolveCallbackStatus("FAILED", "한도초과"))
+                    .thenReturn(PgCallbackStatus.LIMIT_EXCEEDED);
             when(paymentService.handleCallback(
-                    eq("PK_002"), eq("FAILED"), eq("LIMIT_EXCEEDED"), anyString()))
+                    eq("PK_002"), eq(PgCallbackStatus.LIMIT_EXCEEDED), anyString()))
                     .thenReturn(payment);
 
             // act
-            paymentFacade.handleCallback(
-                    "PK_002", "FAILED", "LIMIT_EXCEEDED", "한도초과");
+            paymentFacade.handleCallback("PK_002", "FAILED", "한도초과");
 
             // assert
             verify(orderService, never()).completeOrder(any());

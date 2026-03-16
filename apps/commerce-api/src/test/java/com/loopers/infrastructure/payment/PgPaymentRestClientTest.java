@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.loopers.domain.payment.PgOrderTransactions;
 import com.loopers.domain.payment.PgPaymentRequest;
 import com.loopers.domain.payment.PgPaymentResult;
+import com.loopers.domain.payment.PgRequestStatus;
 import com.loopers.domain.payment.PgTransactionDetail;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -48,9 +49,13 @@ class PgPaymentRestClientTest {
             assertThat(result).isNotNull();
             if (result.requested()) {
                 assertThat(result.transactionKey()).isNotBlank();
-                assertThat(result.status()).isEqualTo("PENDING");
+                assertThat(result.status()).isEqualTo(PgRequestStatus.ACCEPTED);
             } else {
                 assertThat(result.transactionKey()).isNull();
+                assertThat(result.status()).isIn(
+                        PgRequestStatus.SERVER_ERROR,
+                        PgRequestStatus.VALIDATION_ERROR,
+                        PgRequestStatus.CONNECTION_ERROR);
             }
         }
     }
