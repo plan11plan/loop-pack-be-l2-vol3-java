@@ -1,4 +1,5 @@
-import { ProductApi, LikeApi, OrderApi } from '../api.js';
+
+import { ProductApi, LikeApi } from '../api.js';
 import { Auth } from '../auth.js';
 
 export async function initProduct(params) {
@@ -139,61 +140,29 @@ function showOrderForm(product) {
         section.querySelector('#qty-display').textContent = quantity;
     });
 
-    section.querySelector('#place-order-btn').addEventListener('click', async () => {
-        const btn = section.querySelector('#place-order-btn');
-        btn.disabled = true;
-        btn.textContent = '주문 처리 중...';
-        try {
-            const result = await OrderApi.create({
-                items: [{ productId: product.id, quantity, expectedPrice: product.price }],
-            });
-            // 주문 생성 후 sessionStorage에 저장 (뒤로가기 시 중복 주문 방지)
-            sessionStorage.setItem('pendingOrder', JSON.stringify({
-                orderId: result.orderId,
-                amount: result.totalPrice,
-                productId: product.id,
-            }));
-            location.href = `/shop/pg-checkout.html?orderId=${result.orderId}&amount=${result.totalPrice}&returnUrl=${encodeURIComponent('/shop/index.html#product/' + product.id)}`;
-        } catch (e) {
-            Toast.error(e.message);
-            btn.disabled = false;
-            btn.textContent = '주문하기';
-        }
+    section.querySelector('#place-order-btn').addEventListener('click', () => {
+        // Order를 DB에 생성하지 않고, 주문 정보를 sessionStorage에 저장 후 결제 페이지로 이동
+        const checkoutData = {
+            items: [{ productId: product.id, quantity, expectedPrice: product.price }],
+            product: {
+                id: product.id,
+                name: product.name,
+                brandName: product.brandName,
+                price: product.price,
+            },
+        };
+        sessionStorage.setItem('checkoutData', JSON.stringify(checkoutData));
+        location.href = `/shop/pg-checkout.html?mode=new&returnUrl=${encodeURIComponent('/shop/index.html#product/' + product.id)}`;
     });
 }
 
-function showPendingOrderUI(section, orderBtn, pendingOrder) {
-    if (orderBtn) orderBtn.style.display = 'none';
-    section.innerHTML = `
-        <div class="order-form" style="text-align:center">
-            <p style="font-size:13px;color:#999;margin-bottom:16px">결제 대기 중인 주문이 있습니다</p>
-            <a class="btn btn-primary btn-lg" style="width:100%;text-decoration:none"
-               href="/shop/pg-checkout.html?orderId=${pendingOrder.orderId}&amount=${pendingOrder.amount}&returnUrl=${encodeURIComponent('/shop/index.html#product/' + pendingOrder.productId)}">
-                결제 계속하기
-            </a>
-            <button class="btn btn-outline btn-sm" style="width:100%;margin-top:8px" id="new-order-btn">
-                새로 주문하기
-            </button>
-        </div>`;
-    document.getElementById('new-order-btn').addEventListener('click', () => {
-        sessionStorage.removeItem('pendingOrder');
-        if (orderBtn) { orderBtn.style.display = ''; orderBtn.click(); }
-    });
-}
-
-// bfcache 복원 시 중복 주문 방지
+// bfcache 복원 시 UI 정리
 window.addEventListener('pageshow', (e) => {
     if (e.persisted) {
         const section = document.getElementById('order-section');
         const orderBtn = document.getElementById('order-btn');
-        const pending = sessionStorage.getItem('pendingOrder');
-
-        if (pending && section) {
-            showPendingOrderUI(section, orderBtn, JSON.parse(pending));
-        } else {
-            if (orderBtn) orderBtn.style.display = '';
-            if (section) section.innerHTML = '';
-        }
+        if (orderBtn) orderBtn.style.display = '';
+        if (section) section.innerHTML = '';
     }
 });
 

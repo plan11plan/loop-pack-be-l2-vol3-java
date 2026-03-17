@@ -300,7 +300,7 @@
                     <div class="benefit-row">
                         <div>
                             <div class="benefit-label">쿠폰 할인</div>
-                            <div class="benefit-sub">주문 시 적용됨</div>
+                            <div class="benefit-sub">결제 시 적용됨</div>
                         </div>
                         <span class="benefit-value" id="coupon-discount">-0원</span>
                     </div>
@@ -355,7 +355,7 @@
                 </div>
 
                 <div style="margin-top:20px;font-size:11px;color:#bbb;line-height:1.8">
-                    <div id="sum-order-id">ORDER #</div>
+                    <div id="sum-order-id"></div>
                 </div>
             </div>
 
@@ -367,38 +367,94 @@
     </div>
 
     <script type="module">
-        import { PaymentApi, OrderApi, UserApi } from './js/api.js';
+        import { PaymentApi, OrderApi, UserApi, ProductApi } from './js/api.js';
 
         const params = new URLSearchParams(location.search);
-        const orderId = Number(params.get('orderId'));
-        const amount = Number(params.get('amount'));
+        const mode = params.get('mode'); // 'new' = 새 주문, null = 기존 주문 재시도
+        const retryOrderId = Number(params.get('orderId')) || null;
+        const retryAmount = Number(params.get('amount')) || null;
         const returnUrl = params.get('returnUrl') || '/shop/index.html#mypage';
+
+        // 결제 완료 후 폴링에 사용할 orderId (새 주문 시 결제 응답에서 받음)
+        let activeOrderId = retryOrderId;
 
         document.getElementById('btn-back').addEventListener('click', () => {
             location.href = returnUrl;
         });
 
-        if (!orderId || !amount) {
+        if (mode === 'new') {
+            // 새 주문 모드: sessionStorage에서 주문 정보 로드
+            const checkoutData = JSON.parse(sessionStorage.getItem('checkoutData') || 'null');
+            if (!checkoutData || !checkoutData.items || !checkoutData.items.length) {
+                document.getElementById('checkout-left').innerHTML =
+                    '<div style="padding:80px 32px;text-align:center;font-size:13px;color:#999">잘못된 접근입니다.</div>';
+            } else {
+                loadNewOrderData(checkoutData);
+            }
+        } else if (retryOrderId) {
+            // 재시도 모드: 기존 주문 정보 로드
+            loadRetryOrderData(retryOrderId);
+        } else {
             document.getElementById('checkout-left').innerHTML =
                 '<div style="padding:80px 32px;text-align:center;font-size:13px;color:#999">잘못된 접근입니다.</div>';
-        } else {
-            loadOrderData();
         }
 
-        async function loadOrderData() {
-            // Load order details + user info in parallel
+        // === 새 주문 모드 ===
+        async function loadNewOrderData(checkoutData) {
+            const [user, pointData] = await Promise.all([
+                UserApi.me().catch(() => null),
+                UserApi.getPoint().catch(() => null),
+            ]);
+
+            if (user) {
+                document.getElementById('ship-name').textContent = user.name || '-';
+            }
+
+            // 상품 정보 표시 (sessionStorage의 product 데이터 사용)
+            const product = checkoutData.product;
+            const item = checkoutData.items[0];
+            const originalTotal = product.price * item.quantity;
+
+            const itemsHtml = `
+                <div class="product-item">
+                    <div class="product-thumb">IMG</div>
+                    <div class="product-info">
+                        <div class="product-brand">${esc(product.brandName)}</div>
+                        <div class="product-name">${esc(product.name)}</div>
+                        <div class="product-meta">
+                            <span>Qty: ${item.quantity}</span>
+                        </div>
+                    </div>
+                    <div class="product-price">${originalTotal.toLocaleString()}원</div>
+                </div>`;
+            document.getElementById('order-items').innerHTML = itemsHtml;
+
+            // Summary
+            document.getElementById('sum-original').textContent = originalTotal.toLocaleString() + '원';
+            document.getElementById('sum-discount').textContent = '0원';
+            document.getElementById('sum-total').textContent = originalTotal.toLocaleString() + '원';
+            document.getElementById('sum-order-id').textContent = 'NEW ORDER';
+
+            if (pointData) {
+                document.getElementById('point-balance').textContent =
+                    '보유: ' + pointData.point.toLocaleString() + 'P';
+            }
+
+            initPaymentForm({ mode: 'new', checkoutData, amount: originalTotal });
+        }
+
+        // === 재시도 모드 ===
+        async function loadRetryOrderData(orderId) {
             const [order, user, pointData] = await Promise.all([
                 OrderApi.get(orderId).catch(() => null),
                 UserApi.me().catch(() => null),
                 UserApi.getPoint().catch(() => null),
             ]);
 
-            // Shipping info
             if (user) {
                 document.getElementById('ship-name').textContent = user.name || '-';
             }
 
-            // Order items
             if (order && order.items) {
                 const itemsHtml = order.items.map(item => `
                     <div class="product-item">
@@ -414,38 +470,32 @@
                     </div>`).join('');
                 document.getElementById('order-items').innerHTML = itemsHtml;
 
-                // Calculate original total from items
                 const originalTotal = order.items.reduce(
                     (sum, i) => sum + i.orderPrice * i.quantity, 0);
                 const discount = originalTotal - order.totalPrice;
 
-                // Summary
-                document.getElementById('sum-original').textContent =
-                    originalTotal.toLocaleString() + '원';
+                document.getElementById('sum-original').textContent = originalTotal.toLocaleString() + '원';
                 document.getElementById('sum-discount').textContent =
                     discount > 0 ? '-' + discount.toLocaleString() + '원' : '0원';
-                document.getElementById('sum-total').textContent =
-                    order.totalPrice.toLocaleString() + '원';
+                document.getElementById('sum-total').textContent = order.totalPrice.toLocaleString() + '원';
                 document.getElementById('sum-order-id').textContent =
                     'ORDER #' + String(orderId).padStart(6, '0');
 
-                // Discount section
                 if (discount > 0) {
                     document.getElementById('coupon-discount').textContent =
                         '-' + discount.toLocaleString() + '원';
                 }
             }
 
-            // Point balance
             if (pointData) {
                 document.getElementById('point-balance').textContent =
                     '보유: ' + pointData.point.toLocaleString() + 'P';
             }
 
-            initPaymentForm();
+            initPaymentForm({ mode: 'retry', orderId, amount: order ? order.totalPrice : retryAmount });
         }
 
-        function initPaymentForm() {
+        function initPaymentForm(config) {
             let selectedCard = 'SAMSUNG';
             const btnPay = document.getElementById('btn-pay');
             const statusArea = document.getElementById('status-area');
@@ -481,22 +531,61 @@
                     '<div class="status-sub">Please wait...</div>');
 
                 try {
-                    await PaymentApi.request({ orderId, cardType: selectedCard, cardNo });
+                    let requestBody;
+                    if (config.mode === 'new') {
+                        // 새 주문: items + 결제 정보 전송 (Order 생성은 서버에서 처리)
+                        requestBody = {
+                            items: config.checkoutData.items,
+                            cardType: selectedCard,
+                            cardNo,
+                        };
+                    } else {
+                        // 재시도: 기존 orderId + 결제 정보
+                        requestBody = {
+                            orderId: config.orderId,
+                            cardType: selectedCard,
+                            cardNo,
+                        };
+                    }
+
+                    const result = await PaymentApi.request(requestBody);
+
+                    // 결제 응답에서 orderId 획득 (새 주문 시 서버가 생성한 orderId)
+                    activeOrderId = result.orderId;
+
+                    // Summary 갱신
+                    if (activeOrderId) {
+                        document.getElementById('sum-order-id').textContent =
+                            'ORDER #' + String(activeOrderId).padStart(6, '0');
+                    }
+
+                    // sessionStorage 정리 (주문 생성 완료)
+                    sessionStorage.removeItem('checkoutData');
+
                     showStatus('processing',
                         '<div class="spinner"></div>' +
                         '<div class="status-msg">결제 승인 처리 중</div>' +
                         '<div class="status-sub">Approving payment...</div>');
                     pollPaymentResult();
                 } catch (e) {
-                    showStatus('fail',
-                        '<div class="status-icon">&times;</div>' +
-                        '<div class="status-msg">' + e.message + '</div>' +
-                        '<button class="btn-link outline" id="btn-retry">Retry</button>');
-                    document.getElementById('btn-retry').addEventListener('click', () => {
-                        btnPay.disabled = false;
-                        btnPay.textContent = 'PAY NOW';
-                        statusArea.style.display = 'none';
-                    });
+                    if (config.mode === 'new') {
+                        // 새 주문 모드에서 PG 실패 시: 주문이 이미 생성됐을 수 있으므로 마이페이지에서 재시도 안내
+                        showStatus('fail',
+                            '<div class="status-icon">&times;</div>' +
+                            '<div class="status-msg">' + e.message + '</div>' +
+                            '<a class="btn-link" href="/shop/index.html#mypage">주문 내역에서 재시도</a>');
+                    } else {
+                        // 재시도 모드: 같은 orderId로 다시 시도 가능
+                        showStatus('fail',
+                            '<div class="status-icon">&times;</div>' +
+                            '<div class="status-msg">' + e.message + '</div>' +
+                            '<button class="btn-link outline" id="btn-retry">Retry</button>');
+                        document.getElementById('btn-retry').addEventListener('click', () => {
+                            btnPay.disabled = false;
+                            btnPay.textContent = 'PAY NOW';
+                            statusArea.style.display = 'none';
+                        });
+                    }
                 }
             });
 
@@ -505,20 +594,17 @@
                 const interval = setInterval(async () => {
                     attempts++;
                     try {
-                        // 주문 상태와 결제 상태를 동시 체크
                         const [order, paymentStatus] = await Promise.all([
-                            OrderApi.get(orderId).catch(() => null),
-                            PaymentApi.status(orderId).catch(() => null),
+                            OrderApi.get(activeOrderId).catch(() => null),
+                            PaymentApi.status(activeOrderId).catch(() => null),
                         ]);
 
-                        // 결제 성공 → 주문 ORDERED
                         if (order && order.status === 'ORDERED') {
                             clearInterval(interval);
                             onComplete('SUCCESS');
                             return;
                         }
 
-                        // 결제 실패 감지 (PG 콜백으로 FAILED 처리됨)
                         if (paymentStatus && paymentStatus.paymentStatus === 'FAILED') {
                             clearInterval(interval);
                             onComplete('FAILED', paymentStatus.failureMessage);
@@ -539,8 +625,7 @@
             }
 
             function onComplete(status, failureMessage) {
-                // 결제 완료/실패 시 pendingOrder 정리
-                sessionStorage.removeItem('pendingOrder');
+                sessionStorage.removeItem('checkoutData');
 
                 if (status === 'SUCCESS') {
                     showStatus('success',
