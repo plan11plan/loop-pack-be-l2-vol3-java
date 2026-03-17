@@ -197,6 +197,29 @@ class OrderServiceTest {
         }
     }
 
+    @DisplayName("미결제 주문 검증할 때, ")
+    @Nested
+    class ValidateNoPendingPayment {
+
+        @DisplayName("PENDING_PAYMENT 주문이 있으면 예외가 발생한다")
+        @Test
+        void validateNoPendingPayment_whenExists_throwsException() {
+            // arrange
+            orderService.createOrder(1L, createSampleCommands());
+
+            // act & assert
+            assertThatThrownBy(() -> orderService.validateNoPendingPayment(1L))
+                    .isInstanceOf(CoreException.class);
+        }
+
+        @DisplayName("PENDING_PAYMENT 주문이 없으면 통과한다")
+        @Test
+        void validateNoPendingPayment_whenNotExists_passes() {
+            // act & assert — 예외 없이 통과
+            orderService.validateNoPendingPayment(1L);
+        }
+    }
+
     @DisplayName("할인을 적용할 때, ")
     @Nested
     class ApplyDiscount {

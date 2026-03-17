@@ -73,6 +73,13 @@ public class OrderService {
                 .orElseThrow(() -> new CoreException(OrderErrorCode.NOT_FOUND));
     }
 
+    @Transactional(readOnly = true)
+    public void validateNoPendingPayment(Long userId) {
+        if (orderRepository.existsByUserIdAndStatus(userId, OrderStatus.PENDING_PAYMENT)) {
+            throw new CoreException(OrderErrorCode.PENDING_PAYMENT_EXISTS);
+        }
+    }
+
     @Transactional
     public void completeOrder(Long orderId) {
         OrderModel order = getById(orderId);
