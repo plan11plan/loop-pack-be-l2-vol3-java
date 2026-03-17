@@ -1,6 +1,7 @@
 package com.loopers.infrastructure.order;
 
 import com.loopers.domain.order.OrderModel;
+import com.loopers.domain.order.OrderStatus;
 import jakarta.persistence.LockModeType;
 import java.time.ZonedDateTime;
 import java.util.List;
@@ -20,4 +21,6 @@ public interface OrderJpaRepository extends JpaRepository<OrderModel, Long> {
     Optional<OrderModel> findByIdWithLockAndDeletedAtIsNull(Long id);
 
     Page<OrderModel> findAll(Pageable pageable);
+
+    boolean existsByUserIdAndStatus(Long userId, OrderStatus status);
 }

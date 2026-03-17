@@ -66,4 +66,11 @@ public class FakeOrderRepository implements OrderRepository {
 
         return new PageImpl<>(pageContent, pageable, all.size());
     }
+
+    @Override
+    public boolean existsByUserIdAndStatus(Long userId, OrderStatus status) {
+        return store.values().stream()
+                .anyMatch(order -> order.getUserId().equals(userId)
+                        && order.getStatus() == status);
+    }
 }

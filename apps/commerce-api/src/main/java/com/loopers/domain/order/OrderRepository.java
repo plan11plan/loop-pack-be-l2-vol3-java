@@ -17,4 +17,6 @@ public interface OrderRepository {
     Optional<OrderModel> findByIdWithLock(Long id);
 
     Page<OrderModel> findAll(Pageable pageable);
+
+    boolean existsByUserIdAndStatus(Long userId, OrderStatus status);
 }
