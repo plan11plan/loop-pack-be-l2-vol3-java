@@ -35,14 +35,17 @@ public class PaymentFacade {
     private final CouponService couponService;
 
     public PaymentResult requestPayment(Long userId, PaymentCriteria.Create criteria) {
-        // TX-B: Payment 생성 (또는 재시도) — 별도 Bean이므로 TX 정상 적용
-        PaymentModel payment = paymentTransactionService.createOrRetryPayment(criteria);
+        PaymentModel payment;
 
-        // 포인트 차감 (PG 호출 전 동기적으로 처리)
-        OrderModel order = orderService.getById(criteria.orderId());
-        userService.deductPoint(userId, order.getTotalPrice());
+        if (criteria.isNewOrder()) {
+            payment = paymentTransactionService.createOrderAndPayment(userId, criteria);
+        } else {
+            payment = paymentTransactionService.createOrRetryPayment(
+                    criteria.orderId(), criteria.cardType(), criteria.cardNo());
+        }
 
-        // TX 밖: PG 호출
+        userService.deductPoint(userId, payment.getAmount());
+
         PgPaymentResult pgResult;
         try {
             pgResult = pgPaymentClient.requestPayment(
@@ -54,7 +57,7 @@ public class PaymentFacade {
                             CALLBACK_URL,
                             String.valueOf(userId)));
         } catch (Exception e) {
-            userService.addPoint(userId, order.getTotalPrice());
+            userService.addPoint(userId, payment.getAmount());
             throw e;
         }
 
@@ -64,8 +67,7 @@ public class PaymentFacade {
             return PaymentResult.from(payment);
         }
 
-        // PG 요청 실패 — 포인트 즉시 복원
-        userService.addPoint(userId, order.getTotalPrice());
+        userService.addPoint(userId, payment.getAmount());
         paymentTransactionService.failLastTransaction(
                 payment.getOrderId(), "PG_REQUEST_FAILED", pgResult.pgDetail());
         if (pgResult.status() == PgRequestStatus.VALIDATION_ERROR) {
@@ -84,11 +86,9 @@ public class PaymentFacade {
         PgCallbackStatus callbackStatus =
                 pgPaymentClient.resolveCallbackStatus(pgStatus, pgReason);
 
-        // TX-C: Payment 도메인 갱신
         PaymentModel payment = paymentService.handleCallback(
                 transactionKey, callbackStatus, pgReason);
 
-        // TX-D: Order 도메인 갱신
         if (payment.isApproved()) {
             try {
                 orderService.completeOrder(payment.getOrderId());

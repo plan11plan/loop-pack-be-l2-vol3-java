@@ -38,8 +38,6 @@ public class OrderFacade {
             backoff = @Backoff(delay = 50, random = true))
     @Transactional
     public OrderResult.OrderSummary createOrder(Long userId, OrderCriteria.Create criteria) {
-        orderService.validateNoPendingPayment(userId);
-
         List<ProductInfo.StockDeduction> deductionInfos =
                 productService.validateAndDeductStock(criteria.toStockDeductions());
 
