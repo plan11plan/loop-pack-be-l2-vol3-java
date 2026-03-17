@@ -38,15 +38,25 @@ public class PaymentFacade {
         // TX-B: Payment 생성 (또는 재시도) — 별도 Bean이므로 TX 정상 적용
         PaymentModel payment = paymentTransactionService.createOrRetryPayment(criteria);
 
+        // 포인트 차감 (PG 호출 전 동기적으로 처리)
+        OrderModel order = orderService.getById(criteria.orderId());
+        userService.deductPoint(userId, order.getTotalPrice());
+
         // TX 밖: PG 호출
-        PgPaymentResult pgResult = pgPaymentClient.requestPayment(
-                new PgPaymentRequest(
-                        String.format("%06d", payment.getOrderId()),
-                        criteria.cardType().name(),
-                        criteria.cardNo(),
-                        payment.getAmount(),
-                        CALLBACK_URL,
-                        String.valueOf(userId)));
+        PgPaymentResult pgResult;
+        try {
+            pgResult = pgPaymentClient.requestPayment(
+                    new PgPaymentRequest(
+                            String.format("%06d", payment.getOrderId()),
+                            criteria.cardType().name(),
+                            criteria.cardNo(),
+                            payment.getAmount(),
+                            CALLBACK_URL,
+                            String.valueOf(userId)));
+        } catch (Exception e) {
+            userService.addPoint(userId, order.getTotalPrice());
+            throw e;
+        }
 
         if (pgResult.requested()) {
             paymentTransactionService.savePaymentKey(
@@ -54,6 +64,8 @@ public class PaymentFacade {
             return PaymentResult.from(payment);
         }
 
+        // PG 요청 실패 — 포인트 즉시 복원
+        userService.addPoint(userId, order.getTotalPrice());
         paymentTransactionService.failLastTransaction(
                 payment.getOrderId(), "PG_REQUEST_FAILED", pgResult.pgDetail());
         if (pgResult.status() == PgRequestStatus.VALIDATION_ERROR) {
