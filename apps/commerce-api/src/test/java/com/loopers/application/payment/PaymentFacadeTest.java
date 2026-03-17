@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
@@ -55,33 +56,60 @@ class PaymentFacadeTest {
     @Nested
     class RequestPayment {
 
-        @DisplayName("최초 결제면 Payment를 생성하고 포인트 차감 후 PG를 호출한다.")
+        @DisplayName("새 주문 + 결제면 주문과 Payment를 함께 생성하고 포인트 차감 후 PG를 호출한다.")
         @Test
-        void requestPayment_firstTime_createsPaymentAndCallsPg() {
+        void requestPayment_newOrder_createsOrderAndPaymentThenCallsPg() {
             // arrange
             PaymentModel payment = mockPayment(1L, 1L, 50000, PaymentStatus.PENDING);
-            when(paymentTransactionService.createOrRetryPayment(any()))
+            when(paymentTransactionService.createOrderAndPayment(eq(100L), any()))
                     .thenReturn(payment);
-            OrderModel order = org.mockito.Mockito.mock(OrderModel.class);
-            lenient().when(order.getTotalPrice()).thenReturn(50000);
-            when(orderService.getById(1L)).thenReturn(order);
             when(pgPaymentClient.requestPayment(any(PgPaymentRequest.class)))
                     .thenReturn(new PgPaymentResult(true, "20260316:TR:abc", PgRequestStatus.ACCEPTED));
 
             // act
             PaymentResult result = paymentFacade.requestPayment(
                     100L,
-                    new PaymentCriteria.Create(1L, CardType.SAMSUNG, "1234-5678-9814-1451"));
+                    new PaymentCriteria.Create(
+                            null,
+                            List.of(new PaymentCriteria.Create.OrderItem(10L, 2, 25000)),
+                            null,
+                            CardType.SAMSUNG,
+                            "1234-5678-9814-1451"));
 
             // assert
             assertAll(
                     () -> assertThat(result.paymentId()).isEqualTo(1L),
                     () -> assertThat(result.status()).isEqualTo("PENDING"));
-            verify(paymentTransactionService).createOrRetryPayment(any());
+            verify(paymentTransactionService).createOrderAndPayment(eq(100L), any());
             verify(userService).deductPoint(100L, 50000);
             verify(pgPaymentClient).requestPayment(any(PgPaymentRequest.class));
             verify(paymentTransactionService).savePaymentKey(1L, "20260316:TR:abc");
-            verify(userService, never()).addPoint(100L, 50000);
+            verify(userService, never()).addPoint(anyLong(), any(Integer.class));
+        }
+
+        @DisplayName("기존 주문 재시도면 Payment를 생성하고 포인트 차감 후 PG를 호출한다.")
+        @Test
+        void requestPayment_retry_createsPaymentAndCallsPg() {
+            // arrange
+            PaymentModel payment = mockPayment(1L, 1L, 50000, PaymentStatus.PENDING);
+            when(paymentTransactionService.createOrRetryPayment(1L, CardType.SAMSUNG, "1234-5678-9814-1451"))
+                    .thenReturn(payment);
+            when(pgPaymentClient.requestPayment(any(PgPaymentRequest.class)))
+                    .thenReturn(new PgPaymentResult(true, "20260316:TR:abc", PgRequestStatus.ACCEPTED));
+
+            // act
+            PaymentResult result = paymentFacade.requestPayment(
+                    100L,
+                    new PaymentCriteria.Create(1L, null, null, CardType.SAMSUNG, "1234-5678-9814-1451"));
+
+            // assert
+            assertAll(
+                    () -> assertThat(result.paymentId()).isEqualTo(1L),
+                    () -> assertThat(result.status()).isEqualTo("PENDING"));
+            verify(paymentTransactionService).createOrRetryPayment(1L, CardType.SAMSUNG, "1234-5678-9814-1451");
+            verify(userService).deductPoint(100L, 50000);
+            verify(pgPaymentClient).requestPayment(any(PgPaymentRequest.class));
+            verify(paymentTransactionService).savePaymentKey(1L, "20260316:TR:abc");
         }
 
         @DisplayName("PG 서버가 불안정하면 포인트 복원 후 PG_SERVICE_UNAVAILABLE 예외가 발생한다.")
@@ -89,11 +117,8 @@ class PaymentFacadeTest {
         void requestPayment_whenPgUnavailable_throwsException() {
             // arrange
             PaymentModel payment = mockPayment(1L, 1L, 50000, PaymentStatus.PENDING);
-            when(paymentTransactionService.createOrRetryPayment(any()))
+            when(paymentTransactionService.createOrRetryPayment(1L, CardType.SAMSUNG, "1234-5678-9814-1451"))
                     .thenReturn(payment);
-            OrderModel order = org.mockito.Mockito.mock(OrderModel.class);
-            lenient().when(order.getTotalPrice()).thenReturn(50000);
-            when(orderService.getById(1L)).thenReturn(order);
             when(pgPaymentClient.requestPayment(any(PgPaymentRequest.class)))
                     .thenReturn(new PgPaymentResult(false, null, PgRequestStatus.SERVER_ERROR,
                             "현재 서버가 불안정합니다."));
@@ -101,7 +126,7 @@ class PaymentFacadeTest {
             // act & assert
             assertThatThrownBy(() -> paymentFacade.requestPayment(
                     100L,
-                    new PaymentCriteria.Create(1L, CardType.SAMSUNG, "1234-5678-9814-1451")))
+                    new PaymentCriteria.Create(1L, null, null, CardType.SAMSUNG, "1234-5678-9814-1451")))
                     .isInstanceOf(CoreException.class)
                     .hasMessageContaining("결제 서비스가 일시적으로 지연되고 있습니다");
             verify(userService).deductPoint(100L, 50000);
@@ -115,11 +140,8 @@ class PaymentFacadeTest {
         void requestPayment_whenPgBadRequest_throwsException() {
             // arrange
             PaymentModel payment = mockPayment(1L, 1L, 50000, PaymentStatus.PENDING);
-            when(paymentTransactionService.createOrRetryPayment(any()))
+            when(paymentTransactionService.createOrRetryPayment(1L, CardType.SAMSUNG, "invalid"))
                     .thenReturn(payment);
-            OrderModel order = org.mockito.Mockito.mock(OrderModel.class);
-            lenient().when(order.getTotalPrice()).thenReturn(50000);
-            when(orderService.getById(1L)).thenReturn(order);
             when(pgPaymentClient.requestPayment(any(PgPaymentRequest.class)))
                     .thenReturn(new PgPaymentResult(false, null, PgRequestStatus.VALIDATION_ERROR,
                             "카드 번호는 xxxx-xxxx-xxxx-xxxx 형식이어야 합니다."));
@@ -127,7 +149,7 @@ class PaymentFacadeTest {
             // act & assert
             assertThatThrownBy(() -> paymentFacade.requestPayment(
                     100L,
-                    new PaymentCriteria.Create(1L, CardType.SAMSUNG, "invalid")))
+                    new PaymentCriteria.Create(1L, null, null, CardType.SAMSUNG, "invalid")))
                     .isInstanceOf(CoreException.class)
                     .hasMessageContaining("카드 번호는 xxxx-xxxx-xxxx-xxxx 형식이어야 합니다");
             verify(userService).deductPoint(100L, 50000);
@@ -141,11 +163,8 @@ class PaymentFacadeTest {
         void requestPayment_whenPgConnectionFailed_throwsException() {
             // arrange
             PaymentModel payment = mockPayment(1L, 1L, 50000, PaymentStatus.PENDING);
-            when(paymentTransactionService.createOrRetryPayment(any()))
+            when(paymentTransactionService.createOrRetryPayment(1L, CardType.SAMSUNG, "1234-5678-9814-1451"))
                     .thenReturn(payment);
-            OrderModel order = org.mockito.Mockito.mock(OrderModel.class);
-            lenient().when(order.getTotalPrice()).thenReturn(50000);
-            when(orderService.getById(1L)).thenReturn(order);
             when(pgPaymentClient.requestPayment(any(PgPaymentRequest.class)))
                     .thenReturn(new PgPaymentResult(false, null, PgRequestStatus.CONNECTION_ERROR,
                             "Connection refused"));
@@ -153,7 +172,7 @@ class PaymentFacadeTest {
             // act & assert
             assertThatThrownBy(() -> paymentFacade.requestPayment(
                     100L,
-                    new PaymentCriteria.Create(1L, CardType.SAMSUNG, "1234-5678-9814-1451")))
+                    new PaymentCriteria.Create(1L, null, null, CardType.SAMSUNG, "1234-5678-9814-1451")))
                     .isInstanceOf(CoreException.class)
                     .hasMessageContaining("결제 서비스가 일시적으로 지연되고 있습니다");
             verify(userService).deductPoint(100L, 50000);

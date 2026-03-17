@@ -140,23 +140,6 @@ class OrderFacadeTest {
                     .isInstanceOf(CoreException.class);
         }
 
-        @DisplayName("이미 미결제 주문이 있으면 예외가 발생한다")
-        @Test
-        void createOrder_whenPendingPaymentExists_throwsException() {
-            // arrange
-            org.mockito.Mockito.doThrow(new CoreException(OrderErrorCode.PENDING_PAYMENT_EXISTS))
-                    .when(orderService).validateNoPendingPayment(1L);
-
-            OrderCriteria.Create criteria = new OrderCriteria.Create(List.of(
-                    new OrderCriteria.Create.CreateItem(10L, 1, 25000)));
-
-            // act & assert
-            assertThatThrownBy(() -> orderFacade.createOrder(1L, criteria))
-                    .isInstanceOf(CoreException.class)
-                    .satisfies(e -> assertThat(((CoreException) e).getErrorCode())
-                            .isEqualTo(OrderErrorCode.PENDING_PAYMENT_EXISTS));
-            verify(productService, never()).validateAndDeductStock(anyList());
-        }
     }
 
     @DisplayName("회원 주문 목록을 조회할 때 (UC-O02), ")
