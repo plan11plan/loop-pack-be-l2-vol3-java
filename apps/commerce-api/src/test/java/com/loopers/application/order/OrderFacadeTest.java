@@ -92,7 +92,6 @@ class OrderFacadeTest {
                     () -> verify(productService).validateAndDeductStock(anyList()),
                     () -> verify(brandService).getNameMapByIds(List.of(brandId)),
                     () -> verify(orderService).createOrder(anyLong(), anyList()),
-                    () -> verify(userService).deductPoint(1L, 25000),
                     () -> assertThat(result.totalPrice()).isEqualTo(25000));
         }
 

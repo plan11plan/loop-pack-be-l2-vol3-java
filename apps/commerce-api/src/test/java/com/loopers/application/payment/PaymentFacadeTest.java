@@ -55,13 +55,16 @@ class PaymentFacadeTest {
     @Nested
     class RequestPayment {
 
-        @DisplayName("최초 결제면 Payment를 생성하고 PG를 호출한다.")
+        @DisplayName("최초 결제면 Payment를 생성하고 포인트 차감 후 PG를 호출한다.")
         @Test
         void requestPayment_firstTime_createsPaymentAndCallsPg() {
             // arrange
             PaymentModel payment = mockPayment(1L, 1L, 50000, PaymentStatus.PENDING);
             when(paymentTransactionService.createOrRetryPayment(any()))
                     .thenReturn(payment);
+            OrderModel order = org.mockito.Mockito.mock(OrderModel.class);
+            lenient().when(order.getTotalPrice()).thenReturn(50000);
+            when(orderService.getById(1L)).thenReturn(order);
             when(pgPaymentClient.requestPayment(any(PgPaymentRequest.class)))
                     .thenReturn(new PgPaymentResult(true, "20260316:TR:abc", PgRequestStatus.ACCEPTED));
 
@@ -75,17 +78,22 @@ class PaymentFacadeTest {
                     () -> assertThat(result.paymentId()).isEqualTo(1L),
                     () -> assertThat(result.status()).isEqualTo("PENDING"));
             verify(paymentTransactionService).createOrRetryPayment(any());
+            verify(userService).deductPoint(100L, 50000);
             verify(pgPaymentClient).requestPayment(any(PgPaymentRequest.class));
             verify(paymentTransactionService).savePaymentKey(1L, "20260316:TR:abc");
+            verify(userService, never()).addPoint(100L, 50000);
         }
 
-        @DisplayName("PG 서버가 불안정하면 PG_SERVICE_UNAVAILABLE 예외가 발생한다.")
+        @DisplayName("PG 서버가 불안정하면 포인트 복원 후 PG_SERVICE_UNAVAILABLE 예외가 발생한다.")
         @Test
         void requestPayment_whenPgUnavailable_throwsException() {
             // arrange
             PaymentModel payment = mockPayment(1L, 1L, 50000, PaymentStatus.PENDING);
             when(paymentTransactionService.createOrRetryPayment(any()))
                     .thenReturn(payment);
+            OrderModel order = org.mockito.Mockito.mock(OrderModel.class);
+            lenient().when(order.getTotalPrice()).thenReturn(50000);
+            when(orderService.getById(1L)).thenReturn(order);
             when(pgPaymentClient.requestPayment(any(PgPaymentRequest.class)))
                     .thenReturn(new PgPaymentResult(false, null, PgRequestStatus.SERVER_ERROR,
                             "현재 서버가 불안정합니다."));
@@ -96,17 +104,22 @@ class PaymentFacadeTest {
                     new PaymentCriteria.Create(1L, CardType.SAMSUNG, "1234-5678-9814-1451")))
                     .isInstanceOf(CoreException.class)
                     .hasMessageContaining("결제 서비스가 일시적으로 지연되고 있습니다");
+            verify(userService).deductPoint(100L, 50000);
+            verify(userService).addPoint(100L, 50000);
             verify(paymentTransactionService).failLastTransaction(
                     eq(1L), eq("PG_REQUEST_FAILED"), anyString());
         }
 
-        @DisplayName("PG 요청 파라미터가 잘못되면 PG_REQUEST_FAILED 예외가 발생한다.")
+        @DisplayName("PG 요청 파라미터가 잘못되면 포인트 복원 후 PG_REQUEST_FAILED 예외가 발생한다.")
         @Test
         void requestPayment_whenPgBadRequest_throwsException() {
             // arrange
             PaymentModel payment = mockPayment(1L, 1L, 50000, PaymentStatus.PENDING);
             when(paymentTransactionService.createOrRetryPayment(any()))
                     .thenReturn(payment);
+            OrderModel order = org.mockito.Mockito.mock(OrderModel.class);
+            lenient().when(order.getTotalPrice()).thenReturn(50000);
+            when(orderService.getById(1L)).thenReturn(order);
             when(pgPaymentClient.requestPayment(any(PgPaymentRequest.class)))
                     .thenReturn(new PgPaymentResult(false, null, PgRequestStatus.VALIDATION_ERROR,
                             "카드 번호는 xxxx-xxxx-xxxx-xxxx 형식이어야 합니다."));
@@ -117,17 +130,22 @@ class PaymentFacadeTest {
                     new PaymentCriteria.Create(1L, CardType.SAMSUNG, "invalid")))
                     .isInstanceOf(CoreException.class)
                     .hasMessageContaining("카드 번호는 xxxx-xxxx-xxxx-xxxx 형식이어야 합니다");
+            verify(userService).deductPoint(100L, 50000);
+            verify(userService).addPoint(100L, 50000);
             verify(paymentTransactionService).failLastTransaction(
                     eq(1L), eq("PG_REQUEST_FAILED"), anyString());
         }
 
-        @DisplayName("PG 연결이 실패하면 PG_SERVICE_UNAVAILABLE 예외가 발생한다.")
+        @DisplayName("PG 연결이 실패하면 포인트 복원 후 PG_SERVICE_UNAVAILABLE 예외가 발생한다.")
         @Test
         void requestPayment_whenPgConnectionFailed_throwsException() {
             // arrange
             PaymentModel payment = mockPayment(1L, 1L, 50000, PaymentStatus.PENDING);
             when(paymentTransactionService.createOrRetryPayment(any()))
                     .thenReturn(payment);
+            OrderModel order = org.mockito.Mockito.mock(OrderModel.class);
+            lenient().when(order.getTotalPrice()).thenReturn(50000);
+            when(orderService.getById(1L)).thenReturn(order);
             when(pgPaymentClient.requestPayment(any(PgPaymentRequest.class)))
                     .thenReturn(new PgPaymentResult(false, null, PgRequestStatus.CONNECTION_ERROR,
                             "Connection refused"));
@@ -138,6 +156,8 @@ class PaymentFacadeTest {
                     new PaymentCriteria.Create(1L, CardType.SAMSUNG, "1234-5678-9814-1451")))
                     .isInstanceOf(CoreException.class)
                     .hasMessageContaining("결제 서비스가 일시적으로 지연되고 있습니다");
+            verify(userService).deductPoint(100L, 50000);
+            verify(userService).addPoint(100L, 50000);
         }
     }
 
