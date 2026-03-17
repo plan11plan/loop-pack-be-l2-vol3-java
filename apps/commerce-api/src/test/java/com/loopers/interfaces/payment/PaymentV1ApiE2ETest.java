@@ -146,9 +146,9 @@ class PaymentV1ApiE2ETest {
                             .isEqualTo(OrderStatus.ORDERED));
         }
 
-        @DisplayName("FAILED 콜백 수신하면 Payment는 PENDING 유지, Order는 변경 없다.")
+        @DisplayName("FAILED 콜백 수신하면 Payment는 FAILED, Order는 CANCELLED로 전이된다.")
         @Test
-        void handleCallback_failed_keepsPaymentPending() {
+        void handleCallback_failed_failsPaymentAndCancelsOrder() {
             // arrange
             PaymentModel payment = paymentJpaRepository.save(
                     PaymentModel.create(orderId, 100000, CardType.SAMSUNG,
@@ -159,7 +159,7 @@ class PaymentV1ApiE2ETest {
             transactionJpaRepository.save(tx);
 
             // act — FAILED 콜백
-            testRestTemplate.exchange(
+            ResponseEntity<ApiResponse<Object>> response = testRestTemplate.exchange(
                     "/api/v1/payments/callback", HttpMethod.POST,
                     new HttpEntity<>(new PgCallbackRequest(
                             "E2E_TEST_PK_002", String.valueOf(orderId),
@@ -173,10 +173,11 @@ class PaymentV1ApiE2ETest {
             OrderModel updatedOrder = orderJpaRepository.findById(orderId).orElseThrow();
 
             assertAll(
+                    () -> assertThat(response.getStatusCode().is2xxSuccessful()).isTrue(),
                     () -> assertThat(updatedPayment.getStatus())
-                            .isEqualTo(PaymentStatus.PENDING),
+                            .isEqualTo(PaymentStatus.FAILED),
                     () -> assertThat(updatedOrder.getStatus())
-                            .isEqualTo(OrderStatus.PENDING_PAYMENT));
+                            .isEqualTo(OrderStatus.CANCELLED));
         }
 
         @DisplayName("ORDERED 상태 주문에 결제 요청하면 에러 응답을 반환한다.")
