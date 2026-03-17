@@ -8,6 +8,7 @@ import com.loopers.domain.payment.PaymentModel;
 import com.loopers.domain.payment.PaymentService;
 import com.loopers.domain.payment.PgCallbackStatus;
 import com.loopers.domain.payment.PgPaymentClient;
+import com.loopers.domain.order.OrderModel;
 import com.loopers.domain.payment.PgPaymentRequest;
 import com.loopers.domain.payment.PgPaymentResult;
 import com.loopers.domain.payment.PgRequestStatus;
@@ -80,8 +81,14 @@ public class PaymentFacade {
             try {
                 orderService.completeOrder(payment.getOrderId());
             } catch (Exception e) {
-                log.warn("Order 상태 갱신 실패. 폴링 배치가 복구 예정. orderId={}",
-                        payment.getOrderId(), e);
+                OrderModel order = orderService.getById(payment.getOrderId());
+                if (order.isCancelled()) {
+                    pgPaymentClient.refund(transactionKey);
+                    log.warn("늦은 콜백으로 인한 자동 환불. orderId={}", payment.getOrderId());
+                } else {
+                    log.warn("Order 상태 갱신 실패. 폴링 배치가 복구 예정. orderId={}",
+                            payment.getOrderId(), e);
+                }
             }
         }
 

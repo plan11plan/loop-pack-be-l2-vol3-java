@@ -12,6 +12,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.loopers.domain.coupon.CouponService;
+import com.loopers.domain.order.OrderErrorCode;
+import com.loopers.domain.order.OrderModel;
 import com.loopers.domain.order.OrderService;
 import com.loopers.domain.order.dto.OrderInfo;
 import com.loopers.domain.payment.CardType;
@@ -188,6 +190,30 @@ class PaymentFacadeTest {
                     () -> verify(productService).increaseStock(20L, 1),
                     () -> verify(userService).addPoint(100L, 50000),
                     () -> verify(couponService).restoreByOrderId(1L));
+        }
+
+        @DisplayName("SUCCESS 콜백이지만 주문이 이미 취소됐으면 PG 환불을 요청한다.")
+        @Test
+        void handleCallback_success_butOrderCancelled_refundsToPg() {
+            // arrange
+            PaymentModel payment = mockPayment(1L, 1L, 50000, PaymentStatus.APPROVED);
+            when(pgPaymentClient.resolveCallbackStatus("SUCCESS", "정상 승인되었습니다."))
+                    .thenReturn(PgCallbackStatus.APPROVED);
+            when(paymentService.handleCallback(
+                    eq("PK_LATE"), eq(PgCallbackStatus.APPROVED), any()))
+                    .thenReturn(payment);
+            org.mockito.Mockito.doThrow(new CoreException(OrderErrorCode.INVALID_STATUS_TRANSITION))
+                    .when(orderService).completeOrder(1L);
+
+            OrderModel cancelledOrder = org.mockito.Mockito.mock(OrderModel.class);
+            lenient().when(cancelledOrder.isCancelled()).thenReturn(true);
+            when(orderService.getById(1L)).thenReturn(cancelledOrder);
+
+            // act
+            paymentFacade.handleCallback("PK_LATE", "SUCCESS", "정상 승인되었습니다.");
+
+            // assert
+            verify(pgPaymentClient).refund("PK_LATE");
         }
 
         @DisplayName("FAILED 콜백이면 Order를 변경하지 않는다.")
