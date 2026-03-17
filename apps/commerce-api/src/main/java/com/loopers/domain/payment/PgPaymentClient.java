@@ -9,4 +9,6 @@ public interface PgPaymentClient {
     PgOrderTransactions getPaymentsByOrder(String orderId, String userId);
 
     PgCallbackStatus resolveCallbackStatus(String pgStatus, String reason);
+
+    void refund(String transactionKey);
 }

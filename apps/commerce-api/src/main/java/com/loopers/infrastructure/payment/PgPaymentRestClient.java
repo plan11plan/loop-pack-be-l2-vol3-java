@@ -122,6 +122,11 @@ public class PgPaymentRestClient implements PgPaymentClient {
         return PgCallbackStatus.PG_ERROR;
     }
 
+    @Override
+    public void refund(String transactionKey) {
+        throw new UnsupportedOperationException("PG 환불 API 연동은 별도 태스크에서 구현");
+    }
+
     private String parsePgErrorMessage(String responseBody) {
         try {
             JsonNode node = new ObjectMapper().readTree(responseBody);
