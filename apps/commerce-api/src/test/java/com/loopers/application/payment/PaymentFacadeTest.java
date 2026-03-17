@@ -11,7 +11,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.loopers.domain.coupon.CouponService;
 import com.loopers.domain.order.OrderService;
+import com.loopers.domain.order.dto.OrderInfo;
 import com.loopers.domain.payment.CardType;
 import com.loopers.domain.payment.PaymentModel;
 import com.loopers.domain.payment.PaymentService;
@@ -21,9 +23,12 @@ import com.loopers.domain.payment.PgPaymentClient;
 import com.loopers.domain.payment.PgPaymentRequest;
 import com.loopers.domain.payment.PgPaymentResult;
 import com.loopers.domain.payment.PgRequestStatus;
+import com.loopers.domain.product.ProductService;
+import com.loopers.domain.user.UserService;
 import com.loopers.support.error.CoreException;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -39,6 +44,9 @@ class PaymentFacadeTest {
     @Mock PaymentService paymentService;
     @Mock PgPaymentClient pgPaymentClient;
     @Mock PaymentTransactionService paymentTransactionService;
+    @Mock ProductService productService;
+    @Mock UserService userService;
+    @Mock CouponService couponService;
     @InjectMocks PaymentFacade paymentFacade;
 
     @DisplayName("결제를 요청할 때, ")
@@ -153,6 +161,35 @@ class PaymentFacadeTest {
             verify(orderService).completeOrder(1L);
         }
 
+        @DisplayName("FAILED 콜백이면 주문 취소 + 재고 복구 + 포인트 반환 + 쿠폰 복원한다.")
+        @Test
+        void handleCallback_failed_compensatesResources() {
+            // arrange
+            PaymentModel payment = mockPayment(1L, 1L, 50000, PaymentStatus.FAILED);
+            when(pgPaymentClient.resolveCallbackStatus("FAILED", "한도초과"))
+                    .thenReturn(PgCallbackStatus.LIMIT_EXCEEDED);
+            when(paymentService.handleCallback(
+                    eq("PK_002"), eq(PgCallbackStatus.LIMIT_EXCEEDED), anyString()))
+                    .thenReturn(payment);
+
+            OrderInfo.PaymentFailureCancellation cancellation =
+                    new OrderInfo.PaymentFailureCancellation(100L, 50000, List.of(
+                            new OrderInfo.PaymentFailureCancellation.CancelledItem(10L, 2),
+                            new OrderInfo.PaymentFailureCancellation.CancelledItem(20L, 1)));
+            when(orderService.cancelByPaymentFailure(1L)).thenReturn(cancellation);
+
+            // act
+            paymentFacade.handleCallback("PK_002", "FAILED", "한도초과");
+
+            // assert
+            assertAll(
+                    () -> verify(orderService).cancelByPaymentFailure(1L),
+                    () -> verify(productService).increaseStock(10L, 2),
+                    () -> verify(productService).increaseStock(20L, 1),
+                    () -> verify(userService).addPoint(100L, 50000),
+                    () -> verify(couponService).restoreByOrderId(1L));
+        }
+
         @DisplayName("FAILED 콜백이면 Order를 변경하지 않는다.")
         @Test
         void handleCallback_failed_doesNotChangeOrder() {
@@ -183,6 +220,7 @@ class PaymentFacadeTest {
         lenient().when(payment.getMaskedCardNo()).thenReturn("****-****-****-1451");
         lenient().when(payment.getCreatedAt()).thenReturn(ZonedDateTime.now());
         lenient().when(payment.isApproved()).thenReturn(status == PaymentStatus.APPROVED);
+        lenient().when(payment.isFailed()).thenReturn(status == PaymentStatus.FAILED);
         lenient().when(payment.getTransactions()).thenReturn(new ArrayList<>());
         return payment;
     }

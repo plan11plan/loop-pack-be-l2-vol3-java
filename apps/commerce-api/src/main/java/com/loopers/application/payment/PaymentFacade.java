@@ -1,6 +1,8 @@
 package com.loopers.application.payment;
 
+import com.loopers.domain.coupon.CouponService;
 import com.loopers.domain.order.OrderService;
+import com.loopers.domain.order.dto.OrderInfo;
 import com.loopers.domain.payment.PaymentErrorCode;
 import com.loopers.domain.payment.PaymentModel;
 import com.loopers.domain.payment.PaymentService;
@@ -9,6 +11,8 @@ import com.loopers.domain.payment.PgPaymentClient;
 import com.loopers.domain.payment.PgPaymentRequest;
 import com.loopers.domain.payment.PgPaymentResult;
 import com.loopers.domain.payment.PgRequestStatus;
+import com.loopers.domain.product.ProductService;
+import com.loopers.domain.user.UserService;
 import com.loopers.support.error.CoreException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +29,9 @@ public class PaymentFacade {
     private final PaymentService paymentService;
     private final PgPaymentClient pgPaymentClient;
     private final PaymentTransactionService paymentTransactionService;
+    private final ProductService productService;
+    private final UserService userService;
+    private final CouponService couponService;
 
     public PaymentResult requestPayment(Long userId, PaymentCriteria.Create criteria) {
         // TX-B: Payment 생성 (또는 재시도) — 별도 Bean이므로 TX 정상 적용
@@ -76,6 +83,15 @@ public class PaymentFacade {
                 log.warn("Order 상태 갱신 실패. 폴링 배치가 복구 예정. orderId={}",
                         payment.getOrderId(), e);
             }
+        }
+
+        if (payment.isFailed()) {
+            OrderInfo.PaymentFailureCancellation cancellation =
+                    orderService.cancelByPaymentFailure(payment.getOrderId());
+            cancellation.items().forEach(item ->
+                    productService.increaseStock(item.productId(), item.quantity()));
+            userService.addPoint(cancellation.userId(), cancellation.totalPrice());
+            couponService.restoreByOrderId(payment.getOrderId());
         }
     }
 }
