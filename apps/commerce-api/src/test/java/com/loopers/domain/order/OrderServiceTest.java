@@ -220,6 +220,47 @@ class OrderServiceTest {
         }
     }
 
+    @DisplayName("결제 실패로 주문을 취소할 때, ")
+    @Nested
+    class CancelByPaymentFailure {
+
+        @DisplayName("주문 상태가 CANCELLED로 변경되고 아이템 정보가 반환된다")
+        @Test
+        void cancelByPaymentFailure_cancelsAndReturnsInfo() {
+            // arrange
+            OrderModel order = orderService.createOrder(1L, List.of(
+                    new OrderCommand.CreateItem(10L, 25000, 2, "상품A", "브랜드A"),
+                    new OrderCommand.CreateItem(20L, 30000, 1, "상품B", "브랜드B")));
+
+            // act
+            OrderInfo.PaymentFailureCancellation result =
+                    orderService.cancelByPaymentFailure(order.getId());
+
+            // assert
+            assertAll(
+                    () -> assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELLED),
+                    () -> assertThat(result.userId()).isEqualTo(1L),
+                    () -> assertThat(result.totalPrice()).isEqualTo(80000),
+                    () -> assertThat(result.items()).hasSize(2),
+                    () -> assertThat(result.items().get(0).productId()).isEqualTo(10L),
+                    () -> assertThat(result.items().get(0).quantity()).isEqualTo(2),
+                    () -> assertThat(result.items().get(1).productId()).isEqualTo(20L),
+                    () -> assertThat(result.items().get(1).quantity()).isEqualTo(1));
+        }
+
+        @DisplayName("PENDING_PAYMENT이 아닌 주문이면 예외가 발생한다")
+        @Test
+        void cancelByPaymentFailure_whenNotPendingPayment_throwsException() {
+            // arrange
+            OrderModel order = orderService.createOrder(1L, createSampleCommands());
+            orderService.completeOrder(order.getId());
+
+            // act & assert
+            assertThatThrownBy(() -> orderService.cancelByPaymentFailure(order.getId()))
+                    .isInstanceOf(CoreException.class);
+        }
+    }
+
     @DisplayName("할인을 적용할 때, ")
     @Nested
     class ApplyDiscount {

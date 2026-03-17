@@ -87,8 +87,15 @@ public class OrderService {
     }
 
     @Transactional
-    public void cancelOrderByPaymentFailure(Long orderId) {
+    public OrderInfo.PaymentFailureCancellation cancelByPaymentFailure(Long orderId) {
         OrderModel order = getById(orderId);
         order.cancelByPaymentFailure();
+        return new OrderInfo.PaymentFailureCancellation(
+                order.getUserId(),
+                order.getTotalPrice(),
+                order.getItems().stream()
+                        .map(item -> new OrderInfo.PaymentFailureCancellation.CancelledItem(
+                                item.getProductId(), item.getQuantity()))
+                        .toList());
     }
 }
