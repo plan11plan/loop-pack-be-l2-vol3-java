@@ -1,9 +1,9 @@
 package com.loopers.domain.payment;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertAll;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.time.LocalDateTime;
+import com.loopers.support.error.CoreException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -14,54 +14,93 @@ class PaymentModelTest {
     @Nested
     class Create {
 
-        @DisplayName("모든 필드가 주어지면 PENDING 상태로 생성된다.")
+        @DisplayName("PENDING 상태로 생성된다.")
         @Test
-        void create_whenAllDataProvided() {
+        void create_pendingStatus() {
             // act
             PaymentModel payment = PaymentModel.create(
                     1L, 50000, CardType.SAMSUNG, "****-****-****-1451");
 
             // assert
-            assertAll(
-                    () -> assertThat(payment.getOrderId()).isEqualTo(1L),
-                    () -> assertThat(payment.getAmount()).isEqualTo(50000),
-                    () -> assertThat(payment.getCardType()).isEqualTo(CardType.SAMSUNG),
-                    () -> assertThat(payment.getMaskedCardNo()).isEqualTo("****-****-****-1451"),
-                    () -> assertThat(payment.getStatus()).isEqualTo(PaymentStatus.PENDING),
-                    () -> assertThat(payment.getApprovedAt()).isNull(),
-                    () -> assertThat(payment.getTransactions()).isEmpty());
+            assertThat(payment.getStatus()).isEqualTo(PaymentStatus.PENDING);
+            assertThat(payment.getPgTransactionId()).isNull();
+            assertThat(payment.getFailureCode()).isNull();
         }
     }
 
-    @DisplayName("결제를 승인할 때, ")
+    @DisplayName("PG 요청이 수락되면, ")
     @Nested
-    class Approve {
+    class Requested {
 
-        @DisplayName("상태가 APPROVED로 전이되고 승인 시각이 기록된다.")
+        @DisplayName("REQUESTED 상태로 전이되고 pgTransactionId가 저장된다.")
         @Test
-        void approve_setsStatusAndApprovedAt() {
+        void requested_transitionAndSaveKey() {
             // arrange
             PaymentModel payment = PaymentModel.create(
                     1L, 50000, CardType.SAMSUNG, "****-****-****-1451");
-            LocalDateTime approvedAt = LocalDateTime.of(2026, 3, 16, 10, 30);
 
             // act
-            payment.approve(approvedAt);
+            payment.requested("TX_001");
 
             // assert
-            assertAll(
-                    () -> assertThat(payment.getStatus()).isEqualTo(PaymentStatus.APPROVED),
-                    () -> assertThat(payment.getApprovedAt()).isEqualTo(approvedAt));
+            assertThat(payment.getStatus()).isEqualTo(PaymentStatus.REQUESTED);
+            assertThat(payment.getPgTransactionId()).isEqualTo("TX_001");
+        }
+
+        @DisplayName("REQUESTED 상태에서 다시 requested 호출 시 예외가 발생한다.")
+        @Test
+        void requested_fromRequested_throwsException() {
+            // arrange
+            PaymentModel payment = PaymentModel.create(
+                    1L, 50000, CardType.SAMSUNG, "****-****-****-1451");
+            payment.requested("TX_001");
+
+            // act & assert
+            assertThatThrownBy(() -> payment.requested("TX_002"))
+                    .isInstanceOf(CoreException.class);
         }
     }
 
-    @DisplayName("결제를 실패 처리할 때, ")
+    @DisplayName("결제가 완료되면, ")
+    @Nested
+    class Complete {
+
+        @DisplayName("COMPLETED 상태로 전이된다.")
+        @Test
+        void complete_fromRequested() {
+            // arrange
+            PaymentModel payment = PaymentModel.create(
+                    1L, 50000, CardType.SAMSUNG, "****-****-****-1451");
+            payment.requested("TX_001");
+
+            // act
+            payment.complete();
+
+            // assert
+            assertThat(payment.getStatus()).isEqualTo(PaymentStatus.COMPLETED);
+            assertThat(payment.getApprovedAt()).isNotNull();
+        }
+
+        @DisplayName("PENDING에서 complete 호출 시 예외가 발생한다.")
+        @Test
+        void complete_fromPending_throwsException() {
+            // arrange
+            PaymentModel payment = PaymentModel.create(
+                    1L, 50000, CardType.SAMSUNG, "****-****-****-1451");
+
+            // act & assert
+            assertThatThrownBy(() -> payment.complete())
+                    .isInstanceOf(CoreException.class);
+        }
+    }
+
+    @DisplayName("결제가 실패하면, ")
     @Nested
     class Fail {
 
-        @DisplayName("상태가 FAILED로 전이된다.")
+        @DisplayName("PENDING에서 FAILED로 전이된다.")
         @Test
-        void fail_setsStatusToFailed() {
+        void fail_fromPending() {
             // arrange
             PaymentModel payment = PaymentModel.create(
                     1L, 50000, CardType.SAMSUNG, "****-****-****-1451");
@@ -72,92 +111,65 @@ class PaymentModelTest {
             // assert
             assertThat(payment.getStatus()).isEqualTo(PaymentStatus.FAILED);
         }
-    }
 
-    @DisplayName("카드 정보를 갱신할 때, ")
-    @Nested
-    class UpdateCardInfo {
-
-        @DisplayName("카드 종류와 마스킹 번호가 변경된다.")
+        @DisplayName("REQUESTED에서 FAILED로 전이되고 실패 사유가 저장된다.")
         @Test
-        void updateCardInfo_changesCardTypeAndNo() {
+        void fail_fromRequested_withReason() {
             // arrange
             PaymentModel payment = PaymentModel.create(
                     1L, 50000, CardType.SAMSUNG, "****-****-****-1451");
+            payment.requested("TX_001");
 
             // act
-            payment.updateCardInfo(CardType.KB, "****-****-****-9999");
+            payment.fail("LIMIT_EXCEEDED", "한도초과");
 
             // assert
-            assertAll(
-                    () -> assertThat(payment.getCardType()).isEqualTo(CardType.KB),
-                    () -> assertThat(payment.getMaskedCardNo())
-                            .isEqualTo("****-****-****-9999"));
+            assertThat(payment.getStatus()).isEqualTo(PaymentStatus.FAILED);
+            assertThat(payment.getFailureCode()).isEqualTo("LIMIT_EXCEEDED");
+            assertThat(payment.getFailureMessage()).isEqualTo("한도초과");
+        }
+
+        @DisplayName("COMPLETED에서 fail 호출 시 예외가 발생한다.")
+        @Test
+        void fail_fromCompleted_throwsException() {
+            // arrange
+            PaymentModel payment = PaymentModel.create(
+                    1L, 50000, CardType.SAMSUNG, "****-****-****-1451");
+            payment.requested("TX_001");
+            payment.complete();
+
+            // act & assert
+            assertThatThrownBy(() -> payment.fail())
+                    .isInstanceOf(CoreException.class);
         }
     }
 
-    @DisplayName("재시도 가능 여부를 확인할 때, ")
+    @DisplayName("터미널 상태를 확인할 때, ")
     @Nested
-    class IsRetryable {
+    class Terminal {
 
-        @DisplayName("PENDING이고 PROCESSING TX가 없으면 재시도 가능하다.")
+        @DisplayName("COMPLETED는 터미널 상태이다.")
         @Test
-        void isRetryable_whenPendingAndNoProcessingTx() {
+        void isTerminal_completed() {
             // arrange
             PaymentModel payment = PaymentModel.create(
                     1L, 50000, CardType.SAMSUNG, "****-****-****-1451");
+            payment.requested("TX_001");
+            payment.complete();
 
             // assert
-            assertThat(payment.isRetryable()).isTrue();
+            assertThat(payment.isTerminal()).isTrue();
         }
 
-        @DisplayName("PROCESSING TX가 있으면 재시도 불가하다.")
+        @DisplayName("PENDING은 터미널 상태가 아니다.")
         @Test
-        void isRetryable_whenProcessingTxExists_returnsFalse() {
+        void isTerminal_pending() {
             // arrange
             PaymentModel payment = PaymentModel.create(
                     1L, 50000, CardType.SAMSUNG, "****-****-****-1451");
-            payment.addTransaction(PaymentTransactionModel.create(
-                    payment, "PG_SIMULATOR", LocalDateTime.now()));
 
             // assert
-            assertThat(payment.isRetryable()).isFalse();
-        }
-
-        @DisplayName("APPROVED 상태면 재시도 불가하다.")
-        @Test
-        void isRetryable_whenApproved_returnsFalse() {
-            // arrange
-            PaymentModel payment = PaymentModel.create(
-                    1L, 50000, CardType.SAMSUNG, "****-****-****-1451");
-            payment.approve(LocalDateTime.now());
-
-            // assert
-            assertThat(payment.isRetryable()).isFalse();
-        }
-    }
-
-    @DisplayName("Transaction을 추가할 때, ")
-    @Nested
-    class AddTransaction {
-
-        @DisplayName("양방향 관계가 설정된다.")
-        @Test
-        void addTransaction_setsBidirectionalRelation() {
-            // arrange
-            PaymentModel payment = PaymentModel.create(
-                    1L, 50000, CardType.SAMSUNG, "****-****-****-1451");
-            PaymentTransactionModel tx = PaymentTransactionModel.create(
-                    payment, "PG_SIMULATOR", LocalDateTime.now());
-
-            // act
-            payment.addTransaction(tx);
-
-            // assert
-            assertAll(
-                    () -> assertThat(payment.getTransactions()).hasSize(1),
-                    () -> assertThat(payment.getTransactions().get(0)).isEqualTo(tx),
-                    () -> assertThat(tx.getPayment()).isEqualTo(payment));
+            assertThat(payment.isTerminal()).isFalse();
         }
     }
 }

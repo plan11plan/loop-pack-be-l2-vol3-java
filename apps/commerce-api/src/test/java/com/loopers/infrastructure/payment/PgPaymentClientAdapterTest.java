@@ -2,20 +2,30 @@ package com.loopers.infrastructure.payment;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.loopers.domain.payment.PgOrderTransactions;
 import com.loopers.domain.payment.PgPaymentRequest;
 import com.loopers.domain.payment.PgPaymentResult;
 import com.loopers.domain.payment.PgRequestStatus;
 import com.loopers.domain.payment.PgTransactionDetail;
+import feign.Feign;
+import feign.Request;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.boot.autoconfigure.http.HttpMessageConverters;
+import org.springframework.cloud.openfeign.support.SpringDecoder;
+import org.springframework.cloud.openfeign.support.SpringEncoder;
+import org.springframework.cloud.openfeign.support.SpringMvcContract;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import feign.codec.ErrorDecoder;
 
 @Tag("external")
-class PgPaymentRestClientTest {
+class PgPaymentClientAdapterTest {
 
     private static final String PG_BASE_URL = "http://localhost:8082";
     private static final String CALLBACK_URL = "http://localhost:8080/api/v1/payments/callback";
@@ -24,12 +34,38 @@ class PgPaymentRestClientTest {
     private static final String TEST_CARD_NO = "1234-5678-9814-1451";
     private static final long ASYNC_WAIT_MS = 6000;
 
-    private PgPaymentRestClient pgClient;
+    private PgPaymentClientAdapter adapter;
 
     @BeforeEach
     void setUp() {
-        pgClient = new PgPaymentRestClient(
-                WebClient.builder().baseUrl(PG_BASE_URL).build());
+        ObjectMapper objectMapper = new ObjectMapper();
+        HttpMessageConverters messageConverters =
+                new HttpMessageConverters(
+                        new MappingJackson2HttpMessageConverter(objectMapper));
+
+        PgPaymentFeignClient feignClient = Feign.builder()
+                .contract(new SpringMvcContract())
+                .encoder(new SpringEncoder(() -> messageConverters))
+                .decoder(new SpringDecoder(() -> messageConverters))
+                .errorDecoder(new PgErrorDecoder(objectMapper))
+                .options(new Request.Options(
+                        3, TimeUnit.SECONDS, 5, TimeUnit.SECONDS, true))
+                .target(PgPaymentFeignClient.class, PG_BASE_URL);
+
+        Pg2PaymentFeignClient pg2Client = Feign.builder()
+                .contract(new SpringMvcContract())
+                .encoder(new SpringEncoder(() -> messageConverters))
+                .decoder(new SpringDecoder(() -> messageConverters))
+                .errorDecoder(new PgErrorDecoder(objectMapper))
+                .options(new Request.Options(
+                        3, TimeUnit.SECONDS, 5, TimeUnit.SECONDS, true))
+                .target(Pg2PaymentFeignClient.class, PG_BASE_URL);
+
+        MaintenanceWindowFilter maintenanceWindowFilter = new MaintenanceWindowFilter();
+        adapter = new PgPaymentClientAdapter(
+                feignClient, pg2Client,
+                CircuitBreakerRegistry.ofDefaults(),
+                maintenanceWindowFilter);
     }
 
     @DisplayName("결제를 요청할 때, ")
@@ -43,7 +79,7 @@ class PgPaymentRestClientTest {
             PgPaymentRequest request = createRequest("TEST_ORDER_001", 50000);
 
             // act
-            PgPaymentResult result = pgClient.requestPayment(request);
+            PgPaymentResult result = adapter.requestPayment(request);
 
             // assert
             assertThat(result).isNotNull();
@@ -73,7 +109,7 @@ class PgPaymentRestClientTest {
             sleep(ASYNC_WAIT_MS);
 
             // act
-            PgTransactionDetail detail = pgClient.getPaymentStatus(
+            PgTransactionDetail detail = adapter.getPaymentStatus(
                     transactionKey, TEST_USER_ID);
 
             // assert
@@ -97,7 +133,7 @@ class PgPaymentRestClientTest {
             sleep(ASYNC_WAIT_MS);
 
             // act
-            PgOrderTransactions result = pgClient.getPaymentsByOrder(
+            PgOrderTransactions result = adapter.getPaymentsByOrder(
                     orderId, TEST_USER_ID);
 
             // assert
@@ -117,7 +153,7 @@ class PgPaymentRestClientTest {
 
     private String requestPaymentUntilAccepted(String orderId) {
         for (int i = 0; i < 20; i++) {
-            PgPaymentResult result = pgClient.requestPayment(
+            PgPaymentResult result = adapter.requestPayment(
                     createRequest(orderId, 10000));
             if (result.requested()) {
                 return result.transactionKey();

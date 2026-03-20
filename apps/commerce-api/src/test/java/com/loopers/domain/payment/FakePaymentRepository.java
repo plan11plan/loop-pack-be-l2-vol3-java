@@ -21,6 +21,11 @@ public class FakePaymentRepository implements PaymentRepository {
     }
 
     @Override
+    public Optional<PaymentModel> findById(Long id) {
+        return Optional.ofNullable(store.get(id));
+    }
+
+    @Override
     public Optional<PaymentModel> findByOrderId(Long orderId) {
         return store.values().stream()
                 .filter(p -> p.getOrderId().equals(orderId))
@@ -28,10 +33,9 @@ public class FakePaymentRepository implements PaymentRepository {
     }
 
     @Override
-    public Optional<PaymentModel> findByTransactionPaymentKey(String paymentKey) {
+    public Optional<PaymentModel> findByPgTransactionId(String pgTransactionId) {
         return store.values().stream()
-                .filter(p -> p.getTransactions().stream()
-                        .anyMatch(tx -> paymentKey.equals(tx.getPaymentKey())))
+                .filter(p -> pgTransactionId.equals(p.getPgTransactionId()))
                 .findFirst();
     }
 

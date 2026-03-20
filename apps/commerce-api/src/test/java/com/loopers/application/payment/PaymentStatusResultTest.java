@@ -5,8 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 
 import com.loopers.domain.payment.CardType;
 import com.loopers.domain.payment.PaymentModel;
-import com.loopers.domain.payment.PaymentTransactionModel;
-import java.time.LocalDateTime;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -39,7 +37,7 @@ class PaymentStatusResultTest {
         void from_whenLimitExceeded_returnsCustomerMessage() {
             // arrange
             PaymentModel payment = createFailedPayment(
-                    "LIMIT_EXCEEDED", "한도초과입니다. 다른 카드를 선택해주세요.");
+                    "LIMIT_EXCEEDED", "한도초과입니다.");
 
             // act
             PaymentStatusResult result = PaymentStatusResult.from(payment);
@@ -57,7 +55,7 @@ class PaymentStatusResultTest {
         void from_whenInvalidCard_returnsCustomerMessage() {
             // arrange
             PaymentModel payment = createFailedPayment(
-                    "INVALID_CARD", "잘못된 카드입니다. 다른 카드를 선택해주세요.");
+                    "INVALID_CARD", "잘못된 카드입니다.");
 
             // act
             PaymentStatusResult result = PaymentStatusResult.from(payment);
@@ -106,20 +104,21 @@ class PaymentStatusResultTest {
                             .isEqualTo("결제 처리 중 오류가 발생했습니다. 다시 시도해주세요."));
         }
 
-        @DisplayName("APPROVED 상태면 실패 정보 없이 반환한다.")
+        @DisplayName("COMPLETED 상태면 실패 정보 없이 반환한다.")
         @Test
-        void from_whenApproved_returnsNoFailure() {
+        void from_whenCompleted_returnsNoFailure() {
             // arrange
             PaymentModel payment = PaymentModel.create(
                     1L, 50000, CardType.SAMSUNG, "****-****-****-1451");
-            payment.approve(LocalDateTime.now());
+            payment.requested("TX_001");
+            payment.complete();
 
             // act
             PaymentStatusResult result = PaymentStatusResult.from(payment);
 
             // assert
             assertAll(
-                    () -> assertThat(result.paymentStatus()).isEqualTo("APPROVED"),
+                    () -> assertThat(result.paymentStatus()).isEqualTo("COMPLETED"),
                     () -> assertThat(result.failureCode()).isNull(),
                     () -> assertThat(result.failureMessage()).isNull());
         }
@@ -128,11 +127,7 @@ class PaymentStatusResultTest {
     private PaymentModel createFailedPayment(String failureCode, String failureMessage) {
         PaymentModel payment = PaymentModel.create(
                 1L, 50000, CardType.SAMSUNG, "****-****-****-1451");
-        PaymentTransactionModel tx = PaymentTransactionModel.create(
-                payment, "PG_SIMULATOR", LocalDateTime.now());
-        payment.addTransaction(tx);
-        tx.fail(failureCode, failureMessage);
-        payment.fail();
+        payment.fail(failureCode, failureMessage);
         return payment;
     }
 }

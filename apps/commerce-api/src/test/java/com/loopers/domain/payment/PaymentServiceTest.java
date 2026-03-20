@@ -2,7 +2,6 @@ package com.loopers.domain.payment;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.assertAll;
 
 import com.loopers.support.error.CoreException;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,163 +22,144 @@ class PaymentServiceTest {
 
     @DisplayName("결제를 생성할 때, ")
     @Nested
-    class CreatePayment {
+    class CreatePending {
 
-        @DisplayName("Payment와 Transaction이 함께 생성된다.")
+        @DisplayName("PENDING 상태로 생성된다.")
         @Test
-        void createPayment_createsPaymentAndTransaction() {
+        void createPending_createsPayment() {
             // act
-            PaymentModel payment = paymentService.createPayment(
-                    1L, 50000, CardType.SAMSUNG,
-                    "****-****-****-1451", "PG_SIMULATOR");
+            PaymentModel payment = paymentService.createPending(
+                    1L, 50000, CardType.SAMSUNG, "****-****-****-1451");
 
             // assert
-            assertAll(
-                    () -> assertThat(payment.getId()).isNotNull(),
-                    () -> assertThat(payment.getOrderId()).isEqualTo(1L),
-                    () -> assertThat(payment.getAmount()).isEqualTo(50000),
-                    () -> assertThat(payment.getCardType()).isEqualTo(CardType.SAMSUNG),
-                    () -> assertThat(payment.getMaskedCardNo()).isEqualTo("****-****-****-1451"),
-                    () -> assertThat(payment.getStatus()).isEqualTo(PaymentStatus.PENDING),
-                    () -> assertThat(payment.getTransactions()).hasSize(1),
-                    () -> assertThat(payment.getTransactions().get(0).getStatus())
-                            .isEqualTo(TransactionStatus.PROCESSING));
+            assertThat(payment.getId()).isNotNull();
+            assertThat(payment.getOrderId()).isEqualTo(1L);
+            assertThat(payment.getAmount()).isEqualTo(50000);
+            assertThat(payment.getStatus()).isEqualTo(PaymentStatus.PENDING);
         }
-    }
 
-    @DisplayName("결제를 재시도할 때, ")
-    @Nested
-    class RetryPayment {
-
-        @DisplayName("카드 정보를 갱신하고 새 Transaction을 생성한다.")
+        @DisplayName("이미 같은 orderId의 결제가 있으면 예외가 발생한다.")
         @Test
-        void retryPayment_updatesCardAndCreatesNewTransaction() {
+        void createPending_whenDuplicate_throwsException() {
             // arrange
-            PaymentModel payment = paymentService.createPayment(
-                    1L, 50000, CardType.SAMSUNG,
-                    "****-****-****-1451", "PG_SIMULATOR");
-            failFirstTransaction(payment);
-
-            // act
-            paymentService.retryPayment(payment.getOrderId(),
-                    CardType.KB, "****-****-****-9999", "PG_SIMULATOR");
-
-            // assert
-            assertAll(
-                    () -> assertThat(payment.getCardType()).isEqualTo(CardType.KB),
-                    () -> assertThat(payment.getMaskedCardNo())
-                            .isEqualTo("****-****-****-9999"),
-                    () -> assertThat(payment.getStatus()).isEqualTo(PaymentStatus.PENDING),
-                    () -> assertThat(payment.getTransactions()).hasSize(2),
-                    () -> assertThat(payment.getTransactions().get(1).getStatus())
-                            .isEqualTo(TransactionStatus.PROCESSING));
-        }
-
-        @DisplayName("PROCESSING 상태 Transaction이 있으면 예외가 발생한다.")
-        @Test
-        void retryPayment_whenProcessingTxExists_throwsException() {
-            // arrange — Transaction은 PROCESSING 상태
-            paymentService.createPayment(
-                    1L, 50000, CardType.SAMSUNG,
-                    "****-****-****-1451", "PG_SIMULATOR");
+            paymentService.createPending(
+                    1L, 50000, CardType.SAMSUNG, "****-****-****-1451");
 
             // act & assert
-            assertThatThrownBy(() -> paymentService.retryPayment(
-                    1L, CardType.KB, "****-****-****-9999", "PG_SIMULATOR"))
+            assertThatThrownBy(() -> paymentService.createPending(
+                    1L, 30000, CardType.KB, "****-****-****-9999"))
                     .isInstanceOf(CoreException.class);
         }
     }
 
-    @DisplayName("콜백을 처리할 때, ")
+    @DisplayName("PG 수락으로 업데이트할 때, ")
     @Nested
-    class HandleCallback {
+    class UpdateRequested {
 
-        @DisplayName("SUCCESS 콜백이면 Transaction과 Payment를 승인한다.")
+        @DisplayName("REQUESTED 상태로 전이되고 pgTransactionId가 저장된다.")
         @Test
-        void handleCallback_whenSucceeded_approvesPayment() {
+        void updateRequested_setsTransactionId() {
             // arrange
-            PaymentModel payment = createPaymentWithPaymentKey("PK_001");
+            PaymentModel payment = paymentService.createPending(
+                    1L, 50000, CardType.SAMSUNG, "****-****-****-1451");
 
             // act
-            paymentService.handleCallback("PK_001", PgCallbackStatus.APPROVED, null);
+            paymentService.updateRequested(payment.getId(), "TX_001");
 
             // assert
-            PaymentTransactionModel tx = payment.getTransactions().get(0);
-            assertAll(
-                    () -> assertThat(tx.getStatus()).isEqualTo(TransactionStatus.SUCCEEDED),
-                    () -> assertThat(payment.getStatus()).isEqualTo(PaymentStatus.APPROVED),
-                    () -> assertThat(payment.getApprovedAt()).isNotNull());
+            assertThat(payment.getStatus()).isEqualTo(PaymentStatus.REQUESTED);
+            assertThat(payment.getPgTransactionId()).isEqualTo("TX_001");
         }
+    }
 
-        @DisplayName("FAILED 콜백이면 Transaction과 Payment 모두 FAILED로 전이한다.")
+    @DisplayName("결제를 완료할 때, ")
+    @Nested
+    class UpdateCompleted {
+
+        @DisplayName("COMPLETED 상태로 전이된다.")
         @Test
-        void handleCallback_whenFailed_failsTransactionAndPayment() {
+        void updateCompleted_completesPayment() {
             // arrange
-            PaymentModel payment = createPaymentWithPaymentKey("PK_002");
+            PaymentModel payment = paymentService.createPending(
+                    1L, 50000, CardType.SAMSUNG, "****-****-****-1451");
+            paymentService.updateRequested(payment.getId(), "TX_001");
 
             // act
-            paymentService.handleCallback(
-                    "PK_002", PgCallbackStatus.LIMIT_EXCEEDED, "한도초과입니다.");
+            paymentService.updateCompleted("TX_001");
 
             // assert
-            PaymentTransactionModel tx = payment.getTransactions().get(0);
-            assertAll(
-                    () -> assertThat(tx.getStatus()).isEqualTo(TransactionStatus.FAILED),
-                    () -> assertThat(tx.getFailureCode()).isEqualTo("LIMIT_EXCEEDED"),
-                    () -> assertThat(tx.getFailureMessage()).isEqualTo("한도초과입니다."),
-                    () -> assertThat(payment.getStatus()).isEqualTo(PaymentStatus.FAILED));
+            assertThat(payment.getStatus()).isEqualTo(PaymentStatus.COMPLETED);
+            assertThat(payment.getApprovedAt()).isNotNull();
         }
 
-        @DisplayName("INVALID_CARD 콜백이면 Transaction과 Payment 모두 FAILED로 전이한다.")
+        @DisplayName("이미 터미널 상태면 무시한다.")
         @Test
-        void handleCallback_whenInvalidCard_failsTransactionAndPayment() {
+        void updateCompleted_whenTerminal_ignores() {
             // arrange
-            PaymentModel payment = createPaymentWithPaymentKey("PK_IC");
+            PaymentModel payment = paymentService.createPending(
+                    1L, 50000, CardType.SAMSUNG, "****-****-****-1451");
+            paymentService.updateRequested(payment.getId(), "TX_001");
+            paymentService.updateCompleted("TX_001");
 
-            // act
-            paymentService.handleCallback(
-                    "PK_IC", PgCallbackStatus.INVALID_CARD,
-                    "잘못된 카드입니다. 다른 카드를 선택해주세요.");
+            // act — 중복 완료 호출
+            PaymentModel result = paymentService.updateCompleted("TX_001");
 
             // assert
-            PaymentTransactionModel tx = payment.getTransactions().get(0);
-            assertAll(
-                    () -> assertThat(tx.getStatus()).isEqualTo(TransactionStatus.FAILED),
-                    () -> assertThat(tx.getFailureCode()).isEqualTo("INVALID_CARD"),
-                    () -> assertThat(payment.getStatus()).isEqualTo(PaymentStatus.FAILED));
-        }
-
-        @DisplayName("이미 APPROVED인 Payment에 중복 콜백이 오면 무시한다.")
-        @Test
-        void handleCallback_whenAlreadyApproved_ignores() {
-            // arrange
-            PaymentModel payment = createPaymentWithPaymentKey("PK_003");
-            paymentService.handleCallback("PK_003", PgCallbackStatus.APPROVED, null);
-            assertThat(payment.getStatus()).isEqualTo(PaymentStatus.APPROVED);
-
-            // act — 동일 paymentKey로 2번째 콜백
-            PaymentModel result = paymentService.handleCallback(
-                    "PK_003", PgCallbackStatus.APPROVED, null);
-
-            // assert — 상태 변경 없이 그대로 반환
-            assertThat(result.getStatus()).isEqualTo(PaymentStatus.APPROVED);
+            assertThat(result.getStatus()).isEqualTo(PaymentStatus.COMPLETED);
         }
     }
 
     @DisplayName("결제를 실패 처리할 때, ")
     @Nested
-    class FailPayment {
+    class UpdateFailed {
 
-        @DisplayName("타임아웃 시 Payment를 FAILED로 확정한다.")
+        @DisplayName("FAILED 상태로 전이되고 실패 사유가 저장된다.")
         @Test
-        void failPayment_setsStatusToFailed() {
+        void updateFailed_failsWithReason() {
             // arrange
-            PaymentModel payment = paymentService.createPayment(
-                    4L, 60000, CardType.LOTTE,
-                    "****-****-****-4444", "PG_SIMULATOR");
+            PaymentModel payment = paymentService.createPending(
+                    1L, 50000, CardType.SAMSUNG, "****-****-****-1451");
+            paymentService.updateRequested(payment.getId(), "TX_001");
 
             // act
-            paymentService.failPayment(payment.getOrderId());
+            paymentService.updateFailed("TX_001", "LIMIT_EXCEEDED", "한도초과");
+
+            // assert
+            assertThat(payment.getStatus()).isEqualTo(PaymentStatus.FAILED);
+            assertThat(payment.getFailureCode()).isEqualTo("LIMIT_EXCEEDED");
+        }
+
+        @DisplayName("이미 터미널 상태면 무시한다.")
+        @Test
+        void updateFailed_whenTerminal_ignores() {
+            // arrange
+            PaymentModel payment = paymentService.createPending(
+                    1L, 50000, CardType.SAMSUNG, "****-****-****-1451");
+            paymentService.updateRequested(payment.getId(), "TX_001");
+            paymentService.updateCompleted("TX_001");
+
+            // act — 이미 COMPLETED인데 fail 호출
+            PaymentModel result = paymentService.updateFailed(
+                    "TX_001", "PG_ERROR", "오류");
+
+            // assert
+            assertThat(result.getStatus()).isEqualTo(PaymentStatus.COMPLETED);
+        }
+    }
+
+    @DisplayName("ID로 결제를 실패 처리할 때, ")
+    @Nested
+    class FailById {
+
+        @DisplayName("Payment를 FAILED로 전이한다.")
+        @Test
+        void failById_setsStatusToFailed() {
+            // arrange
+            PaymentModel payment = paymentService.createPending(
+                    1L, 50000, CardType.SAMSUNG, "****-****-****-1451");
+
+            // act
+            paymentService.failById(payment.getId());
 
             // assert
             assertThat(payment.getStatus()).isEqualTo(PaymentStatus.FAILED);
@@ -194,9 +174,8 @@ class PaymentServiceTest {
         @Test
         void findByOrderId_returnsPayment() {
             // arrange
-            paymentService.createPayment(
-                    5L, 70000, CardType.HYUNDAI,
-                    "****-****-****-5555", "PG_SIMULATOR");
+            paymentService.createPending(
+                    5L, 70000, CardType.HYUNDAI, "****-****-****-5555");
 
             // act & assert
             assertThat(paymentService.findByOrderId(5L)).isPresent();
@@ -207,20 +186,5 @@ class PaymentServiceTest {
         void findByOrderId_whenNotExists_returnsEmpty() {
             assertThat(paymentService.findByOrderId(999L)).isEmpty();
         }
-    }
-
-    // === 헬퍼 메서드 === //
-
-    private PaymentModel createPaymentWithPaymentKey(String paymentKey) {
-        PaymentModel payment = paymentService.createPayment(
-                System.nanoTime(), 50000, CardType.SAMSUNG,
-                "****-****-****-1451", "PG_SIMULATOR");
-        payment.getTransactions().get(0).assignPaymentKey(paymentKey);
-        return payment;
-    }
-
-    private void failFirstTransaction(PaymentModel payment) {
-        payment.getTransactions().get(0)
-                .fail("LIMIT_EXCEEDED", "한도초과입니다.");
     }
 }
