@@ -55,6 +55,8 @@ public class OrderFacade {
                             order.getOriginalTotalPrice()));
         }
 
+        userService.deductPoint(userId, order.getTotalPrice());
+
         return OrderResult.OrderSummary.from(order);
     }
 

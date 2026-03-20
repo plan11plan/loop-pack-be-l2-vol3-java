@@ -1,7 +1,6 @@
 package com.loopers.domain.payment;
 
 import com.loopers.support.error.CoreException;
-import java.time.LocalDateTime;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -14,56 +13,47 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
 
     @Transactional
-    public PaymentModel createPayment(Long orderId, int amount,
-                                      CardType cardType, String maskedCardNo,
-                                      String pgProvider) {
-        PaymentModel payment = PaymentModel.create(orderId, amount, cardType, maskedCardNo);
-        payment.addTransaction(
-                PaymentTransactionModel.create(payment, pgProvider, LocalDateTime.now()));
-        return paymentRepository.save(payment);
+    public PaymentModel createPending(Long orderId, int amount,
+                                      CardType cardType, String maskedCardNo) {
+        paymentRepository.findByOrderId(orderId)
+                .ifPresent(existing -> {
+                    throw new CoreException(PaymentErrorCode.PAYMENT_IN_PROGRESS);
+                });
+        return paymentRepository.save(
+                PaymentModel.create(orderId, amount, cardType, maskedCardNo));
     }
 
     @Transactional
-    public PaymentModel retryPayment(Long orderId, CardType cardType,
-                                     String maskedCardNo, String pgProvider) {
-        PaymentModel payment = getByOrderIdOrThrow(orderId);
-        if (!payment.isRetryable()) {
-            throw new CoreException(PaymentErrorCode.PAYMENT_IN_PROGRESS);
-        }
-        payment.updateCardInfo(cardType, maskedCardNo);
-        payment.addTransaction(
-                PaymentTransactionModel.create(payment, pgProvider, LocalDateTime.now()));
+    public PaymentModel updateRequested(Long paymentId, String pgTransactionId) {
+        PaymentModel payment = getByIdOrThrow(paymentId);
+        payment.requested(pgTransactionId);
         return payment;
     }
 
     @Transactional
-    public PaymentModel handleCallback(String paymentKey, PgCallbackStatus callbackStatus,
-                                       String pgReason) {
-        PaymentModel payment = paymentRepository.findByTransactionPaymentKey(paymentKey)
-                .orElseThrow(() -> new CoreException(PaymentErrorCode.TRANSACTION_NOT_FOUND));
-
-        PaymentTransactionModel transaction = payment.getTransactions().stream()
-                .filter(tx -> paymentKey.equals(tx.getPaymentKey()))
-                .findFirst()
-                .orElseThrow(() -> new CoreException(PaymentErrorCode.TRANSACTION_NOT_FOUND));
-
-        if (transaction.isCompleted() || payment.isApproved() || payment.isFailed()) {
+    public PaymentModel updateCompleted(String pgTransactionId) {
+        PaymentModel payment = getByPgTransactionIdOrThrow(pgTransactionId);
+        if (payment.isTerminal()) {
             return payment;
         }
-
-        if (callbackStatus.isSuccess()) {
-            transaction.succeed(null);
-            payment.approve(LocalDateTime.now());
-        } else {
-            transaction.fail(callbackStatus.name(), pgReason);
-            payment.fail();
-        }
+        payment.complete();
         return payment;
     }
 
     @Transactional
-    public void failPayment(Long orderId) {
-        getByOrderIdOrThrow(orderId).fail();
+    public PaymentModel updateFailed(String pgTransactionId, String failureCode,
+                                     String failureMessage) {
+        PaymentModel payment = getByPgTransactionIdOrThrow(pgTransactionId);
+        if (payment.isTerminal()) {
+            return payment;
+        }
+        payment.fail(failureCode, failureMessage);
+        return payment;
+    }
+
+    @Transactional
+    public void failById(Long paymentId) {
+        getByIdOrThrow(paymentId).fail();
     }
 
     @Transactional(readOnly = true)
@@ -71,8 +61,13 @@ public class PaymentService {
         return paymentRepository.findByOrderId(orderId);
     }
 
-    private PaymentModel getByOrderIdOrThrow(Long orderId) {
-        return paymentRepository.findByOrderId(orderId)
+    private PaymentModel getByIdOrThrow(Long id) {
+        return paymentRepository.findById(id)
+                .orElseThrow(() -> new CoreException(PaymentErrorCode.PAYMENT_NOT_FOUND));
+    }
+
+    private PaymentModel getByPgTransactionIdOrThrow(String pgTransactionId) {
+        return paymentRepository.findByPgTransactionId(pgTransactionId)
                 .orElseThrow(() -> new CoreException(PaymentErrorCode.PAYMENT_NOT_FOUND));
     }
 }

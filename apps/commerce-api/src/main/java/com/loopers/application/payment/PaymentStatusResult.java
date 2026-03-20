@@ -1,8 +1,6 @@
 package com.loopers.application.payment;
 
 import com.loopers.domain.payment.PaymentModel;
-import com.loopers.domain.payment.PaymentTransactionModel;
-import com.loopers.domain.payment.TransactionStatus;
 
 public record PaymentStatusResult(
         String paymentStatus,
@@ -10,26 +8,13 @@ public record PaymentStatusResult(
         String failureMessage) {
 
     public static PaymentStatusResult from(PaymentModel payment) {
-        String failureCode = null;
-        String failureMessage = null;
-
-        if (payment.isFailed()) {
-            PaymentTransactionModel lastFailed = payment.getTransactions().stream()
-                    .filter(tx -> tx.getStatus() == TransactionStatus.FAILED)
-                    .reduce((first, second) -> second)
-                    .orElse(null);
-            if (lastFailed != null) {
-                failureCode = lastFailed.getFailureCode();
-                failureMessage = toCustomerMessage(lastFailed.getFailureCode(),
-                        lastFailed.getFailureMessage());
-            }
-        }
-
         return new PaymentStatusResult(
-                payment.getStatus().name(), failureCode, failureMessage);
+                payment.getStatus().name(),
+                payment.getFailureCode(),
+                payment.isFailed() ? toCustomerMessage(payment.getFailureCode()) : null);
     }
 
-    private static String toCustomerMessage(String code, String pgMessage) {
+    private static String toCustomerMessage(String code) {
         if (code == null) {
             return "결제 처리 중 오류가 발생했습니다. 다시 시도해주세요.";
         }

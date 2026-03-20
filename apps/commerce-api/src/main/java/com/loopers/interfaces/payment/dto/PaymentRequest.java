@@ -1,6 +1,6 @@
 package com.loopers.interfaces.payment.dto;
 
-import com.loopers.application.payment.PaymentCriteria;
+import com.loopers.application.order.dto.OrderCriteria;
 import com.loopers.domain.payment.CardType;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
@@ -11,7 +11,6 @@ import java.util.List;
 public class PaymentRequest {
 
     public record Create(
-            Long orderId,
             @Valid
             List<@Valid OrderItemRequest> items,
             Long couponId,
@@ -20,16 +19,13 @@ public class PaymentRequest {
             @NotBlank(message = "카드 번호는 필수 입력값입니다.")
             String cardNo
     ) {
-        public PaymentCriteria.Create toCriteria() {
-            return new PaymentCriteria.Create(
-                    orderId,
+        public OrderCriteria.Create toOrderCriteria() {
+            return new OrderCriteria.Create(
                     items != null ? items.stream()
-                            .map(i -> new PaymentCriteria.Create.OrderItem(
+                            .map(i -> new OrderCriteria.Create.CreateItem(
                                     i.productId(), i.quantity(), i.expectedPrice()))
                             .toList() : null,
-                    couponId,
-                    cardType,
-                    cardNo);
+                    couponId);
         }
 
         public record OrderItemRequest(
