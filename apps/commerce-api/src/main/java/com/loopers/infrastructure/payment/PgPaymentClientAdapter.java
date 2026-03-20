@@ -16,6 +16,8 @@ import com.loopers.infrastructure.payment.dto.TransactionDetailData;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.github.resilience4j.retry.Retry;
+import io.github.resilience4j.retry.RetryRegistry;
 import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +31,7 @@ public class PgPaymentClientAdapter implements PaymentGateway {
     private final PgPaymentFeignClient pg1Client;
     private final Pg2PaymentFeignClient pg2Client;
     private final CircuitBreakerRegistry circuitBreakerRegistry;
+    private final RetryRegistry retryRegistry;
     private final MaintenanceWindowFilter maintenanceWindowFilter;
 
     @Override
@@ -39,7 +42,7 @@ public class PgPaymentClientAdapter implements PaymentGateway {
 
         // PG1 시도
         try {
-            return executeWithCircuitBreaker(
+            return executeWithCircuitBreakerAndRetry(
                     PgIdentifier.PG1, cardType,
                     () -> callPg1(request));
         } catch (CallNotPermittedException e) {
@@ -51,7 +54,7 @@ public class PgPaymentClientAdapter implements PaymentGateway {
 
         // PG2 시도
         try {
-            return executeWithCircuitBreaker(
+            return executeWithCircuitBreakerAndRetry(
                     PgIdentifier.PG2, cardType,
                     () -> callPg2(request));
         } catch (CallNotPermittedException e) {
@@ -94,11 +97,18 @@ public class PgPaymentClientAdapter implements PaymentGateway {
                         .toList());
     }
 
-    private <T> T executeWithCircuitBreaker(
+    // CB(outer) → Retry(inner) → Feign 순서로 실행
+    // Retry 3회 실패 = CB에 1건의 실패로 기록
+    private <T> T executeWithCircuitBreakerAndRetry(
             PgIdentifier pg, CardType cardType, Supplier<T> supplier) {
-        String key = cardType.circuitBreakerKey(pg);
-        CircuitBreaker circuitBreaker = circuitBreakerRegistry.circuitBreaker(key);
-        return circuitBreaker.executeSupplier(supplier);
+        String cbKey = cardType.circuitBreakerKey(pg);
+        CircuitBreaker circuitBreaker = circuitBreakerRegistry.circuitBreaker(cbKey);
+
+        String retryName = pg.name().toLowerCase();
+        Retry retry = retryRegistry.retry(retryName);
+
+        Supplier<T> retryWrapped = Retry.decorateSupplier(retry, supplier);
+        return circuitBreaker.executeSupplier(retryWrapped);
     }
 
     private PgPaymentResult callPg1(PgPaymentRequest request) {

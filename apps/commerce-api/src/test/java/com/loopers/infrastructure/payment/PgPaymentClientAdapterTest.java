@@ -65,6 +65,7 @@ class PgPaymentClientAdapterTest {
         adapter = new PgPaymentClientAdapter(
                 feignClient, pg2Client,
                 CircuitBreakerRegistry.ofDefaults(),
+                io.github.resilience4j.retry.RetryRegistry.ofDefaults(),
                 maintenanceWindowFilter);
     }
 
