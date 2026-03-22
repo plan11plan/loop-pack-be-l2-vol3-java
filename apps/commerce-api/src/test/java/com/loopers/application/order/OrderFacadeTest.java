@@ -256,7 +256,7 @@ class OrderFacadeTest {
         @Test
         void cancelMyOrderItem_success() {
             // arrange
-            when(orderService.getByIdAndUserId(1L, 1L)).thenReturn(
+            when(orderService.getByIdWithLock(1L)).thenReturn(
                     OrderModel.create(1L, List.of(
                             OrderItemModel.create(10L, 25000, 2, "상품A", "브랜드A"))));
             when(orderService.cancelItem(any(OrderModel.class), eq(100L)))
@@ -267,7 +267,7 @@ class OrderFacadeTest {
 
             // assert
             assertAll(
-                    () -> verify(orderService).getByIdAndUserId(1L, 1L),
+                    () -> verify(orderService).getByIdWithLock(1L),
                     () -> verify(orderService).cancelItem(any(OrderModel.class), eq(100L)),
                     () -> verify(productService).increaseStock(10L, 2));
         }
@@ -276,8 +276,9 @@ class OrderFacadeTest {
         @Test
         void cancelMyOrderItem_notOwner_throwsException() {
             // arrange
-            when(orderService.getByIdAndUserId(1L, 999L))
-                    .thenThrow(new CoreException(OrderErrorCode.FORBIDDEN));
+            when(orderService.getByIdWithLock(1L)).thenReturn(
+                    OrderModel.create(1L, List.of(
+                            OrderItemModel.create(10L, 25000, 2, "상품A", "브랜드A"))));
 
             // act & assert
             assertThatThrownBy(() -> orderFacade.cancelMyOrderItem(999L, 1L, 100L))
@@ -497,7 +498,7 @@ class OrderFacadeTest {
         @Test
         void cancelOrderItem_whenAllCancelled_restoresCoupon() {
             // arrange
-            when(orderService.getByIdAndUserId(1L, 1L)).thenReturn(
+            when(orderService.getByIdWithLock(1L)).thenReturn(
                     OrderModel.create(1L, List.of(
                             OrderItemModel.create(10L, 50000, 1, "상품A", "브랜드A")), 5000));
             when(orderService.cancelItem(any(OrderModel.class), eq(100L)))
@@ -516,7 +517,7 @@ class OrderFacadeTest {
         @Test
         void cancelOrderItem_whenPartiallyCancelled_doesNotRestoreCoupon() {
             // arrange
-            when(orderService.getByIdAndUserId(1L, 1L)).thenReturn(
+            when(orderService.getByIdWithLock(1L)).thenReturn(
                     OrderModel.create(1L, List.of(
                             OrderItemModel.create(10L, 30000, 1, "상품A", "브랜드A"),
                             OrderItemModel.create(20L, 20000, 1, "상품B", "브랜드A")), 5000));
@@ -541,7 +542,7 @@ class OrderFacadeTest {
         @Test
         void cancelOrderItem_admin_success() {
             // arrange
-            when(orderService.getById(1L)).thenReturn(
+            when(orderService.getByIdWithLock(1L)).thenReturn(
                     OrderModel.create(1L, List.of(
                             OrderItemModel.create(10L, 25000, 2, "상품A", "브랜드A"))));
             when(orderService.cancelItem(any(OrderModel.class), eq(100L)))
@@ -552,7 +553,7 @@ class OrderFacadeTest {
 
             // assert
             assertAll(
-                    () -> verify(orderService).getById(1L),
+                    () -> verify(orderService).getByIdWithLock(1L),
                     () -> verify(orderService).cancelItem(any(OrderModel.class), eq(100L)),
                     () -> verify(productService).increaseStock(10L, 2));
         }
@@ -561,7 +562,7 @@ class OrderFacadeTest {
         @Test
         void cancelOrderItem_admin_allCancelled_restoresCoupon() {
             // arrange
-            when(orderService.getById(1L)).thenReturn(
+            when(orderService.getByIdWithLock(1L)).thenReturn(
                     OrderModel.create(1L, List.of(
                             OrderItemModel.create(10L, 50000, 1, "상품A", "브랜드A")), 5000));
             when(orderService.cancelItem(any(OrderModel.class), eq(100L)))

@@ -141,4 +141,27 @@ public class FakeProductRepository implements ProductRepository {
             .filter(product -> product.getDeletedAt() == null)
             .ifPresent(ProductModel::subtractLikeCount);
     }
+
+    @Override
+    public int decreaseStock(Long id, int quantity) {
+        return Optional.ofNullable(store.get(id))
+                .filter(product -> product.getDeletedAt() == null)
+                .filter(product -> product.getStock() >= quantity)
+                .map(product -> {
+                    product.decreaseStock(quantity);
+                    return 1;
+                })
+                .orElse(0);
+    }
+
+    @Override
+    public int increaseStock(Long id, int quantity) {
+        return Optional.ofNullable(store.get(id))
+                .filter(product -> product.getDeletedAt() == null)
+                .map(product -> {
+                    product.increaseStock(quantity);
+                    return 1;
+                })
+                .orElse(0);
+    }
 }
