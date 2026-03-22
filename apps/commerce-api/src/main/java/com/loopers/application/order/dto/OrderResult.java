@@ -29,6 +29,15 @@ public class OrderResult {
                     payment.getMaskedCardNo(),
                     order.getCreatedAt());
         }
+
+        public static OrderPaymentSummary pending(OrderModel order) {
+            return new OrderPaymentSummary(
+                    order.getId(),
+                    order.getTotalPrice(),
+                    order.getStatus().name(),
+                    null, null, null, null,
+                    order.getCreatedAt());
+        }
     }
 
     public record OrderSummary(
