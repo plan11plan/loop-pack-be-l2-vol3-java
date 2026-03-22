@@ -70,9 +70,13 @@ public class UserService {
 
     @Transactional
     public void deductPoint(Long userId, long amount) {
-        UserModel user = userRepository.findById(userId)
-                .orElseThrow(() -> new CoreException(ErrorType.NOT_FOUND, "사용자를 찾을 수 없습니다."));
-        user.deductPoint(amount);
+        if (amount < 1) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "차감 금액은 1 이상이어야 합니다.");
+        }
+        int updated = userRepository.deductPoint(userId, amount);
+        if (updated == 0) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "포인트가 부족합니다.");
+        }
     }
 
     @Transactional(readOnly = true)

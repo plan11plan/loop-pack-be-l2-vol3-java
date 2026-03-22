@@ -69,4 +69,14 @@ public class ProductRepositoryImpl implements ProductRepository {
     public void decrementLikeCount(Long id) {
         productJpaRepository.decrementLikeCount(id);
     }
+
+    @Override
+    public int decreaseStock(Long id, int quantity) {
+        return productJpaRepository.decreaseStock(id, quantity);
+    }
+
+    @Override
+    public int increaseStock(Long id, int quantity) {
+        return productJpaRepository.increaseStock(id, quantity);
+    }
 }

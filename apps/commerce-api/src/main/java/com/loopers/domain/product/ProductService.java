@@ -3,6 +3,7 @@ package com.loopers.domain.product;
 import com.loopers.domain.product.dto.ProductCommand;
 import com.loopers.domain.product.dto.ProductInfo;
 import com.loopers.support.error.CoreException;
+import com.loopers.support.error.ErrorType;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -87,7 +88,10 @@ public class ProductService {
 
     @Transactional
     public void increaseStock(Long productId, int quantity) {
-        getById(productId).increaseStock(quantity);
+        if (quantity < 1) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "복구 수량은 1 이상이어야 합니다.");
+        }
+        productRepository.increaseStock(productId, quantity);
     }
 
     @Transactional(readOnly = true)
@@ -119,11 +123,10 @@ public class ProductService {
         Map<Long, ProductModel> productMap = products.stream()
                 .collect(Collectors.toMap(ProductModel::getId, Function.identity()));
 
-        return commands.stream()
+        List<ProductInfo.StockDeduction> results = commands.stream()
                 .map(command -> {
                     ProductModel product = productMap.get(command.productId());
                     product.validateExpectedPrice(command.expectedPrice());
-                    product.decreaseStock(command.quantity());
                     return new ProductInfo.StockDeduction(
                             command.productId(),
                             product.getName(),
@@ -132,5 +135,17 @@ public class ProductService {
                             product.getBrandId());
                 })
                 .toList();
+
+        for (ProductCommand.StockDeduction command : commands) {
+            if (command.quantity() < 1) {
+                throw new CoreException(ErrorType.BAD_REQUEST, "차감 수량은 1 이상이어야 합니다.");
+            }
+            int updated = productRepository.decreaseStock(command.productId(), command.quantity());
+            if (updated == 0) {
+                throw new CoreException(ErrorType.BAD_REQUEST, "재고가 부족합니다.");
+            }
+        }
+
+        return results;
     }
 }
