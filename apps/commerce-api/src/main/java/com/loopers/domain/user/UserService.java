@@ -1,5 +1,6 @@
 package com.loopers.domain.user;
 
+import com.loopers.domain.user.event.UserSignedUpEvent;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import java.time.LocalDate;
@@ -7,6 +8,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -21,6 +23,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public UserModel signup(String loginId, String rawPassword, String name, String birthDate, String email) {
@@ -32,8 +35,10 @@ public class UserService {
         validatePasswordFormat(rawPassword);
         validateBirthDateNotInPassword(rawPassword, parsedBirthDate);
 
-        return userRepository.save(
+        UserModel user = userRepository.save(
                 UserModel.create(loginId, passwordEncoder.encode(rawPassword), name, parsedBirthDate, email));
+        eventPublisher.publishEvent(UserSignedUpEvent.from(user));
+        return user;
     }
 
     @Transactional(readOnly = true)

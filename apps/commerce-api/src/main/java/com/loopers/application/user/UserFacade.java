@@ -4,9 +4,7 @@ import com.loopers.application.user.dto.UserCriteria;
 import com.loopers.application.user.dto.UserResult;
 import com.loopers.domain.user.UserModel;
 import com.loopers.domain.user.UserService;
-import com.loopers.domain.user.event.UserSignedUpEvent;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,14 +13,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class UserFacade {
 
     private final UserService userService;
-    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public UserResult signup(UserCriteria.Signup criteria) {
         UserModel userModel = userService.signup(
                 criteria.loginId(), criteria.rawPassword(), criteria.name(),
                 criteria.birthDate(), criteria.email());
-        eventPublisher.publishEvent(UserSignedUpEvent.from(userModel));
         return UserResult.from(userModel);
     }
 
