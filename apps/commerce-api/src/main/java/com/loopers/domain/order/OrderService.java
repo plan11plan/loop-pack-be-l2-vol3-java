@@ -87,7 +87,8 @@ public class OrderService {
     public void completeOrder(Long orderId) {
         OrderModel order = getById(orderId);
         order.completePayment();
-        eventPublisher.publishEvent(new OrderCompletedEvent(orderId, order.getUserId()));
+        eventPublisher.publishEvent(
+                new OrderCompletedEvent(orderId, order.getUserId(), order.getTotalPrice()));
     }
 
     @Transactional
