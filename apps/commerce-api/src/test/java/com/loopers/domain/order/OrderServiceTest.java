@@ -246,6 +246,7 @@ class OrderServiceTest {
                         OrderCompletedEvent event = (OrderCompletedEvent) publishedEvents.get(0);
                         assertThat(event.orderId()).isEqualTo(order.getId());
                         assertThat(event.userId()).isEqualTo(1L);
+                        assertThat(event.totalPrice()).isEqualTo(50000);
                     });
         }
     }
