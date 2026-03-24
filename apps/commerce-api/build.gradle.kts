@@ -25,6 +25,9 @@ dependencies {
     // security
     implementation("org.springframework.security:spring-security-crypto")
 
+    // mail
+    implementation("org.springframework.boot:spring-boot-starter-mail")
+
     // querydsl
     annotationProcessor("com.querydsl:querydsl-apt::jakarta")
     annotationProcessor("jakarta.persistence:jakarta.persistence-api")
