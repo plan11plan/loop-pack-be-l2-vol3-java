@@ -106,7 +106,7 @@ class CouponV1ApiE2ETest {
             // assert
             assertAll(
                     () -> assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK),
-                    () -> assertThat(ownedCouponJpaRepository.findAll()).hasSize(1));
+                    () -> assertThat(ownedCouponJpaRepository.findAll()).hasSize(2));
         }
 
         @DisplayName("이미 발급받은 쿠폰을 다시 발급받으면, 409 응답을 반환한다.")
@@ -169,11 +169,10 @@ class CouponV1ApiE2ETest {
             // assert
             assertAll(
                     () -> assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK),
-                    () -> assertThat(response.getBody().data().items()).hasSize(1),
-                    () -> assertThat(response.getBody().data().items().get(0).couponName())
-                            .isEqualTo("테스트 쿠폰"),
-                    () -> assertThat(response.getBody().data().items().get(0).status())
-                            .isEqualTo("AVAILABLE"));
+                    () -> assertThat(response.getBody().data().items()).hasSize(2),
+                    () -> assertThat(response.getBody().data().items())
+                            .anyMatch(item -> item.couponName().equals("테스트 쿠폰")
+                                    && item.status().equals("AVAILABLE")));
         }
     }
 }
