@@ -18,7 +18,7 @@ public interface ProductLikeJpaRepository extends JpaRepository<ProductLikeModel
     List<Object[]> countByProductIdIn(@Param("productIds") List<Long> productIds);
 
     @Query("SELECT l.productId, COUNT(l) FROM ProductLikeModel l"
-            + " WHERE l.productId % :divisor = :remainder GROUP BY l.productId")
+            + " WHERE MOD(l.productId, :divisor) = :remainder GROUP BY l.productId")
     List<Object[]> countByProductIdModulo(
             @Param("divisor") int divisor, @Param("remainder") int remainder);
 }

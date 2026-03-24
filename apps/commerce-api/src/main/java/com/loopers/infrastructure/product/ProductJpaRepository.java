@@ -48,7 +48,7 @@ public interface ProductJpaRepository extends JpaRepository<ProductModel, Long> 
     int increaseStock(@Param("id") Long id, @Param("quantity") int quantity);
 
     @Query("SELECT p FROM ProductModel p"
-            + " WHERE p.id % :divisor = :remainder AND p.deletedAt IS NULL")
+            + " WHERE MOD(p.id, :divisor) = :remainder AND p.deletedAt IS NULL")
     List<ProductModel> findByIdModulo(
             @Param("divisor") int divisor, @Param("remainder") int remainder);
 }
