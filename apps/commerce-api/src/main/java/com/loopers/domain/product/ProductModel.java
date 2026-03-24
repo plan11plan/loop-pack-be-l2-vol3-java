@@ -111,6 +111,10 @@ public class ProductModel extends BaseEntity {
         }
     }
 
+    public void reconcileLikeCount(int actualCount) {
+        this.likeCount = actualCount;
+    }
+
     public void updateThumbnailUrl(String thumbnailUrl) {
         this.thumbnailUrl = thumbnailUrl;
     }

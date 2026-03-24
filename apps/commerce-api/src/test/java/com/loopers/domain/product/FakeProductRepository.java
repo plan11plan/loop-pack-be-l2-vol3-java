@@ -164,4 +164,12 @@ public class FakeProductRepository implements ProductRepository {
                 })
                 .orElse(0);
     }
+
+    @Override
+    public List<ProductModel> findByIdModulo(int divisor, int remainder) {
+        return store.values().stream()
+                .filter(product -> product.getDeletedAt() == null)
+                .filter(product -> product.getId() % divisor == remainder)
+                .toList();
+    }
 }

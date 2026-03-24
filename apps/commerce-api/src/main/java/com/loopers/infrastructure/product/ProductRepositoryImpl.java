@@ -79,4 +79,9 @@ public class ProductRepositoryImpl implements ProductRepository {
     public int increaseStock(Long id, int quantity) {
         return productJpaRepository.increaseStock(id, quantity);
     }
+
+    @Override
+    public List<ProductModel> findByIdModulo(int divisor, int remainder) {
+        return productJpaRepository.findByIdModulo(divisor, remainder);
+    }
 }

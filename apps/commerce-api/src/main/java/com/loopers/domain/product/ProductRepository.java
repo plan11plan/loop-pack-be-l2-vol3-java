@@ -31,4 +31,6 @@ public interface ProductRepository {
     int decreaseStock(Long id, int quantity);
 
     int increaseStock(Long id, int quantity);
+
+    List<ProductModel> findByIdModulo(int divisor, int remainder);
 }
