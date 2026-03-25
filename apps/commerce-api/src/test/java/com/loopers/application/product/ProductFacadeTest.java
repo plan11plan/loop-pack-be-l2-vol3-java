@@ -37,6 +37,9 @@ class ProductFacadeTest {
     @Mock
     private ProductImageService productImageService;
 
+    @Mock
+    private org.springframework.context.ApplicationEventPublisher eventPublisher;
+
     @InjectMocks
     private ProductFacade productFacade;
 
@@ -83,7 +86,7 @@ class ProductFacadeTest {
                             ProductImageModel.create(1L, "https://img.com/detail1.jpg", ImageType.DETAIL, 0)));
 
             // act
-            ProductResult.DetailWithImages result = productFacade.getProductDetail(1L);
+            ProductResult.DetailWithImages result = productFacade.getProductDetail(1L, null);
 
             // assert
             assertThat(result.product().name()).isEqualTo("에어맥스");

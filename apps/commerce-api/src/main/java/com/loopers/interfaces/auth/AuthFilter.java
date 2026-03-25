@@ -44,6 +44,7 @@ public class AuthFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         if (!requiresAuth(request.getRequestURI())) {
+            tryOptionalAuth(request);
             filterChain.doFilter(request, response);
             return;
         }
@@ -76,6 +77,22 @@ public class AuthFilter extends OncePerRequestFilter {
             || uri.startsWith(AUTH_REQUIRED_PREFIX_ORDERS)
             || uri.startsWith(AUTH_REQUIRED_PREFIX_PAYMENTS)
             || uri.startsWith(AUTH_REQUIRED_PREFIX_COUPONS);
+    }
+
+    private void tryOptionalAuth(HttpServletRequest request) {
+        String loginId = request.getHeader(HEADER_LOGIN_ID);
+        String password = request.getHeader(HEADER_LOGIN_PW);
+
+        if (loginId == null || loginId.isBlank() || password == null || password.isBlank()) {
+            return;
+        }
+
+        try {
+            UserModel user = authenticationService.authenticate(loginId, password);
+            request.setAttribute("loginUser",
+                    new LoginUser(user.getId(), user.getLoginId(), user.getName()));
+        } catch (Exception ignored) {
+        }
     }
 
     private void writeUnauthorizedResponse(HttpServletResponse response, String message) throws IOException {

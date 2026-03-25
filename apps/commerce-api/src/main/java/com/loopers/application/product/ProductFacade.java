@@ -7,12 +7,15 @@ import com.loopers.domain.product.ImageType;
 import com.loopers.domain.product.ProductImageService;
 import com.loopers.domain.product.ProductModel;
 import com.loopers.domain.product.ProductService;
+import com.loopers.domain.product.event.ProductViewedEvent;
 import com.loopers.support.cache.CacheType;
+import java.time.ZonedDateTime;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -28,6 +31,7 @@ public class ProductFacade {
     private final ProductService productService;
     private final BrandService brandService;
     private final ProductImageService productImageService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Caching(evict = {
             @CacheEvict(cacheNames = CacheType.Names.PRODUCT_LIST_LATEST, allEntries = true),
@@ -48,9 +52,9 @@ public class ProductFacade {
     }
 
     @Transactional(readOnly = true)
-    public ProductResult.DetailWithImages getProductDetail(Long id) {
+    public ProductResult.DetailWithImages getProductDetail(Long id, Long userId) {
         ProductModel product = productService.getById(id);
-        return new ProductResult.DetailWithImages(
+        ProductResult.DetailWithImages result = new ProductResult.DetailWithImages(
                 ProductResult.of(
                         product,
                         brandService.getById(product.getBrandId()).getName()),
@@ -60,6 +64,8 @@ public class ProductFacade {
                 productImageService.getImagesByProductIdAndType(id, ImageType.DETAIL).stream()
                         .map(ProductResult.ImageResult::from)
                         .toList());
+        eventPublisher.publishEvent(new ProductViewedEvent(id, userId, ZonedDateTime.now()));
+        return result;
     }
 
     @Caching(evict = {
