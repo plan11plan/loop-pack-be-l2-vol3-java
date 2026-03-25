@@ -45,7 +45,6 @@ class ProductFacadeViewEventTest {
         when(stubProduct.getName()).thenReturn("테스트 상품");
         when(stubProduct.getPrice()).thenReturn(50000);
         when(stubProduct.getStock()).thenReturn(100);
-        when(stubProduct.getLikeCount()).thenReturn(0);
         when(productService.getById(1L)).thenReturn(stubProduct);
 
         BrandModel stubBrand = mock(BrandModel.class);
