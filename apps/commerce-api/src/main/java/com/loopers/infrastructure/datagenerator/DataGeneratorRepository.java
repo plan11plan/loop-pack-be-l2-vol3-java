@@ -138,8 +138,8 @@ public class DataGeneratorRepository {
 
     public int batchInsertProducts(List<Object[]> products) {
         if (products.isEmpty()) return 0;
-        String sql = "INSERT INTO products (brand_id, name, price, stock, like_count, thumbnail_url, version, created_at, updated_at) "
-                + "VALUES (?, ?, ?, ?, 0, ?, 0, NOW(), NOW())";
+        String sql = "INSERT INTO products (brand_id, name, price, stock, thumbnail_url, version, created_at, updated_at) "
+                + "VALUES (?, ?, ?, ?, ?, 0, NOW(), NOW())";
         jdbcTemplate.batchUpdate(sql, products, 1000,
                 (PreparedStatement ps, Object[] p) -> {
                     ps.setLong(1, (Long) p[0]);
@@ -271,18 +271,11 @@ public class DataGeneratorRepository {
 
     public List<Long> findActiveProductIdsWithLikes(int limit) {
         return jdbcTemplate.queryForList(
-                "SELECT id FROM products WHERE deleted_at IS NULL AND like_count > 0 "
-                        + "ORDER BY like_count ASC LIMIT ?",
+                "SELECT DISTINCT l.product_id FROM likes l"
+                        + " JOIN products p ON l.product_id = p.id"
+                        + " WHERE p.deleted_at IS NULL LIMIT ?",
                 Long.class,
                 limit);
-    }
-
-    public void syncLikeCounts() {
-        jdbcTemplate.update(
-                "UPDATE products p LEFT JOIN ("
-                        + "SELECT product_id, COUNT(*) AS cnt FROM likes GROUP BY product_id"
-                        + ") lc ON p.id = lc.product_id "
-                        + "SET p.like_count = COALESCE(lc.cnt, 0)");
     }
 
     private long countTable(String tableName, boolean hasSoftDelete) {

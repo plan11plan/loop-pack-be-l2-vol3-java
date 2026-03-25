@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.PageRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -86,14 +87,6 @@ public class ProductService {
         return productRepository.findAllByBrandId(brandId);
     }
 
-    @Transactional
-    public void increaseStock(Long productId, int quantity) {
-        if (quantity < 1) {
-            throw new CoreException(ErrorType.BAD_REQUEST, "복구 수량은 1 이상이어야 합니다.");
-        }
-        productRepository.increaseStock(productId, quantity);
-    }
-
     @Transactional(readOnly = true)
     public Page<ProductModel> getAllSortedByLikeCountDesc(Pageable pageable) {
         return productRepository.findAllSortedByLikeCountDesc(pageable);
@@ -104,14 +97,22 @@ public class ProductService {
         return productRepository.findAllByBrandIdSortedByLikeCountDesc(brandId, pageable);
     }
 
-    @Transactional
-    public void incrementLikeCount(Long id) {
-        productRepository.incrementLikeCount(id);
+    @Transactional(readOnly = true)
+    public Map<Long, Long> getLikeCountsByProductIds(List<Long> productIds) {
+        return productRepository.findLikeCountsByProductIds(productIds);
+    }
+
+    @Transactional(readOnly = true)
+    public long getLikeCountByProductId(Long productId) {
+        return productRepository.findLikeCountByProductId(productId);
     }
 
     @Transactional
-    public void decrementLikeCount(Long id) {
-        productRepository.decrementLikeCount(id);
+    public void increaseStock(Long productId, int quantity) {
+        if (quantity < 1) {
+            throw new CoreException(ErrorType.BAD_REQUEST, "복구 수량은 1 이상이어야 합니다.");
+        }
+        productRepository.increaseStock(productId, quantity);
     }
 
     @Transactional

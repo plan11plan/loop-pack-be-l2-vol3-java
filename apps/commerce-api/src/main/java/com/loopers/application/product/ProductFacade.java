@@ -10,6 +10,7 @@ import com.loopers.domain.product.ProductService;
 import com.loopers.domain.product.event.ProductViewedEvent;
 import com.loopers.support.cache.CacheType;
 import java.time.ZonedDateTime;
+import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
@@ -48,7 +49,8 @@ public class ProductFacade {
         ProductModel product = productService.getById(id);
         return ProductResult.of(
                 product,
-                brandService.getById(product.getBrandId()).getName());
+                brandService.getById(product.getBrandId()).getName(),
+                productService.getLikeCountByProductId(id));
     }
 
     @Transactional(readOnly = true)
@@ -57,7 +59,8 @@ public class ProductFacade {
         ProductResult.DetailWithImages result = new ProductResult.DetailWithImages(
                 ProductResult.of(
                         product,
-                        brandService.getById(product.getBrandId()).getName()),
+                        brandService.getById(product.getBrandId()).getName(),
+                        productService.getLikeCountByProductId(id)),
                 productImageService.getImagesByProductIdAndType(id, ImageType.MAIN).stream()
                         .map(ProductResult.ImageResult::from)
                         .toList(),
@@ -104,38 +107,20 @@ public class ProductFacade {
     @Transactional(readOnly = true)
     public Page<ProductResult> getProductsWithActiveBrand(Pageable pageable) {
         Page<ProductModel> products = productService.getAll(pageable);
-        return new PageImpl<>(
-                ProductResult.fromWithActiveBrand(
-                        products.getContent(),
-                        brandService.getActiveNameMapByIds(
-                                ProductModel.extractDistinctBrandIds(products.getContent()))),
-                products.getPageable(),
-                products.getTotalElements());
+        return toResultPage(products);
     }
 
     @Transactional(readOnly = true)
     public Page<ProductResult> getProductsWithActiveBrandByBrandId(Long brandId, Pageable pageable) {
         Page<ProductModel> products = productService.getAllByBrandId(brandId, pageable);
-        return new PageImpl<>(
-                ProductResult.fromWithActiveBrand(
-                        products.getContent(),
-                        brandService.getActiveNameMapByIds(
-                                ProductModel.extractDistinctBrandIds(products.getContent()))),
-                products.getPageable(),
-                products.getTotalElements());
+        return toResultPage(products);
     }
 
     @Transactional(readOnly = true)
     public Page<ProductResult> getProductsWithActiveBrandSortedByLikes(int page, int size) {
         Page<ProductModel> products = productService.getAllSortedByLikeCountDesc(
                 PageRequest.of(page, size));
-        return new PageImpl<>(
-                ProductResult.fromWithActiveBrand(
-                        products.getContent(),
-                        brandService.getActiveNameMapByIds(
-                                ProductModel.extractDistinctBrandIds(products.getContent()))),
-                products.getPageable(),
-                products.getTotalElements());
+        return toResultPage(products);
     }
 
     @Transactional(readOnly = true)
@@ -143,11 +128,17 @@ public class ProductFacade {
             Long brandId, int page, int size) {
         Page<ProductModel> products = productService.getAllByBrandIdSortedByLikeCountDesc(
                 brandId, PageRequest.of(page, size));
+        return toResultPage(products);
+    }
+
+    private Page<ProductResult> toResultPage(Page<ProductModel> products) {
+        List<Long> productIds = ProductModel.extractIds(products.getContent());
         return new PageImpl<>(
                 ProductResult.fromWithActiveBrand(
                         products.getContent(),
                         brandService.getActiveNameMapByIds(
-                                ProductModel.extractDistinctBrandIds(products.getContent()))),
+                                ProductModel.extractDistinctBrandIds(products.getContent())),
+                        productService.getLikeCountsByProductIds(productIds)),
                 products.getPageable(),
                 products.getTotalElements());
     }

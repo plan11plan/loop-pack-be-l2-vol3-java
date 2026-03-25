@@ -117,10 +117,7 @@ public class BulkDataGeneratorService {
                 log.info("  Phase 5: Orders {} already exist. Skipping.", totalOrders);
             }
 
-            // Phase 6: Sync like_count
-            syncLikeCounts();
-
-            // Phase 7: Clear all caches (Redis에 이전 세션 캐시 제거)
+            // Phase 6: Clear all caches (Redis에 이전 세션 캐시 제거)
             evictAllCaches();
 
             Map<String, Long> finalStats = dataGeneratorRepository.getStats();
@@ -438,12 +435,6 @@ public class BulkDataGeneratorService {
         }
 
         log.info("  Phase 5: Orders {} created ({}s)", created, elapsed(start));
-    }
-
-    private void syncLikeCounts() {
-        long start = System.currentTimeMillis();
-        dataGeneratorRepository.syncLikeCounts();
-        log.info("  Phase 6: like_count synced from likes table ({}s)", elapsed(start));
     }
 
     private int flushOrderBatch(List<Object[]> orderBatch, List<List<Object[]>> itemsPerOrder) {
