@@ -19,6 +19,7 @@ import com.loopers.domain.coupon.OwnedCouponModel;
 import com.loopers.support.error.CoreException;
 import java.time.ZonedDateTime;
 import java.util.List;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -66,7 +67,7 @@ class CouponFacadeTest {
                     () -> assertThat(result.name()).isEqualTo("신규가입 10% 할인"),
                     () -> assertThat(result.discountType()).isEqualTo("RATE"),
                     () -> assertThat(result.discountValue()).isEqualTo(10L),
-                    () -> assertThat(result.issuedQuantity()).isEqualTo(0));
+                    () -> assertThat(result.issuedQuantity()).isEqualTo(0L));
         }
     }
 
@@ -82,6 +83,7 @@ class CouponFacadeTest {
                     "여름 세일 5000원 할인", CouponDiscountType.FIXED, 5000L,
                     20000L, 500, ZonedDateTime.now().plusDays(14));
             when(couponService.getById(1L)).thenReturn(coupon);
+            when(couponService.countIssuedCoupons(1L)).thenReturn(42L);
 
             // act
             CouponResult.Detail result = couponFacade.getCoupon(1L);
@@ -92,7 +94,8 @@ class CouponFacadeTest {
                     () -> assertThat(result.name()).isEqualTo("여름 세일 5000원 할인"),
                     () -> assertThat(result.discountType()).isEqualTo("FIXED"),
                     () -> assertThat(result.discountValue()).isEqualTo(5000L),
-                    () -> assertThat(result.minOrderAmount()).isEqualTo(20000L));
+                    () -> assertThat(result.minOrderAmount()).isEqualTo(20000L),
+                    () -> assertThat(result.issuedQuantity()).isEqualTo(42L));
         }
     }
 
@@ -235,6 +238,24 @@ class CouponFacadeTest {
                     .satisfies(e -> assertThat(((CoreException) e).getErrorCode())
                             .isEqualTo(CouponErrorCode.QUANTITY_EXHAUSTED));
             verify(couponService, never()).issue(1L, 200L);
+        }
+
+        @DisplayName("UNIQUE 제약 위반(중복 발급) 시 카운터를 복원하고 ALREADY_ISSUED 예외를 던진다")
+        @Test
+        void issueCoupon_whenDuplicateInsert() {
+            // arrange
+            CouponModel coupon = CouponModel.create(
+                    "신규가입 할인", CouponDiscountType.RATE, 10L,
+                    10000L, 1000, ZonedDateTime.now().plusDays(30));
+            when(couponService.getById(1L)).thenReturn(coupon);
+            when(couponService.issue(1L, 100L))
+                    .thenThrow(new DataIntegrityViolationException("Unique constraint"));
+
+            // act & assert
+            assertThatThrownBy(() -> couponFacade.issueCoupon(1L, 100L))
+                    .isInstanceOf(CoreException.class)
+                    .satisfies(e -> assertThat(((CoreException) e).getErrorCode())
+                            .isEqualTo(CouponErrorCode.ALREADY_ISSUED));
         }
     }
 

@@ -114,7 +114,6 @@ class CouponV1ApiE2ETest {
         void issue_returnsConflict_whenAlreadyIssued() {
             // arrange
             CouponModel coupon = saveCoupon("테스트 쿠폰", CouponDiscountType.FIXED, 5000);
-            couponJpaRepository.incrementIssuedQuantity(coupon.getId());
             ownedCouponJpaRepository.save(OwnedCouponModel.create(coupon, userId));
 
             // act
@@ -154,7 +153,6 @@ class CouponV1ApiE2ETest {
         void myOwnedCoupons_returnsList() {
             // arrange
             CouponModel coupon = saveCoupon("테스트 쿠폰", CouponDiscountType.RATE, 10);
-            couponJpaRepository.incrementIssuedQuantity(coupon.getId());
             ownedCouponJpaRepository.save(OwnedCouponModel.create(coupon, userId));
 
             // act

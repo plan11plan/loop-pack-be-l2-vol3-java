@@ -46,34 +46,11 @@ public class FakeCouponRepository implements CouponRepository {
         return new PageImpl<>(pageContent, pageable, activeModels.size());
     }
 
-    @Override
-    public int incrementIssuedQuantity(Long id) {
-        CouponModel coupon = store.get(id);
-        if (coupon == null || coupon.getDeletedAt() != null) {
-            return 0;
-        }
-        if (coupon.getIssuedQuantity() >= coupon.getTotalQuantity()) {
-            return 0;
-        }
-        setField(coupon, "issuedQuantity", coupon.getIssuedQuantity() + 1);
-        return 1;
-    }
-
     private void setId(Object target, Long id) {
         try {
             var field = target.getClass().getSuperclass().getDeclaredField("id");
             field.setAccessible(true);
             field.set(target, id);
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private void setField(Object target, String fieldName, Object value) {
-        try {
-            var field = target.getClass().getDeclaredField(fieldName);
-            field.setAccessible(true);
-            field.set(target, value);
         } catch (NoSuchFieldException | IllegalAccessException e) {
             throw new RuntimeException(e);
         }

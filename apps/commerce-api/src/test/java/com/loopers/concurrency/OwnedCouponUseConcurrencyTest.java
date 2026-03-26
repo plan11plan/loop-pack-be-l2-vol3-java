@@ -74,7 +74,6 @@ class OwnedCouponUseConcurrencyTest {
         CouponModel coupon = couponJpaRepository.save(
                 CouponModel.create("테스트 쿠폰", CouponDiscountType.FIXED, 5000,
                         null, 100, ZonedDateTime.now().plusMonths(3)));
-        couponJpaRepository.incrementIssuedQuantity(coupon.getId());
         return ownedCouponJpaRepository.save(OwnedCouponModel.create(coupon, userId));
     }
 

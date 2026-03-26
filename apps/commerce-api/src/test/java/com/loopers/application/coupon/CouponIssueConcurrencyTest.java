@@ -74,14 +74,11 @@ class CouponIssueConcurrencyTest {
         executorService.shutdown();
 
         // assert
-        CouponModel updated = couponJpaRepository.findById(coupon.getId()).orElseThrow();
-        long ownedCount = ownedCouponJpaRepository.findAllByCouponId(coupon.getId(),
-                org.springframework.data.domain.Pageable.unpaged()).getTotalElements();
+        long ownedCount = ownedCouponJpaRepository.countByCouponId(coupon.getId());
 
         assertAll(
                 () -> assertThat(successCount.get()).isEqualTo(totalQuantity),
                 () -> assertThat(failCount.get()).isEqualTo(threadCount - totalQuantity),
-                () -> assertThat(updated.getIssuedQuantity()).isEqualTo(totalQuantity),
                 () -> assertThat(ownedCount).isEqualTo(totalQuantity));
     }
 }
