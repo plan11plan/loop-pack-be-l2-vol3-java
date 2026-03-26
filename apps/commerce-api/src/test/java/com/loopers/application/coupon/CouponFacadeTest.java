@@ -1,18 +1,22 @@
 package com.loopers.application.coupon;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.loopers.application.coupon.dto.CouponCriteria;
 import com.loopers.application.coupon.dto.CouponResult;
 import com.loopers.domain.coupon.CouponDiscountType;
+import com.loopers.domain.coupon.CouponErrorCode;
 import com.loopers.domain.coupon.CouponModel;
 import com.loopers.domain.coupon.CouponService;
 import com.loopers.domain.coupon.OwnedCouponModel;
+import com.loopers.support.error.CoreException;
 import java.time.ZonedDateTime;
 import java.util.List;
 import org.junit.jupiter.api.DisplayName;
@@ -190,7 +194,7 @@ class CouponFacadeTest {
     @Nested
     class IssueCoupon {
 
-        @DisplayName("CouponService에 위임하고 발급된 쿠폰 정보를 반환한다")
+        @DisplayName("1차 문지기 통과 후 CouponService에 위임하고 발급된 쿠폰 정보를 반환한다")
         @Test
         void issueCoupon_success() {
             // arrange
@@ -198,6 +202,7 @@ class CouponFacadeTest {
                     "신규가입 할인", CouponDiscountType.RATE, 10L,
                     10000L, 1000, ZonedDateTime.now().plusDays(30));
             OwnedCouponModel owned = OwnedCouponModel.create(coupon, 100L);
+            when(couponService.getById(1L)).thenReturn(coupon);
             when(couponService.issue(1L, 100L)).thenReturn(owned);
 
             // act
@@ -205,9 +210,31 @@ class CouponFacadeTest {
 
             // assert
             assertAll(
+                    () -> verify(couponService).getById(1L),
                     () -> verify(couponService).issue(1L, 100L),
                     () -> assertThat(result.userId()).isEqualTo(100L),
                     () -> assertThat(result.status()).isEqualTo("AVAILABLE"));
+        }
+
+        @DisplayName("1차 문지기에서 수량 초과 시 Service를 호출하지 않고 즉시 거절한다")
+        @Test
+        void issueCoupon_whenFirstGatekeeperRejects() {
+            // arrange — totalQuantity=1인 쿠폰으로 1번 발급 후 2번째 시도
+            CouponModel coupon = CouponModel.create(
+                    "한정 쿠폰", CouponDiscountType.FIXED, 5000L,
+                    null, 1, ZonedDateTime.now().plusDays(30));
+            OwnedCouponModel owned = OwnedCouponModel.create(coupon, 100L);
+            when(couponService.getById(1L)).thenReturn(coupon);
+            when(couponService.issue(1L, 100L)).thenReturn(owned);
+
+            couponFacade.issueCoupon(1L, 100L); // 1번째: 1차 문지기 통과
+
+            // act & assert — 2번째: 1차 문지기에서 거절
+            assertThatThrownBy(() -> couponFacade.issueCoupon(1L, 200L))
+                    .isInstanceOf(CoreException.class)
+                    .satisfies(e -> assertThat(((CoreException) e).getErrorCode())
+                            .isEqualTo(CouponErrorCode.QUANTITY_EXHAUSTED));
+            verify(couponService, never()).issue(1L, 200L);
         }
     }
 

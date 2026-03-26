@@ -114,8 +114,7 @@ class OrderCouponV1ApiE2ETest {
         CouponModel coupon = couponJpaRepository.save(
                 CouponModel.create("테스트 쿠폰", type, value, minOrderAmount, 100,
                         ZonedDateTime.now().plusMonths(3)));
-        coupon.issue();
-        couponJpaRepository.save(coupon);
+        couponJpaRepository.incrementIssuedQuantity(coupon.getId());
         return ownedCouponJpaRepository.save(OwnedCouponModel.create(coupon, userId));
     }
 

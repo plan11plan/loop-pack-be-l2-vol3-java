@@ -220,8 +220,7 @@ class AdminCouponV1ApiE2ETest {
         void issues_returnsPageResponse() {
             // arrange
             CouponModel coupon = saveCoupon("발급 대상", CouponDiscountType.FIXED, 1000);
-            coupon.issue();
-            couponJpaRepository.save(coupon);
+            couponJpaRepository.incrementIssuedQuantity(coupon.getId());
             ownedCouponJpaRepository.save(OwnedCouponModel.create(coupon, 100L));
 
             // act

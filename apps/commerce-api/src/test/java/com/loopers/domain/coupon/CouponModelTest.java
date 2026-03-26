@@ -163,26 +163,6 @@ class CouponModelTest {
         }
     }
 
-    @DisplayName("발급할 때, ")
-    @Nested
-    class Issue {
-
-        @DisplayName("validateIssuable 통과 후 issuedQuantity가 1 증가한다")
-        @Test
-        void issue_incrementsIssuedQuantity() {
-            // arrange
-            CouponModel coupon = CouponModel.create(
-                    "할인 쿠폰", CouponDiscountType.FIXED, 5000L,
-                    null, 1000, ZonedDateTime.now().plusDays(30));
-
-            // act
-            coupon.issue();
-
-            // assert
-            assertThat(coupon.getIssuedQuantity()).isEqualTo(1);
-        }
-    }
-
     private static void setField(Object target, String fieldName, Object value) {
         try {
             var field = target.getClass().getDeclaredField(fieldName);
