@@ -49,6 +49,10 @@ public class CouponResult {
                     model.getUsedAt(),
                     model.getCreatedAt());
         }
+
+        public static IssuedDetail pending(Long couponId, Long userId) {
+            return new IssuedDetail(null, userId, "PENDING", null, null);
+        }
     }
 
     public record OwnedDetail(

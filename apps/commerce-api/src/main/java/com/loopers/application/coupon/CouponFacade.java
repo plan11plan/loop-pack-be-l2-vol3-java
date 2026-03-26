@@ -2,6 +2,8 @@ package com.loopers.application.coupon;
 
 import com.loopers.application.coupon.dto.CouponCriteria;
 import com.loopers.application.coupon.dto.CouponResult;
+import com.loopers.application.coupon.event.CouponIssuedMessage;
+import com.loopers.confg.kafka.KafkaTopics;
 import com.loopers.domain.coupon.CouponErrorCode;
 import com.loopers.domain.coupon.CouponIssueLimiter;
 import com.loopers.domain.coupon.CouponIssueResult;
@@ -11,9 +13,9 @@ import com.loopers.support.error.CoreException;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +25,7 @@ public class CouponFacade {
 
     private final CouponService couponService;
     private final CouponIssueLimiter couponIssueLimiter;
+    private final KafkaTemplate<Object, Object> kafkaTemplate;
 
     @Transactional
     public CouponResult.Detail registerCoupon(CouponCriteria.Create criteria) {
@@ -78,11 +81,12 @@ public class CouponFacade {
         }
 
         try {
-            return CouponResult.IssuedDetail.from(
-                    couponService.issue(couponId, userId));
-        } catch (DataIntegrityViolationException e) {
-            couponIssueLimiter.rollback(couponId, userId);
-            throw new CoreException(CouponErrorCode.ALREADY_ISSUED);
+            long issuedAt = System.currentTimeMillis();
+            kafkaTemplate.send(
+                    KafkaTopics.COUPON_ISSUED,
+                    String.valueOf(couponId),
+                    new CouponIssuedMessage(couponId, userId, issuedAt));
+            return CouponResult.IssuedDetail.pending(couponId, userId);
         } catch (Exception e) {
             couponIssueLimiter.rollback(couponId, userId);
             throw e;

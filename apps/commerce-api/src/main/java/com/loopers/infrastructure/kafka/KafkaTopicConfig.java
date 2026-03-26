@@ -26,4 +26,12 @@ public class KafkaTopicConfig {
                 .replicas(1)
                 .build();
     }
+
+    @Bean
+    public NewTopic couponIssuedTopic() {
+        return TopicBuilder.name(KafkaTopics.COUPON_ISSUED)
+                .partitions(1)
+                .replicas(1)
+                .build();
+    }
 }
