@@ -44,6 +44,10 @@ class CouponFacadeTest {
     @Mock
     private CouponIssueLimiter couponIssueLimiter;
 
+    @SuppressWarnings("unchecked")
+    @Mock
+    private org.springframework.kafka.core.KafkaTemplate<Object, Object> kafkaTemplate;
+
     @InjectMocks
     private CouponFacade couponFacade;
 
@@ -204,17 +208,12 @@ class CouponFacadeTest {
     @Nested
     class IssueCoupon {
 
-        @DisplayName("Redis 승인 후 CouponService에 위임하고 발급된 쿠폰 정보를 반환한다")
+        @DisplayName("Redis 승인 후 Kafka로 발행하고 PENDING 상태를 반환한다")
         @Test
         void issueCoupon_success() {
             // arrange
-            CouponModel coupon = CouponModel.create(
-                    "신규가입 할인", CouponDiscountType.RATE, 10L,
-                    10000L, 1000, ZonedDateTime.now().plusDays(30));
-            OwnedCouponModel owned = OwnedCouponModel.create(coupon, 100L);
             when(couponIssueLimiter.tryIssue(1L, 100L))
                     .thenReturn(CouponIssueResult.SUCCESS);
-            when(couponService.issue(1L, 100L)).thenReturn(owned);
 
             // act
             CouponResult.IssuedDetail result = couponFacade.issueCoupon(1L, 100L);
@@ -222,9 +221,9 @@ class CouponFacadeTest {
             // assert
             assertAll(
                     () -> verify(couponIssueLimiter).tryIssue(1L, 100L),
-                    () -> verify(couponService).issue(1L, 100L),
+                    () -> verify(kafkaTemplate).send(eq("coupon-issued"), eq("1"), any()),
                     () -> assertThat(result.userId()).isEqualTo(100L),
-                    () -> assertThat(result.status()).isEqualTo("AVAILABLE"));
+                    () -> assertThat(result.status()).isEqualTo("PENDING"));
         }
 
         @DisplayName("Redis에서 수량 초과 시 Service를 호출하지 않고 즉시 거절한다")
@@ -257,14 +256,14 @@ class CouponFacadeTest {
             verify(couponService, never()).issue(anyLong(), anyLong());
         }
 
-        @DisplayName("DB INSERT 실패 시 Redis에서 ZREM으로 롤백한다")
+        @DisplayName("Kafka produce 실패 시 Redis에서 ZREM으로 롤백한다")
         @Test
-        void issueCoupon_whenDbFails_rollbacksRedis() {
+        void issueCoupon_whenProduceFails_rollbacksRedis() {
             // arrange
             when(couponIssueLimiter.tryIssue(1L, 100L))
                     .thenReturn(CouponIssueResult.SUCCESS);
-            when(couponService.issue(1L, 100L))
-                    .thenThrow(new RuntimeException("DB error"));
+            when(kafkaTemplate.send(any(), any(), any()))
+                    .thenThrow(new RuntimeException("Kafka error"));
 
             // act & assert
             assertThatThrownBy(() -> couponFacade.issueCoupon(1L, 100L))

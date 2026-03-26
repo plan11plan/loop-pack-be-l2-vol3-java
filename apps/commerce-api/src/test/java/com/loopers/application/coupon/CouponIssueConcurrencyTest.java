@@ -4,8 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertAll;
 
 import com.loopers.domain.coupon.CouponDiscountType;
-import com.loopers.domain.coupon.CouponModel;
 import com.loopers.domain.coupon.CouponIssueLimiter;
+import com.loopers.domain.coupon.CouponModel;
 import com.loopers.infrastructure.coupon.CouponJpaRepository;
 import com.loopers.infrastructure.coupon.OwnedCouponJpaRepository;
 import com.loopers.utils.DatabaseCleanUp;
@@ -22,7 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
-@DisplayName("선착순 쿠폰 발급 동시성 통합 테스트 (Redis ZSET)")
+@DisplayName("선착순 쿠폰 발급 동시성 통합 테스트 (Redis + Kafka)")
 @SpringBootTest
 class CouponIssueConcurrencyTest {
 
@@ -89,9 +89,14 @@ class CouponIssueConcurrencyTest {
         latch.await();
         executorService.shutdown();
 
-        // assert
-        long ownedCount = ownedCouponJpaRepository.countByCouponId(coupon.getId());
+        // assert — Kafka Consumer가 비동기로 처리하므로 대기
+        long deadline = System.currentTimeMillis() + 30_000;
+        while (ownedCouponJpaRepository.countByCouponId(coupon.getId()) < totalQuantity
+                && System.currentTimeMillis() < deadline) {
+            Thread.sleep(500);
+        }
 
+        long ownedCount = ownedCouponJpaRepository.countByCouponId(coupon.getId());
         assertAll(
                 () -> assertThat(successCount.get()).isEqualTo(totalQuantity),
                 () -> assertThat(failCount.get()).isEqualTo(threadCount - totalQuantity),

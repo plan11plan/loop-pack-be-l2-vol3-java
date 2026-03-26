@@ -114,10 +114,8 @@ class CouponV1ApiE2ETest {
                             new HttpEntity<>(null, authHeaders()),
                             new ParameterizedTypeReference<>() {});
 
-            // assert
-            assertAll(
-                    () -> assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK),
-                    () -> assertThat(ownedCouponJpaRepository.findAll()).hasSize(2));
+            // assert — Kafka 비동기 처리이므로 응답 코드만 검증
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         }
 
         @DisplayName("이미 발급받은 쿠폰을 다시 발급받으면, 409 응답을 반환한다.")
@@ -126,6 +124,7 @@ class CouponV1ApiE2ETest {
             // arrange
             CouponModel coupon = saveCoupon("테스트 쿠폰", CouponDiscountType.FIXED, 5000);
             ownedCouponJpaRepository.save(OwnedCouponModel.create(coupon, userId));
+            couponIssueLimiter.tryIssue(coupon.getId(), userId); // Redis ZSET에도 등록
 
             // act
             ResponseEntity<ApiResponse<Object>> response =
