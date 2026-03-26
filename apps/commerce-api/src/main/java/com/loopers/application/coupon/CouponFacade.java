@@ -3,7 +3,8 @@ package com.loopers.application.coupon;
 import com.loopers.application.coupon.dto.CouponCriteria;
 import com.loopers.application.coupon.dto.CouponResult;
 import com.loopers.domain.coupon.CouponErrorCode;
-import com.loopers.domain.coupon.CouponIssueCounter;
+import com.loopers.domain.coupon.CouponIssueLimiter;
+import com.loopers.domain.coupon.CouponIssueResult;
 import com.loopers.domain.coupon.CouponModel;
 import com.loopers.domain.coupon.CouponService;
 import com.loopers.support.error.CoreException;
@@ -21,12 +22,13 @@ import org.springframework.transaction.annotation.Transactional;
 public class CouponFacade {
 
     private final CouponService couponService;
-    private final CouponIssueCounter couponIssueCounter = new CouponIssueCounter();
+    private final CouponIssueLimiter couponIssueLimiter;
 
     @Transactional
     public CouponResult.Detail registerCoupon(CouponCriteria.Create criteria) {
-        return CouponResult.Detail.from(
-                couponService.register(criteria.toCommand()), 0);
+        CouponModel coupon = couponService.register(criteria.toCommand());
+        couponIssueLimiter.registerTotalQuantity(coupon.getId(), coupon.getTotalQuantity());
+        return CouponResult.Detail.from(coupon, 0);
     }
 
     @Transactional(readOnly = true)
@@ -64,17 +66,26 @@ public class CouponFacade {
     }
 
     public CouponResult.IssuedDetail issueCoupon(Long couponId, Long userId) {
-        // 1차 문지기: AtomicInteger — 첫 요청만 DB 조회, 이후 캐시
-        if (!couponIssueCounter.tryAcquire(couponId,
-                () -> couponService.getById(couponId).getTotalQuantity())) {
+        CouponIssueResult result = couponIssueLimiter.tryIssue(couponId, userId);
+        if (result == CouponIssueResult.NOT_FOUND) {
+            throw new CoreException(CouponErrorCode.NOT_FOUND);
+        }
+        if (result == CouponIssueResult.ALREADY_ISSUED) {
+            throw new CoreException(CouponErrorCode.ALREADY_ISSUED);
+        }
+        if (result == CouponIssueResult.QUANTITY_EXHAUSTED) {
             throw new CoreException(CouponErrorCode.QUANTITY_EXHAUSTED);
         }
+
         try {
             return CouponResult.IssuedDetail.from(
                     couponService.issue(couponId, userId));
         } catch (DataIntegrityViolationException e) {
-            couponIssueCounter.release(couponId);
+            couponIssueLimiter.rollback(couponId, userId);
             throw new CoreException(CouponErrorCode.ALREADY_ISSUED);
+        } catch (Exception e) {
+            couponIssueLimiter.rollback(couponId, userId);
+            throw e;
         }
     }
 
