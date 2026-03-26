@@ -36,9 +36,6 @@ public class CouponModel extends BaseEntity {
     @Column(name = "total_quantity", nullable = false)
     private int totalQuantity;
 
-    @Column(name = "issued_quantity", nullable = false)
-    private int issuedQuantity;
-
     @Column(name = "expired_at", nullable = false)
     private ZonedDateTime expiredAt;
 
@@ -49,7 +46,6 @@ public class CouponModel extends BaseEntity {
         this.discountValue = discountValue;
         this.minOrderAmount = minOrderAmount;
         this.totalQuantity = totalQuantity;
-        this.issuedQuantity = 0;
         this.expiredAt = expiredAt;
     }
 
@@ -71,9 +67,6 @@ public class CouponModel extends BaseEntity {
         }
         if (this.expiredAt.isBefore(ZonedDateTime.now())) {
             throw new CoreException(CouponErrorCode.EXPIRED);
-        }
-        if (this.issuedQuantity >= this.totalQuantity) {
-            throw new CoreException(CouponErrorCode.QUANTITY_EXHAUSTED);
         }
     }
 

@@ -11,6 +11,4 @@ public interface CouponRepository {
     Optional<CouponModel> findById(Long id);
 
     Page<CouponModel> findAll(Pageable pageable);
-
-    int incrementIssuedQuantity(Long id);
 }

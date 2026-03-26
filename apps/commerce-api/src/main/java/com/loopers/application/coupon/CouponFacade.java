@@ -8,7 +8,9 @@ import com.loopers.domain.coupon.CouponModel;
 import com.loopers.domain.coupon.CouponService;
 import com.loopers.support.error.CoreException;
 import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -24,19 +26,25 @@ public class CouponFacade {
     @Transactional
     public CouponResult.Detail registerCoupon(CouponCriteria.Create criteria) {
         return CouponResult.Detail.from(
-                couponService.register(criteria.toCommand()));
+                couponService.register(criteria.toCommand()), 0);
     }
 
     @Transactional(readOnly = true)
     public CouponResult.Detail getCoupon(Long couponId) {
         return CouponResult.Detail.from(
-                couponService.getById(couponId));
+                couponService.getById(couponId),
+                couponService.countIssuedCoupons(couponId));
     }
 
     @Transactional(readOnly = true)
     public Page<CouponResult.Detail> getCoupons(Pageable pageable) {
-        return couponService.getAll(pageable)
-                .map(CouponResult.Detail::from);
+        Page<CouponModel> coupons = couponService.getAll(pageable);
+        List<Long> couponIds = coupons.getContent().stream()
+                .map(CouponModel::getId)
+                .toList();
+        Map<Long, Long> issuedCountMap = couponService.countIssuedCoupons(couponIds);
+        return coupons.map(coupon -> CouponResult.Detail.from(
+                coupon, issuedCountMap.getOrDefault(coupon.getId(), 0L)));
     }
 
     @Transactional
@@ -56,18 +64,17 @@ public class CouponFacade {
     }
 
     public CouponResult.IssuedDetail issueCoupon(Long couponId, Long userId) {
-        // 1차 문지기: AtomicInteger (트랜잭션 밖, DB 부하 경감)
-        CouponModel coupon = couponService.getById(couponId);
-        if (!couponIssueCounter.tryAcquire(couponId, coupon.getTotalQuantity())) {
+        // 1차 문지기: AtomicInteger — 첫 요청만 DB 조회, 이후 캐시
+        if (!couponIssueCounter.tryAcquire(couponId,
+                () -> couponService.getById(couponId).getTotalQuantity())) {
             throw new CoreException(CouponErrorCode.QUANTITY_EXHAUSTED);
         }
         try {
-            // 2차 문지기 + OwnedCoupon INSERT (CouponService @Transactional)
             return CouponResult.IssuedDetail.from(
                     couponService.issue(couponId, userId));
-        } catch (Exception e) {
+        } catch (DataIntegrityViolationException e) {
             couponIssueCounter.release(couponId);
-            throw e;
+            throw new CoreException(CouponErrorCode.ALREADY_ISSUED);
         }
     }
 
