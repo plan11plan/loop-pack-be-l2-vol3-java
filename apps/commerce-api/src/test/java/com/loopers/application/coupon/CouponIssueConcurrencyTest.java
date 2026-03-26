@@ -5,21 +5,24 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 
 import com.loopers.domain.coupon.CouponDiscountType;
 import com.loopers.domain.coupon.CouponModel;
+import com.loopers.domain.coupon.CouponIssueLimiter;
 import com.loopers.infrastructure.coupon.CouponJpaRepository;
 import com.loopers.infrastructure.coupon.OwnedCouponJpaRepository;
 import com.loopers.utils.DatabaseCleanUp;
+import com.loopers.utils.RedisCleanUp;
 import java.time.ZonedDateTime;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
-@DisplayName("선착순 쿠폰 발급 동시성 통합 테스트")
+@DisplayName("선착순 쿠폰 발급 동시성 통합 테스트 (Redis ZSET)")
 @SpringBootTest
 class CouponIssueConcurrencyTest {
 
@@ -33,11 +36,23 @@ class CouponIssueConcurrencyTest {
     private OwnedCouponJpaRepository ownedCouponJpaRepository;
 
     @Autowired
+    private CouponIssueLimiter couponIssueLimiter;
+
+    @Autowired
     private DatabaseCleanUp databaseCleanUp;
+
+    @Autowired
+    private RedisCleanUp redisCleanUp;
+
+    @BeforeEach
+    void setUp() {
+        redisCleanUp.truncateAll();
+    }
 
     @AfterEach
     void tearDown() {
         databaseCleanUp.truncateAllTables();
+        redisCleanUp.truncateAll();
     }
 
     @DisplayName("100장 쿠폰에 1000명이 동시 요청하면 정확히 100장만 발급된다")
@@ -50,6 +65,7 @@ class CouponIssueConcurrencyTest {
         CouponModel coupon = couponJpaRepository.save(CouponModel.create(
                 "선착순 쿠폰", CouponDiscountType.FIXED, 5000L,
                 null, totalQuantity, ZonedDateTime.now().plusDays(30)));
+        couponIssueLimiter.registerTotalQuantity(coupon.getId(), totalQuantity);
 
         ExecutorService executorService = Executors.newFixedThreadPool(32);
         CountDownLatch latch = new CountDownLatch(threadCount);

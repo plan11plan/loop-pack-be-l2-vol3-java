@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertAll;
 
 import com.loopers.domain.coupon.CouponDiscountType;
+import com.loopers.domain.coupon.CouponIssueLimiter;
 import com.loopers.domain.coupon.CouponModel;
 import com.loopers.domain.coupon.OwnedCouponModel;
 import com.loopers.infrastructure.coupon.CouponJpaRepository;
@@ -12,6 +13,7 @@ import com.loopers.interfaces.api.ApiResponse;
 import com.loopers.interfaces.coupon.dto.CouponV1Dto;
 import com.loopers.interfaces.user.dto.UserV1Dto;
 import com.loopers.utils.DatabaseCleanUp;
+import com.loopers.utils.RedisCleanUp;
 import java.time.ZonedDateTime;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,6 +41,8 @@ class CouponV1ApiE2ETest {
     private final CouponJpaRepository couponJpaRepository;
     private final OwnedCouponJpaRepository ownedCouponJpaRepository;
     private final DatabaseCleanUp databaseCleanUp;
+    private final RedisCleanUp redisCleanUp;
+    private final CouponIssueLimiter couponIssueLimiter;
 
     private Long userId;
 
@@ -47,12 +51,16 @@ class CouponV1ApiE2ETest {
         TestRestTemplate testRestTemplate,
         CouponJpaRepository couponJpaRepository,
         OwnedCouponJpaRepository ownedCouponJpaRepository,
-        DatabaseCleanUp databaseCleanUp
+        DatabaseCleanUp databaseCleanUp,
+        RedisCleanUp redisCleanUp,
+        CouponIssueLimiter couponIssueLimiter
     ) {
         this.testRestTemplate = testRestTemplate;
         this.couponJpaRepository = couponJpaRepository;
         this.ownedCouponJpaRepository = ownedCouponJpaRepository;
         this.databaseCleanUp = databaseCleanUp;
+        this.redisCleanUp = redisCleanUp;
+        this.couponIssueLimiter = couponIssueLimiter;
     }
 
     @BeforeEach
@@ -70,6 +78,7 @@ class CouponV1ApiE2ETest {
     @AfterEach
     void tearDown() {
         databaseCleanUp.truncateAllTables();
+        redisCleanUp.truncateAll();
     }
 
     private HttpHeaders authHeaders() {
@@ -80,9 +89,11 @@ class CouponV1ApiE2ETest {
     }
 
     private CouponModel saveCoupon(String name, CouponDiscountType type, long value) {
-        return couponJpaRepository.save(
+        CouponModel coupon = couponJpaRepository.save(
                 CouponModel.create(name, type, value, null, 100,
                         ZonedDateTime.now().plusMonths(3)));
+        couponIssueLimiter.registerTotalQuantity(coupon.getId(), coupon.getTotalQuantity());
+        return coupon;
     }
 
     @DisplayName("POST /api/v1/coupons/{couponId}/issue")
