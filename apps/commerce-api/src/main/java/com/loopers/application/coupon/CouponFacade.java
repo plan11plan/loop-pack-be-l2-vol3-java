@@ -2,14 +2,15 @@ package com.loopers.application.coupon;
 
 import com.loopers.application.coupon.dto.CouponCriteria;
 import com.loopers.application.coupon.dto.CouponResult;
+import com.loopers.domain.coupon.CouponErrorCode;
+import com.loopers.domain.coupon.CouponIssueCounter;
+import com.loopers.domain.coupon.CouponModel;
 import com.loopers.domain.coupon.CouponService;
+import com.loopers.support.error.CoreException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.orm.ObjectOptimisticLockingFailureException;
-import org.springframework.retry.annotation.Backoff;
-import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class CouponFacade {
 
     private final CouponService couponService;
+    private final CouponIssueCounter couponIssueCounter = new CouponIssueCounter();
 
     @Transactional
     public CouponResult.Detail registerCoupon(CouponCriteria.Create criteria) {
@@ -53,14 +55,20 @@ public class CouponFacade {
                 .map(CouponResult.IssuedDetail::from);
     }
 
-    @Retryable(
-            retryFor = ObjectOptimisticLockingFailureException.class,
-            maxAttempts = 50,
-            backoff = @Backoff(delay = 50, random = true))
-    @Transactional
     public CouponResult.IssuedDetail issueCoupon(Long couponId, Long userId) {
-        return CouponResult.IssuedDetail.from(
-                couponService.issue(couponId, userId));
+        // 1차 문지기: AtomicInteger (트랜잭션 밖, DB 부하 경감)
+        CouponModel coupon = couponService.getById(couponId);
+        if (!couponIssueCounter.tryAcquire(couponId, coupon.getTotalQuantity())) {
+            throw new CoreException(CouponErrorCode.QUANTITY_EXHAUSTED);
+        }
+        try {
+            // 2차 문지기 + OwnedCoupon INSERT (CouponService @Transactional)
+            return CouponResult.IssuedDetail.from(
+                    couponService.issue(couponId, userId));
+        } catch (Exception e) {
+            couponIssueCounter.release(couponId);
+            throw e;
+        }
     }
 
     @Transactional(readOnly = true)

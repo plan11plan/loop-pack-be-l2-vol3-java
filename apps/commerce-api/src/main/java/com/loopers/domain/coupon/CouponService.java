@@ -52,13 +52,15 @@ public class CouponService {
 
     @Transactional
     public OwnedCouponModel issue(Long couponId, Long userId) {
-        CouponModel coupon = couponRepository.findById(couponId)
-                .orElseThrow(() -> new CoreException(CouponErrorCode.NOT_FOUND));
+        CouponModel coupon = getById(couponId);
+        coupon.validateIssuable();
         ownedCouponRepository.findByCouponIdAndUserId(couponId, userId)
                 .ifPresent(owned -> {
                     throw new CoreException(CouponErrorCode.ALREADY_ISSUED);
                 });
-        coupon.issue();
+        if (couponRepository.incrementIssuedQuantity(couponId) == 0) {
+            throw new CoreException(CouponErrorCode.QUANTITY_EXHAUSTED);
+        }
         return ownedCouponRepository.save(OwnedCouponModel.create(coupon, userId));
     }
 

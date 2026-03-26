@@ -8,7 +8,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
-import jakarta.persistence.Version;
+
 import java.time.ZonedDateTime;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -41,9 +41,6 @@ public class CouponModel extends BaseEntity {
 
     @Column(name = "expired_at", nullable = false)
     private ZonedDateTime expiredAt;
-
-    @Version
-    private Long version;
 
     private CouponModel(String name, CouponDiscountType discountType, long discountValue,
                         Long minOrderAmount, int totalQuantity, ZonedDateTime expiredAt) {
@@ -78,11 +75,6 @@ public class CouponModel extends BaseEntity {
         if (this.issuedQuantity >= this.totalQuantity) {
             throw new CoreException(CouponErrorCode.QUANTITY_EXHAUSTED);
         }
-    }
-
-    public void issue() {
-        validateIssuable();
-        this.issuedQuantity++;
     }
 
     public void update(String name, ZonedDateTime expiredAt) {
