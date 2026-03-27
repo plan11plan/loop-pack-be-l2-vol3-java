@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -238,6 +239,27 @@ class CouponFacadeTest {
                     .satisfies(e -> assertThat(((CoreException) e).getErrorCode())
                             .isEqualTo(CouponErrorCode.QUANTITY_EXHAUSTED));
             verify(couponService, never()).issue(1L, 200L);
+        }
+
+        @DisplayName("1차 문지기에서 중복 사용자를 즉시 거절한다")
+        @Test
+        void issueCoupon_whenDuplicateUser() {
+            // arrange
+            CouponModel coupon = CouponModel.create(
+                    "한정 쿠폰", CouponDiscountType.FIXED, 5000L,
+                    null, 1000, ZonedDateTime.now().plusDays(30));
+            OwnedCouponModel owned = OwnedCouponModel.create(coupon, 100L);
+            when(couponService.getById(1L)).thenReturn(coupon);
+            when(couponService.issue(1L, 100L)).thenReturn(owned);
+
+            couponFacade.issueCoupon(1L, 100L); // 1번째: 성공
+
+            // act & assert — 같은 유저 재시도: ALREADY_ISSUED
+            assertThatThrownBy(() -> couponFacade.issueCoupon(1L, 100L))
+                    .isInstanceOf(CoreException.class)
+                    .satisfies(e -> assertThat(((CoreException) e).getErrorCode())
+                            .isEqualTo(CouponErrorCode.ALREADY_ISSUED));
+            verify(couponService, times(1)).issue(1L, 100L);
         }
 
         @DisplayName("UNIQUE 제약 위반(중복 발급) 시 카운터를 복원하고 ALREADY_ISSUED 예외를 던진다")
