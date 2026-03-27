@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -20,6 +19,7 @@ import com.loopers.domain.coupon.CouponModel;
 import com.loopers.domain.coupon.CouponService;
 import com.loopers.domain.coupon.OwnedCouponModel;
 import com.loopers.domain.coupon.CouponIssueLimiter;
+import com.loopers.infrastructure.outbox.OutboxEventPublisher;
 import com.loopers.support.error.CoreException;
 import java.time.ZonedDateTime;
 import java.util.List;
@@ -44,9 +44,8 @@ class CouponFacadeTest {
     @Mock
     private CouponIssueLimiter couponIssueLimiter;
 
-    @SuppressWarnings("unchecked")
     @Mock
-    private org.springframework.kafka.core.KafkaTemplate<Object, Object> kafkaTemplate;
+    private OutboxEventPublisher outboxEventPublisher;
 
     @InjectMocks
     private CouponFacade couponFacade;
@@ -208,7 +207,7 @@ class CouponFacadeTest {
     @Nested
     class IssueCoupon {
 
-        @DisplayName("Redis 승인 후 Kafka로 발행하고 PENDING 상태를 반환한다")
+        @DisplayName("Redis 승인 후 Outbox에 저장하고 PENDING 상태를 반환한다")
         @Test
         void issueCoupon_success() {
             // arrange
@@ -221,7 +220,8 @@ class CouponFacadeTest {
             // assert
             assertAll(
                     () -> verify(couponIssueLimiter).tryIssue(1L, 100L),
-                    () -> verify(kafkaTemplate).send(eq("coupon-issued"), eq("1"), any()),
+                    () -> verify(outboxEventPublisher).publish(
+                            eq("COUPON_ISSUED"), eq("coupon-issued"), eq("1"), any()),
                     () -> assertThat(result.userId()).isEqualTo(100L),
                     () -> assertThat(result.status()).isEqualTo("PENDING"));
         }
@@ -256,14 +256,14 @@ class CouponFacadeTest {
             verify(couponService, never()).issue(anyLong(), anyLong());
         }
 
-        @DisplayName("Kafka produce 실패 시 Redis에서 ZREM으로 롤백한다")
+        @DisplayName("Outbox 저장 실패 시 Redis에서 ZREM으로 롤백한다")
         @Test
-        void issueCoupon_whenProduceFails_rollbacksRedis() {
+        void issueCoupon_whenOutboxFails_rollbacksRedis() {
             // arrange
             when(couponIssueLimiter.tryIssue(1L, 100L))
                     .thenReturn(CouponIssueResult.SUCCESS);
-            when(kafkaTemplate.send(any(), any(), any()))
-                    .thenThrow(new RuntimeException("Kafka error"));
+            org.mockito.Mockito.doThrow(new RuntimeException("DB error"))
+                    .when(outboxEventPublisher).publish(any(), any(), any(), any());
 
             // act & assert
             assertThatThrownBy(() -> couponFacade.issueCoupon(1L, 100L))
