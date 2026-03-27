@@ -44,6 +44,7 @@ public class CouponRedisIssueLimiter implements CouponIssueLimiter {
 
     @Override
     public void registerTotalQuantity(Long couponId, int totalQuantity) {
+        redisTemplate.delete(ISSUED_KEY_PREFIX + couponId);
         redisTemplate.opsForValue().set(
                 QUANTITY_KEY_PREFIX + couponId, String.valueOf(totalQuantity));
     }
