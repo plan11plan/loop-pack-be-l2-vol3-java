@@ -1,8 +1,8 @@
 package com.loopers.infrastructure.outbox;
 
 import java.util.List;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -10,11 +10,17 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class OutboxKafkaRelay {
 
     private final OutboxEventJpaRepository outboxRepository;
-    private final KafkaTemplate<Object, Object> kafkaTemplate;
+    private final KafkaTemplate<String, String> kafkaTemplate;
+
+    public OutboxKafkaRelay(
+            OutboxEventJpaRepository outboxRepository,
+            @Qualifier(OutboxKafkaConfig.OUTBOX_KAFKA_TEMPLATE) KafkaTemplate<String, String> kafkaTemplate) {
+        this.outboxRepository = outboxRepository;
+        this.kafkaTemplate = kafkaTemplate;
+    }
 
     @Scheduled(fixedDelay = 3000)
     @Transactional

@@ -9,13 +9,13 @@ import com.loopers.domain.coupon.CouponIssueLimiter;
 import com.loopers.domain.coupon.CouponIssueResult;
 import com.loopers.domain.coupon.CouponModel;
 import com.loopers.domain.coupon.CouponService;
+import com.loopers.infrastructure.outbox.OutboxEventPublisher;
 import com.loopers.support.error.CoreException;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,7 +25,7 @@ public class CouponFacade {
 
     private final CouponService couponService;
     private final CouponIssueLimiter couponIssueLimiter;
-    private final KafkaTemplate<Object, Object> kafkaTemplate;
+    private final OutboxEventPublisher outboxEventPublisher;
 
     @Transactional
     public CouponResult.Detail registerCoupon(CouponCriteria.Create criteria) {
@@ -68,6 +68,7 @@ public class CouponFacade {
                 .map(CouponResult.IssuedDetail::from);
     }
 
+    @Transactional
     public CouponResult.IssuedDetail issueCoupon(Long couponId, Long userId) {
         CouponIssueResult result = couponIssueLimiter.tryIssue(couponId, userId);
         if (result == CouponIssueResult.NOT_FOUND) {
@@ -81,11 +82,11 @@ public class CouponFacade {
         }
 
         try {
-            long issuedAt = System.currentTimeMillis();
-            kafkaTemplate.send(
+            outboxEventPublisher.publish(
+                    "COUPON_ISSUED",
                     KafkaTopics.COUPON_ISSUED,
                     String.valueOf(couponId),
-                    new CouponIssuedMessage(couponId, userId, issuedAt));
+                    new CouponIssuedMessage(couponId, userId, System.currentTimeMillis()));
             return CouponResult.IssuedDetail.pending(couponId, userId);
         } catch (Exception e) {
             couponIssueLimiter.rollback(couponId, userId);
