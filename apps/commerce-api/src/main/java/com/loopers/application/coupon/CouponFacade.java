@@ -64,16 +64,21 @@ public class CouponFacade {
     }
 
     public CouponResult.IssuedDetail issueCoupon(Long couponId, Long userId) {
-        // 1차 문지기: AtomicInteger — 첫 요청만 DB 조회, 이후 캐시
-        if (!couponIssueCounter.tryAcquire(couponId,
-                () -> couponService.getById(couponId).getTotalQuantity())) {
-            throw new CoreException(CouponErrorCode.QUANTITY_EXHAUSTED);
+        // 1차 문지기: AtomicInteger + 중복 유저 필터 — 첫 요청만 DB 조회, 이후 캐시
+        CouponIssueCounter.AcquireResult acquireResult =
+                couponIssueCounter.tryAcquire(couponId, userId,
+                        () -> couponService.getById(couponId).getTotalQuantity());
+        if (acquireResult != CouponIssueCounter.AcquireResult.SUCCESS) {
+            throw new CoreException(
+                    acquireResult == CouponIssueCounter.AcquireResult.ALREADY_ISSUED
+                            ? CouponErrorCode.ALREADY_ISSUED
+                            : CouponErrorCode.QUANTITY_EXHAUSTED);
         }
         try {
             return CouponResult.IssuedDetail.from(
                     couponService.issue(couponId, userId));
         } catch (DataIntegrityViolationException e) {
-            couponIssueCounter.release(couponId);
+            couponIssueCounter.release(couponId, userId);
             throw new CoreException(CouponErrorCode.ALREADY_ISSUED);
         }
     }
