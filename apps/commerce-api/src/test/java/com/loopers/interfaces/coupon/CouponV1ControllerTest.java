@@ -41,7 +41,7 @@ class CouponV1ControllerTest {
         void issue_returnsSuccess() {
             // arrange
             when(couponFacade.issueCoupon(10L, 1L)).thenReturn(
-                    new CouponResult.IssuedDetail(1L, 1L, "AVAILABLE", null, ZonedDateTime.now()));
+                    CouponResult.IssuedDetail.pending(10L, 1L));
 
             // act
             ApiResponse<Object> response = couponV1Controller.issue(loginUser, 10L);

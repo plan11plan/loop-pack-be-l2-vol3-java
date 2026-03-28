@@ -168,7 +168,7 @@ class AdminCouponV1ControllerTest {
         void issues_returnsPageResponse() {
             // arrange
             Page<CouponResult.IssuedDetail> page = new PageImpl<>(
-                    List.of(new CouponResult.IssuedDetail(1L, 100L, "AVAILABLE", null, now)),
+                    List.of(new CouponResult.IssuedDetail(1L, 100L, 1L, "ISSUED")),
                     PageRequest.of(0, 20), 1);
             when(couponFacade.getIssuedCoupons(any(), any())).thenReturn(page);
 

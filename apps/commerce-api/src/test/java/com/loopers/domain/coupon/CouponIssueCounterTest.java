@@ -64,15 +64,15 @@ class CouponIssueCounterTest {
             assertThat(counter.tryAcquire(2L, 1L, () -> 1)).isEqualTo(SUCCESS);
         }
 
-        @DisplayName("수량 초과로 거절된 사용자는 재시도 시 ALREADY_ISSUED로 즉시 거절된다")
+        @DisplayName("수량 초과로 거절된 사용자는 Set에 들어가지 않아 재시도 시에도 QUANTITY_EXHAUSTED를 반환한다")
         @Test
-        void tryAcquire_afterQuantityExhausted_rejectImmediately() {
+        void tryAcquire_afterQuantityExhausted_notInSet() {
             // arrange
             counter.tryAcquire(1L, 1L, () -> 1); // 1/1 성공
-            counter.tryAcquire(1L, 2L, () -> 1); // 수량 초과 — set에는 남음
+            counter.tryAcquire(1L, 2L, () -> 1); // 수량 초과 — Set에 안 들어감
 
-            // act & assert — 재시도: set에 남아있으므로 ALREADY_ISSUED
-            assertThat(counter.tryAcquire(1L, 2L, () -> 1)).isEqualTo(ALREADY_ISSUED);
+            // act & assert — 재시도: Set에 없으므로 수량 재확인 → QUANTITY_EXHAUSTED
+            assertThat(counter.tryAcquire(1L, 2L, () -> 1)).isEqualTo(QUANTITY_EXHAUSTED);
         }
     }
 

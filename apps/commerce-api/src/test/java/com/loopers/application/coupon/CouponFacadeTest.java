@@ -17,10 +17,10 @@ import com.loopers.domain.coupon.CouponErrorCode;
 import com.loopers.domain.coupon.CouponModel;
 import com.loopers.domain.coupon.CouponService;
 import com.loopers.domain.coupon.OwnedCouponModel;
+import com.loopers.infrastructure.coupon.CouponIssueBatchBuffer;
 import com.loopers.support.error.CoreException;
 import java.time.ZonedDateTime;
 import java.util.List;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -38,6 +38,9 @@ class CouponFacadeTest {
 
     @Mock
     private CouponService couponService;
+
+    @Mock
+    private CouponIssueBatchBuffer couponIssueBatchBuffer;
 
     @InjectMocks
     private CouponFacade couponFacade;
@@ -190,7 +193,7 @@ class CouponFacadeTest {
                     () -> verify(couponService).getIssuedCoupons(1L, pageable),
                     () -> assertThat(result.getContent()).hasSize(2),
                     () -> assertThat(result.getContent().get(0).userId()).isEqualTo(100L),
-                    () -> assertThat(result.getContent().get(0).status()).isEqualTo("AVAILABLE"));
+                    () -> assertThat(result.getContent().get(0).status()).isEqualTo("ISSUED"));
         }
     }
 
@@ -198,38 +201,35 @@ class CouponFacadeTest {
     @Nested
     class IssueCoupon {
 
-        @DisplayName("1차 문지기 통과 후 CouponService에 위임하고 발급된 쿠폰 정보를 반환한다")
+        @DisplayName("1차 문지기 통과 후 버퍼에 추가하고 PENDING 상태를 반환한다")
         @Test
         void issueCoupon_success() {
             // arrange
             CouponModel coupon = CouponModel.create(
                     "신규가입 할인", CouponDiscountType.RATE, 10L,
                     10000L, 1000, ZonedDateTime.now().plusDays(30));
-            OwnedCouponModel owned = OwnedCouponModel.create(coupon, 100L);
             when(couponService.getById(1L)).thenReturn(coupon);
-            when(couponService.issue(1L, 100L)).thenReturn(owned);
 
             // act
             CouponResult.IssuedDetail result = couponFacade.issueCoupon(1L, 100L);
 
             // assert
             assertAll(
-                    () -> verify(couponService).getById(1L),
-                    () -> verify(couponService).issue(1L, 100L),
+                    () -> verify(couponIssueBatchBuffer).add(1L, 100L),
+                    () -> assertThat(result.couponId()).isEqualTo(1L),
                     () -> assertThat(result.userId()).isEqualTo(100L),
-                    () -> assertThat(result.status()).isEqualTo("AVAILABLE"));
+                    () -> assertThat(result.ownedCouponId()).isNull(),
+                    () -> assertThat(result.status()).isEqualTo("PENDING"));
         }
 
-        @DisplayName("1차 문지기에서 수량 초과 시 Service를 호출하지 않고 즉시 거절한다")
+        @DisplayName("1차 문지기에서 수량 초과 시 버퍼에 추가하지 않고 즉시 거절한다")
         @Test
         void issueCoupon_whenFirstGatekeeperRejects() {
             // arrange — totalQuantity=1인 쿠폰으로 1번 발급 후 2번째 시도
             CouponModel coupon = CouponModel.create(
                     "한정 쿠폰", CouponDiscountType.FIXED, 5000L,
                     null, 1, ZonedDateTime.now().plusDays(30));
-            OwnedCouponModel owned = OwnedCouponModel.create(coupon, 100L);
             when(couponService.getById(1L)).thenReturn(coupon);
-            when(couponService.issue(1L, 100L)).thenReturn(owned);
 
             couponFacade.issueCoupon(1L, 100L); // 1번째: 1차 문지기 통과
 
@@ -238,7 +238,7 @@ class CouponFacadeTest {
                     .isInstanceOf(CoreException.class)
                     .satisfies(e -> assertThat(((CoreException) e).getErrorCode())
                             .isEqualTo(CouponErrorCode.QUANTITY_EXHAUSTED));
-            verify(couponService, never()).issue(1L, 200L);
+            verify(couponIssueBatchBuffer, never()).add(1L, 200L);
         }
 
         @DisplayName("1차 문지기에서 중복 사용자를 즉시 거절한다")
@@ -248,9 +248,7 @@ class CouponFacadeTest {
             CouponModel coupon = CouponModel.create(
                     "한정 쿠폰", CouponDiscountType.FIXED, 5000L,
                     null, 1000, ZonedDateTime.now().plusDays(30));
-            OwnedCouponModel owned = OwnedCouponModel.create(coupon, 100L);
             when(couponService.getById(1L)).thenReturn(coupon);
-            when(couponService.issue(1L, 100L)).thenReturn(owned);
 
             couponFacade.issueCoupon(1L, 100L); // 1번째: 성공
 
@@ -259,26 +257,9 @@ class CouponFacadeTest {
                     .isInstanceOf(CoreException.class)
                     .satisfies(e -> assertThat(((CoreException) e).getErrorCode())
                             .isEqualTo(CouponErrorCode.ALREADY_ISSUED));
-            verify(couponService, times(1)).issue(1L, 100L);
+            verify(couponIssueBatchBuffer, times(1)).add(1L, 100L);
         }
 
-        @DisplayName("UNIQUE 제약 위반(중복 발급) 시 카운터를 복원하고 ALREADY_ISSUED 예외를 던진다")
-        @Test
-        void issueCoupon_whenDuplicateInsert() {
-            // arrange
-            CouponModel coupon = CouponModel.create(
-                    "신규가입 할인", CouponDiscountType.RATE, 10L,
-                    10000L, 1000, ZonedDateTime.now().plusDays(30));
-            when(couponService.getById(1L)).thenReturn(coupon);
-            when(couponService.issue(1L, 100L))
-                    .thenThrow(new DataIntegrityViolationException("Unique constraint"));
-
-            // act & assert
-            assertThatThrownBy(() -> couponFacade.issueCoupon(1L, 100L))
-                    .isInstanceOf(CoreException.class)
-                    .satisfies(e -> assertThat(((CoreException) e).getErrorCode())
-                            .isEqualTo(CouponErrorCode.ALREADY_ISSUED));
-        }
     }
 
     @DisplayName("내 쿠폰 목록을 조회할 때 (UC-C08), ")
