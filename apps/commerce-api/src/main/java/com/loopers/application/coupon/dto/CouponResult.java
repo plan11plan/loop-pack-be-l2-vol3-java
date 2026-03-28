@@ -35,19 +35,21 @@ public class CouponResult {
     }
 
     public record IssuedDetail(
-        Long id,
+        Long couponId,
         Long userId,
-        String status,
-        ZonedDateTime usedAt,
-        ZonedDateTime createdAt
+        Long ownedCouponId,
+        String status
     ) {
         public static IssuedDetail from(OwnedCouponModel model) {
             return new IssuedDetail(
-                    model.getId(),
+                    model.getCouponId(),
                     model.getUserId(),
-                    model.getStatus(),
-                    model.getUsedAt(),
-                    model.getCreatedAt());
+                    model.getId(),
+                    "ISSUED");
+        }
+
+        public static IssuedDetail pending(Long couponId, Long userId) {
+            return new IssuedDetail(couponId, userId, null, "PENDING");
         }
     }
 

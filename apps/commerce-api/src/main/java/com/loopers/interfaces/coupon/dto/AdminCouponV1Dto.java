@@ -95,14 +95,11 @@ public class AdminCouponV1Dto {
     public record IssueListItem(
         Long ownedCouponId,
         Long userId,
-        String status,
-        ZonedDateTime usedAt,
-        ZonedDateTime issuedAt
+        String status
     ) {
         public static IssueListItem from(CouponResult.IssuedDetail result) {
             return new IssueListItem(
-                    result.id(), result.userId(), result.status(),
-                    result.usedAt(), result.createdAt());
+                    result.ownedCouponId(), result.userId(), result.status());
         }
     }
 
