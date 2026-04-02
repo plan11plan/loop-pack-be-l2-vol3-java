@@ -24,7 +24,7 @@ class WaitingRoomServiceTest {
     void setUp() {
         waitingQueue = new FakeWaitingQueue();
         entryGate = new FakeEntryGate();
-        waitingRoomService = new WaitingRoomService(waitingQueue, entryGate);
+        waitingRoomService = new WaitingRoomService(waitingQueue, entryGate, 60);
     }
 
     /** 테스트 헬퍼: 대기열에서 꺼내 토큰 발급 (processQueue 없이 직접 조작) */
@@ -182,6 +182,51 @@ class WaitingRoomServiceTest {
                     () -> assertThat(entryGate.getToken(100L)).isNotNull(),
                     () -> assertThat(entryGate.getToken(200L)).isNotNull(),
                     () -> assertThat(entryGate.getToken(300L)).isNotNull());
+        }
+
+        @DisplayName("3-5. 참여열이 상한선에 도달하면 스케줄러가 더 이상 꺼내지 않는다.")
+        @Test
+        void processQueue_stopsWhenEntryGateFull() {
+            // maxCapacity=1200이지만, 테스트용으로 작은 값으로 Service 재생성
+            var smallCapacityService = new WaitingRoomService(waitingQueue, entryGate, 3);
+            for (long i = 1; i <= 10; i++) {
+                smallCapacityService.enter(i);
+            }
+
+            // act — 1차: 상한 3명까지만
+            smallCapacityService.processQueue();
+
+            // assert
+            assertAll(
+                    () -> assertThat(entryGate.getActiveCount()).isEqualTo(3),
+                    () -> assertThat(waitingQueue.getTotalWaiting()).isEqualTo(7));
+
+            // act — 2차: 이미 3명 → 0명 추가 입장
+            smallCapacityService.processQueue();
+            assertThat(entryGate.getActiveCount()).isEqualTo(3);
+        }
+
+        @DisplayName("3-6. 참여열에서 자리가 나면 그만큼 다시 꺼낸다.")
+        @Test
+        void processQueue_resumesWhenSlotFreed() {
+            var smallCapacityService = new WaitingRoomService(waitingQueue, entryGate, 3);
+            for (long i = 1; i <= 10; i++) {
+                smallCapacityService.enter(i);
+            }
+
+            // 1차: 3명 입장
+            smallCapacityService.processQueue();
+            assertThat(entryGate.getActiveCount()).isEqualTo(3);
+
+            // 1명 주문 완료 → 자리 1개
+            smallCapacityService.completeEntry(1L);
+            assertThat(entryGate.getActiveCount()).isEqualTo(2);
+
+            // 2차: 여유 1명만 추가 입장
+            smallCapacityService.processQueue();
+            assertAll(
+                    () -> assertThat(entryGate.getActiveCount()).isEqualTo(3),
+                    () -> assertThat(waitingQueue.getTotalWaiting()).isEqualTo(6));
         }
     }
 
