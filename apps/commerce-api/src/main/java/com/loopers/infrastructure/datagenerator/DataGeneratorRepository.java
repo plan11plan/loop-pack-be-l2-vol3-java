@@ -72,6 +72,12 @@ public class DataGeneratorRepository {
         return jdbcTemplate.queryForList("SELECT id FROM users", Long.class);
     }
 
+    public List<Long> findUserIdsByPrefix(String prefix, int limit) {
+        return jdbcTemplate.queryForList(
+                "SELECT id FROM users WHERE login_id LIKE ? AND deleted_at IS NULL ORDER BY id LIMIT ?",
+                Long.class, prefix + "%", limit);
+    }
+
     public List<Map<String, Object>> findRandomProducts(int limit) {
         return jdbcTemplate.queryForList(
                 "SELECT id, price, stock FROM products WHERE deleted_at IS NULL AND stock > 0 ORDER BY RAND() LIMIT ?",
