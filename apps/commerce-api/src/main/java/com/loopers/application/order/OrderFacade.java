@@ -11,6 +11,7 @@ import com.loopers.domain.order.dto.OrderInfo;
 import com.loopers.domain.order.dto.OrderCommand;
 import com.loopers.domain.product.ProductService;
 import com.loopers.domain.product.dto.ProductInfo;
+import com.loopers.domain.waitingroom.WaitingRoomService;
 import com.loopers.domain.user.UserService;
 import java.util.List;
 import java.util.Map;
@@ -30,11 +31,15 @@ public class OrderFacade {
     private final OrderService orderService;
     private final CouponService couponService;
     private final UserService userService;
+    private final WaitingRoomService waitingRoomService;
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
-    public OrderResult.OrderSummary createOrder(Long userId, OrderCriteria.Create criteria) {
+    public OrderResult.OrderSummary createOrderWithToken(
+            Long userId, String token, OrderCriteria.Create criteria) {
+        waitingRoomService.validateToken(userId, token);
         OrderModel order = processOrder(userId, criteria);
+        waitingRoomService.completeEntry(userId);
         return OrderResult.OrderSummary.from(order);
     }
 
