@@ -37,9 +37,11 @@ public class OrderFacade {
     @Transactional
     public OrderResult.OrderSummary createOrderWithToken(
             Long userId, String token, OrderCriteria.Create criteria) {
+
         waitingRoomService.validateToken(userId, token);
         OrderModel order = processOrder(userId, criteria);
         waitingRoomService.completeEntry(userId);
+
         return OrderResult.OrderSummary.from(order);
     }
 

@@ -3,10 +3,10 @@ package com.loopers.domain.waitingroom;
 import com.loopers.support.error.CoreException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
-@RequiredArgsConstructor
 public class WaitingRoomService {
 
     private static final long THROUGHPUT_PER_SECOND = 20;
@@ -14,6 +14,16 @@ public class WaitingRoomService {
 
     private final WaitingQueue waitingQueue;
     private final EntryGate entryGate;
+    private final int maxEntryCapacity;
+
+    public WaitingRoomService(
+            WaitingQueue waitingQueue,
+            EntryGate entryGate,
+            @Value("${queue.entry.max-capacity:60}") int maxEntryCapacity) {
+        this.waitingQueue = waitingQueue;
+        this.entryGate = entryGate;
+        this.maxEntryCapacity = maxEntryCapacity;
+    }
 
     // === (1) 줄 서기 === //
 
@@ -40,7 +50,11 @@ public class WaitingRoomService {
     // === (3) N명 꺼내기 + (4) 토큰 발급 === //
 
     public void processQueue() {
-        List<Long> admitted = waitingQueue.popFront(BATCH_SIZE);
+        int admitCount = Math.min(BATCH_SIZE, maxEntryCapacity - (int) entryGate.getActiveCount());
+        if (admitCount <= 0) {
+            return;
+        }
+        List<Long> admitted = waitingQueue.popFront(admitCount);
         for (Long userId : admitted) {
             entryGate.issueToken(userId);
         }
