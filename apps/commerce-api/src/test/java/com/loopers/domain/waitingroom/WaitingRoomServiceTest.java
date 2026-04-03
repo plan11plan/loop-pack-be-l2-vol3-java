@@ -24,7 +24,7 @@ class WaitingRoomServiceTest {
     void setUp() {
         waitingQueue = new FakeWaitingQueue();
         entryGate = new FakeEntryGate();
-        waitingRoomService = new WaitingRoomService(waitingQueue, entryGate, 60);
+        waitingRoomService = new WaitingRoomService(waitingQueue, entryGate, 48);
     }
 
     /** 테스트 헬퍼: 대기열에서 꺼내 토큰 발급 (processQueue 없이 직접 조작) */

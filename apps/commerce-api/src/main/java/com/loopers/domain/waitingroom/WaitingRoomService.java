@@ -19,7 +19,7 @@ public class WaitingRoomService {
     public WaitingRoomService(
             WaitingQueue waitingQueue,
             EntryGate entryGate,
-            @Value("${queue.entry.max-capacity:60}") int maxEntryCapacity) {
+            @Value("${queue.entry.max-capacity:48}") int maxEntryCapacity) {
         this.waitingQueue = waitingQueue;
         this.entryGate = entryGate;
         this.maxEntryCapacity = maxEntryCapacity;
