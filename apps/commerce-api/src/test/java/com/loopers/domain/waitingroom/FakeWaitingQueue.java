@@ -54,4 +54,16 @@ public class FakeWaitingQueue implements WaitingQueue {
         }
         return result;
     }
+
+    @Override
+    public List<WaitingEntry> popFrontWithScores(int count) {
+        List<WaitingEntry> result = new ArrayList<>();
+        var iterator = store.entrySet().iterator();
+        while (iterator.hasNext() && result.size() < count) {
+            var entry = iterator.next();
+            result.add(new WaitingEntry(entry.getKey(), entry.getValue()));
+            iterator.remove();
+        }
+        return result;
+    }
 }

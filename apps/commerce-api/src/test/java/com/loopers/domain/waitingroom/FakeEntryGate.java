@@ -33,4 +33,9 @@ public class FakeEntryGate implements EntryGate {
     public void completeEntry(Long userId) {
         tokens.remove(userId);
     }
+
+    @Override
+    public long getActiveCount() {
+        return tokens.size();
+    }
 }

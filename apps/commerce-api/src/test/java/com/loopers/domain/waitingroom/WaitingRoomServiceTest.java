@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertAll;
 
+import com.loopers.domain.waitingroom.event.WaitingRoomCompletedEvent;
 import com.loopers.support.error.CoreException;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -12,6 +14,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.ApplicationEventPublisher;
 
 @DisplayName("WaitingRoomService 단위 테스트")
 class WaitingRoomServiceTest {
@@ -19,12 +22,15 @@ class WaitingRoomServiceTest {
     private WaitingRoomService waitingRoomService;
     private FakeWaitingQueue waitingQueue;
     private FakeEntryGate entryGate;
+    private final List<Object> publishedEvents = new ArrayList<>();
+    private final ApplicationEventPublisher eventPublisher = publishedEvents::add;
 
     @BeforeEach
     void setUp() {
+        publishedEvents.clear();
         waitingQueue = new FakeWaitingQueue();
         entryGate = new FakeEntryGate();
-        waitingRoomService = new WaitingRoomService(waitingQueue, entryGate);
+        waitingRoomService = new WaitingRoomService(waitingQueue, entryGate, eventPublisher);
     }
 
     /** 테스트 헬퍼: 대기열에서 꺼내 토큰 발급 (processQueue 없이 직접 조작) */
@@ -184,7 +190,7 @@ class WaitingRoomServiceTest {
             waitingRoomService.enter(100L);
             waitingRoomService.enter(200L);
             waitingRoomService.enter(300L);
-            waitingRoomService.processQueue();
+            drainQueue();
             assertAll(
                     () -> assertThat(entryGate.getToken(100L)).isNotNull(),
                     () -> assertThat(entryGate.getToken(200L)).isNotNull(),
@@ -211,7 +217,7 @@ class WaitingRoomServiceTest {
             for (long i = 1; i <= 10; i++) {
                 waitingRoomService.enter(i);
             }
-            waitingRoomService.processQueue();
+            drainQueue();
             Set<String> tokens = new HashSet<>();
             for (long i = 1; i <= 10; i++) {
                 tokens.add(entryGate.getToken(i));
@@ -290,6 +296,20 @@ class WaitingRoomServiceTest {
                     .satisfies(e -> assertThat(((CoreException) e).getErrorCode())
                             .isEqualTo(WaitingRoomErrorCode.INVALID_TOKEN));
         }
+
+        @DisplayName("5a-6. 주문 완료 시 WaitingRoomCompletedEvent가 발행된다.")
+        @Test
+        void completeEntry_publishesCompletedEvent() {
+            waitingRoomService.enter(1L);
+            admitFromQueue(1);
+            publishedEvents.clear();
+
+            waitingRoomService.completeEntry(1L);
+
+            assertThat(publishedEvents).hasSize(1);
+            assertThat(publishedEvents.get(0)).isInstanceOf(WaitingRoomCompletedEvent.class);
+            assertThat(((WaitingRoomCompletedEvent) publishedEvents.get(0)).userId()).isEqualTo(1L);
+        }
     }
 
     @DisplayName("(6) 순환 — 자리 발생 후 다음 유저 입장")
@@ -299,16 +319,18 @@ class WaitingRoomServiceTest {
         @DisplayName("6-1. 주문 완료(토큰 삭제) 후 다음 스케줄러 실행 시 새 유저가 입장한다.")
         @Test
         void cycle_afterComplete_nextUserGetsToken() {
-            for (long i = 1; i <= 25; i++) {
+            for (long i = 1; i <= 5; i++) {
                 waitingRoomService.enter(i);
             }
+            // 1차: 2명 입장
             waitingRoomService.processQueue();
-            assertThat(waitingQueue.getTotalWaiting()).isEqualTo(5);
+            assertThat(waitingQueue.getTotalWaiting()).isEqualTo(3);
 
-            waitingRoomService.processQueue();
+            // 나머지 전부 입장
+            drainQueue();
             assertAll(
-                    () -> assertThat(entryGate.getToken(21L)).isNotNull(),
-                    () -> assertThat(entryGate.getToken(25L)).isNotNull(),
+                    () -> assertThat(entryGate.getToken(3L)).isNotNull(),
+                    () -> assertThat(entryGate.getToken(5L)).isNotNull(),
                     () -> assertThat(waitingQueue.getTotalWaiting()).isEqualTo(0));
         }
     }
