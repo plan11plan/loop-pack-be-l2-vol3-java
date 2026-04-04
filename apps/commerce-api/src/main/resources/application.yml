@@ -133,6 +133,11 @@ resilience4j:
           - feign.FeignException.ServiceUnavailable
         ignore-exceptions:
           - feign.FeignException.BadRequest
+  bulkhead:
+    instances:
+      orderApi:
+        max-concurrent-calls: 48
+        max-wait-duration: 3000ms
 
 maintenance:
   windows:

@@ -13,6 +13,7 @@ import com.loopers.domain.product.ProductService;
 import com.loopers.domain.product.dto.ProductInfo;
 import com.loopers.domain.waitingroom.WaitingRoomService;
 import com.loopers.domain.user.UserService;
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +35,7 @@ public class OrderFacade {
     private final WaitingRoomService waitingRoomService;
     private final ApplicationEventPublisher eventPublisher;
 
+    @Bulkhead(name = "orderApi", type = Bulkhead.Type.SEMAPHORE)
     @Transactional
     public OrderResult.OrderSummary createOrderWithToken(
             Long userId, String token, OrderCriteria.Create criteria) {
