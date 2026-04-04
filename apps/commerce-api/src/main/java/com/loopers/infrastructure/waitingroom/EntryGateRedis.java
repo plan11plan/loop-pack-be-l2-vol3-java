@@ -15,7 +15,6 @@ import org.springframework.stereotype.Component;
 public class EntryGateRedis implements EntryGate {
 
     private static final String TOKEN_KEY_PREFIX = "queue:entry-token:";
-    private static final String ACTIVE_SET_KEY = "queue:entry-gate-members";
 
     private final RedisTemplate<String, String> redisTemplate;
     private final long tokenTtlSeconds;
@@ -30,11 +29,8 @@ public class EntryGateRedis implements EntryGate {
     @Override
     public String issueToken(Long userId) {
         String token = UUID.randomUUID().toString();
-        String userIdStr = String.valueOf(userId);
         redisTemplate.opsForValue().set(
                 TOKEN_KEY_PREFIX + userId, token, tokenTtlSeconds, TimeUnit.SECONDS);
-        redisTemplate.opsForZSet().add(
-                ACTIVE_SET_KEY, userIdStr, System.currentTimeMillis() + tokenTtlSeconds * 1000);
         return token;
     }
 
@@ -54,14 +50,5 @@ public class EntryGateRedis implements EntryGate {
     @Override
     public void completeEntry(Long userId) {
         redisTemplate.delete(TOKEN_KEY_PREFIX + userId);
-        redisTemplate.opsForZSet().remove(ACTIVE_SET_KEY, String.valueOf(userId));
-    }
-
-    @Override
-    public long getActiveCount() {
-        // 만료된 항목 제거 후 카운트 (score = 만료시각, 현재시각 이전이면 만료)
-        redisTemplate.opsForZSet().removeRangeByScore(ACTIVE_SET_KEY, 0, System.currentTimeMillis());
-        Long count = redisTemplate.opsForZSet().zCard(ACTIVE_SET_KEY);
-        return count != null ? count : 0;
     }
 }

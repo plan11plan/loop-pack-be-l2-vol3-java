@@ -9,6 +9,4 @@ public interface EntryGate {
     void validateToken(Long userId, String token);
 
     void completeEntry(Long userId);
-
-    long getActiveCount();
 }

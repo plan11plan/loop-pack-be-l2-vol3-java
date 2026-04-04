@@ -3,27 +3,17 @@ package com.loopers.domain.waitingroom;
 import com.loopers.support.error.CoreException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class WaitingRoomService {
 
     private static final long THROUGHPUT_PER_SECOND = 20;
-    private static final int BATCH_SIZE = 20;
+    private static final int BATCH_SIZE = 2; // 100ms마다 2명 × 10회 = 초당 20명 (Jitter)
 
     private final WaitingQueue waitingQueue;
     private final EntryGate entryGate;
-    private final int maxEntryCapacity;
-
-    public WaitingRoomService(
-            WaitingQueue waitingQueue,
-            EntryGate entryGate,
-            @Value("${queue.entry.max-capacity:48}") int maxEntryCapacity) {
-        this.waitingQueue = waitingQueue;
-        this.entryGate = entryGate;
-        this.maxEntryCapacity = maxEntryCapacity;
-    }
 
     // === (1) 줄 서기 === //
 
@@ -50,11 +40,7 @@ public class WaitingRoomService {
     // === (3) N명 꺼내기 + (4) 토큰 발급 === //
 
     public void processQueue() {
-        int admitCount = Math.min(BATCH_SIZE, maxEntryCapacity - (int) entryGate.getActiveCount());
-        if (admitCount <= 0) {
-            return;
-        }
-        List<Long> admitted = waitingQueue.popFront(admitCount);
+        List<Long> admitted = waitingQueue.popFront(BATCH_SIZE);
         for (Long userId : admitted) {
             entryGate.issueToken(userId);
         }

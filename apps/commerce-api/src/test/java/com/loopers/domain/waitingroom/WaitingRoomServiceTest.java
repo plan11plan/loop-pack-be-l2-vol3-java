@@ -24,7 +24,7 @@ class WaitingRoomServiceTest {
     void setUp() {
         waitingQueue = new FakeWaitingQueue();
         entryGate = new FakeEntryGate();
-        waitingRoomService = new WaitingRoomService(waitingQueue, entryGate, 48);
+        waitingRoomService = new WaitingRoomService(waitingQueue, entryGate);
     }
 
     /** 테스트 헬퍼: 대기열에서 꺼내 토큰 발급 (processQueue 없이 직접 조작) */
@@ -32,6 +32,13 @@ class WaitingRoomServiceTest {
         List<Long> popped = waitingQueue.popFront(count);
         for (Long userId : popped) {
             entryGate.issueToken(userId);
+        }
+    }
+
+    /** 테스트 헬퍼: processQueue를 대기열이 빌 때까지 반복 (BATCH_SIZE=2라 여러 번 호출 필요) */
+    private void drainQueue() {
+        while (waitingQueue.getTotalWaiting() > 0) {
+            waitingRoomService.processQueue();
         }
     }
 
@@ -142,14 +149,14 @@ class WaitingRoomServiceTest {
     @Nested
     class ProcessQueue {
 
-        @DisplayName("3-1. 스케줄러가 실행되면 대기열에서 최대 20명이 제거된다.")
+        @DisplayName("3-1. 스케줄러가 1회 실행되면 배치 크기(2)만큼 꺼낸다.")
         @Test
-        void processQueue_admitsUpToBatchSize() {
-            for (long i = 1; i <= 25; i++) {
+        void processQueue_admitsBatchSize() {
+            for (long i = 1; i <= 5; i++) {
                 waitingRoomService.enter(i);
             }
             waitingRoomService.processQueue();
-            assertThat(waitingQueue.getTotalWaiting()).isEqualTo(5);
+            assertThat(waitingQueue.getTotalWaiting()).isEqualTo(3);
         }
 
         @DisplayName("3-2. 대기열에 20명 미만이면 있는 만큼만 꺼낸다.")
@@ -184,50 +191,6 @@ class WaitingRoomServiceTest {
                     () -> assertThat(entryGate.getToken(300L)).isNotNull());
         }
 
-        @DisplayName("3-5. 참여열이 상한선에 도달하면 스케줄러가 더 이상 꺼내지 않는다.")
-        @Test
-        void processQueue_stopsWhenEntryGateFull() {
-            // maxCapacity=1200이지만, 테스트용으로 작은 값으로 Service 재생성
-            var smallCapacityService = new WaitingRoomService(waitingQueue, entryGate, 3);
-            for (long i = 1; i <= 10; i++) {
-                smallCapacityService.enter(i);
-            }
-
-            // act — 1차: 상한 3명까지만
-            smallCapacityService.processQueue();
-
-            // assert
-            assertAll(
-                    () -> assertThat(entryGate.getActiveCount()).isEqualTo(3),
-                    () -> assertThat(waitingQueue.getTotalWaiting()).isEqualTo(7));
-
-            // act — 2차: 이미 3명 → 0명 추가 입장
-            smallCapacityService.processQueue();
-            assertThat(entryGate.getActiveCount()).isEqualTo(3);
-        }
-
-        @DisplayName("3-6. 참여열에서 자리가 나면 그만큼 다시 꺼낸다.")
-        @Test
-        void processQueue_resumesWhenSlotFreed() {
-            var smallCapacityService = new WaitingRoomService(waitingQueue, entryGate, 3);
-            for (long i = 1; i <= 10; i++) {
-                smallCapacityService.enter(i);
-            }
-
-            // 1차: 3명 입장
-            smallCapacityService.processQueue();
-            assertThat(entryGate.getActiveCount()).isEqualTo(3);
-
-            // 1명 주문 완료 → 자리 1개
-            smallCapacityService.completeEntry(1L);
-            assertThat(entryGate.getActiveCount()).isEqualTo(2);
-
-            // 2차: 여유 1명만 추가 입장
-            smallCapacityService.processQueue();
-            assertAll(
-                    () -> assertThat(entryGate.getActiveCount()).isEqualTo(3),
-                    () -> assertThat(waitingQueue.getTotalWaiting()).isEqualTo(6));
-        }
     }
 
     @DisplayName("(4) 입장 토큰 발급")
