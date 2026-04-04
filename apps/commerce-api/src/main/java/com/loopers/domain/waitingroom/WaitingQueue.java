@@ -13,6 +13,8 @@ public interface WaitingQueue {
     boolean cancel(Long userId);
 
     List<Long> popFront(int count);
+
+    List<WaitingEntry> popFrontWithScores(int count);
 }
 
 

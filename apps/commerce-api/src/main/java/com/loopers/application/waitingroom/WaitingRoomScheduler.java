@@ -1,6 +1,10 @@
 package com.loopers.application.waitingroom;
 
+import com.loopers.domain.waitingroom.WaitingEntry;
 import com.loopers.domain.waitingroom.WaitingRoomService;
+import com.loopers.infrastructure.waitingroom.metrics.WaitingRoomProcessQueueMetrics;
+import com.loopers.infrastructure.waitingroom.metrics.WaitingRoomSchedulerTimer;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -16,9 +20,14 @@ import org.springframework.stereotype.Component;
 public class WaitingRoomScheduler {
 
     private final WaitingRoomService waitingRoomService;
+    private final WaitingRoomSchedulerTimer schedulerTimer;
+    private final WaitingRoomProcessQueueMetrics processQueueMetrics;
 
     @Scheduled(fixedDelay = 100)
     public void run() {
-        waitingRoomService.processQueue();
+        schedulerTimer.record(() -> {
+            List<WaitingEntry> admitted = waitingRoomService.processQueue();
+            processQueueMetrics.recordBatch(admitted);
+        });
     }
 }

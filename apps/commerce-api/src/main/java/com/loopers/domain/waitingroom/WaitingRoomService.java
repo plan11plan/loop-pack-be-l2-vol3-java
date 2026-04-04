@@ -1,8 +1,13 @@
 package com.loopers.domain.waitingroom;
 
+import com.loopers.domain.waitingroom.event.WaitingRoomAdmittedEvent;
+import com.loopers.domain.waitingroom.event.WaitingRoomCancelledEvent;
+import com.loopers.domain.waitingroom.event.WaitingRoomCompletedEvent;
+import com.loopers.domain.waitingroom.event.WaitingRoomEnteredEvent;
 import com.loopers.support.error.CoreException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -14,11 +19,13 @@ public class WaitingRoomService {
 
     private final WaitingQueue waitingQueue;
     private final EntryGate entryGate;
+    private final ApplicationEventPublisher eventPublisher;
 
     // === (1) 줄 서기 === //
 
     public WaitingRoomPosition enter(Long userId) {
         waitingQueue.enter(userId);
+        eventPublisher.publishEvent(new WaitingRoomEnteredEvent(userId));
         return buildPosition(userId);
     }
 
@@ -39,11 +46,15 @@ public class WaitingRoomService {
 
     // === (3) N명 꺼내기 + (4) 토큰 발급 === //
 
-    public void processQueue() {
-        List<Long> admitted = waitingQueue.popFront(BATCH_SIZE);
-        for (Long userId : admitted) {
-            entryGate.issueToken(userId);
+    public List<WaitingEntry> processQueue() {
+        List<WaitingEntry> admitted = waitingQueue.popFrontWithScores(BATCH_SIZE);
+        for (WaitingEntry entry : admitted) {
+            entryGate.issueToken(entry.userId());
         }
+        if (!admitted.isEmpty()) {
+            eventPublisher.publishEvent(new WaitingRoomAdmittedEvent(admitted.size()));
+        }
+        return admitted;
     }
 
     // === (5a) 토큰 검증 === //
@@ -56,12 +67,14 @@ public class WaitingRoomService {
 
     public void completeEntry(Long userId) {
         entryGate.completeEntry(userId);
+        eventPublisher.publishEvent(new WaitingRoomCompletedEvent(userId));
     }
 
     // === 대기열 취소 === //
 
     public void cancel(Long userId) {
         waitingQueue.cancel(userId);
+        eventPublisher.publishEvent(new WaitingRoomCancelledEvent(userId));
     }
 
     private WaitingRoomPosition buildPosition(Long userId) {

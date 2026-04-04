@@ -1,6 +1,7 @@
 package com.loopers.infrastructure.waitingroom;
 
 import com.loopers.config.redis.RedisConfig;
+import com.loopers.domain.waitingroom.WaitingEntry;
 import com.loopers.domain.waitingroom.WaitingQueue;
 import java.util.List;
 import java.util.Set;
@@ -52,6 +53,19 @@ public class WaitingQueueRedis implements WaitingQueue {
         }
         return tuples.stream()
                 .map(tuple -> Long.parseLong(tuple.getValue()))
+                .toList();
+    }
+
+    @Override
+    public List<WaitingEntry> popFrontWithScores(int count) {
+        Set<TypedTuple<String>> tuples = redisTemplate.opsForZSet().popMin(QUEUE_KEY, count);
+        if (tuples == null || tuples.isEmpty()) {
+            return List.of();
+        }
+        return tuples.stream()
+                .map(tuple -> new WaitingEntry(
+                        Long.parseLong(tuple.getValue()),
+                        tuple.getScore().longValue()))
                 .toList();
     }
 }
