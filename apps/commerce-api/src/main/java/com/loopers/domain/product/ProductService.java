@@ -40,6 +40,11 @@ public class ProductService {
         return products;
     }
 
+    @Transactional(readOnly = true)
+    public List<ProductModel> findAllByIds(List<Long> ids) {
+        return productRepository.findAllByIdIn(ids);
+    }
+
     @Transactional
     public void update(Long id, String name, int price, int stock) {
         getById(id).update(name, price, stock);
