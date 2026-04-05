@@ -6,6 +6,7 @@ import { initLogin } from './pages/login.js';
 import { initMyPage } from './pages/mypage.js';
 import { initCoupons } from './pages/coupons.js';
 import { initBlackFriday } from './pages/blackfriday.js';
+import { initRanking } from './pages/ranking.js';
 
 // === Globals ===
 window.Modal = {
@@ -67,6 +68,7 @@ const routes = {
     coupons: initCoupons,
     mypage: initMyPage,
     blackfriday: initBlackFriday,
+    ranking: initRanking,
 };
 
 function navigate(page, params = {}) {

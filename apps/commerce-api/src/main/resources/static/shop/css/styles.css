@@ -672,6 +672,56 @@ tbody tr:hover { background: #fafafa; }
 }
 .bf-complete-actions { display: flex; gap: 12px; justify-content: center; }
 
+/* === Ranking === */
+.ranking-container { max-width: 720px; margin: 0 auto; }
+.ranking-header {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    margin-bottom: 32px; padding-bottom: 20px; border-bottom: 1px solid #000;
+}
+.ranking-title {
+    font-size: 14px; font-weight: 700; letter-spacing: 2px;
+    text-transform: uppercase;
+}
+.ranking-subtitle { font-size: 12px; color: #999; margin-top: 4px; }
+.ranking-date-input {
+    padding: 8px 0; border: none; border-bottom: 1px solid #ddd;
+    font-size: 12px; background: transparent; outline: none;
+    color: #666; cursor: pointer;
+}
+.ranking-date-input:focus { border-bottom-color: #000; }
+.ranking-list { display: flex; flex-direction: column; gap: 0; }
+.ranking-item {
+    display: flex; align-items: center; gap: 20px;
+    padding: 16px 0; border-bottom: 1px solid #f0f0f0;
+    transition: background .15s; cursor: pointer;
+}
+.ranking-item:first-child { border-top: none; }
+.ranking-item:hover { background: #fafafa; }
+.ranking-rank {
+    width: 40px; text-align: center; font-size: 16px;
+    font-weight: 400; color: #ccc; flex-shrink: 0;
+}
+.ranking-rank-top { color: #000; font-weight: 700; }
+.ranking-rank-1 { font-size: 22px; font-weight: 800; }
+.ranking-thumb {
+    width: 56px; height: 56px; background: #f5f5f5;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden; flex-shrink: 0; font-size: 20px; color: #ccc;
+}
+.ranking-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.ranking-info { flex: 1; min-width: 0; }
+.ranking-brand {
+    font-size: 10px; color: #999; font-weight: 500;
+    letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 3px;
+}
+.ranking-name {
+    font-size: 13px; font-weight: 400;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ranking-right { text-align: right; flex-shrink: 0; }
+.ranking-price { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+.ranking-score { font-size: 10px; color: #bbb; letter-spacing: 0.3px; }
+
 /* Responsive */
 @media (max-width: 768px) {
     .product-detail { grid-template-columns: 1fr; gap: 20px; }
@@ -689,4 +739,7 @@ tbody tr:hover { background: #fafafa; }
     .bf-products-grid { grid-template-columns: 1fr; }
     .bf-order-layout { grid-template-columns: 1fr; }
     .bf-payment-methods { grid-template-columns: repeat(2, 1fr); }
+    .ranking-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+    .ranking-item { gap: 12px; }
+    .ranking-thumb { width: 44px; height: 44px; }
 }

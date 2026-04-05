@@ -76,6 +76,15 @@ export const PaymentApi = {
     status: (orderId) => request('GET', `/api/v1/payments/status?orderId=${orderId}`, null, true),
 };
 
+// === Rankings ===
+export const RankingApi = {
+    list: (date = null, page = 1, size = 20) => {
+        let url = `/api/v1/rankings?page=${page}&size=${size}`;
+        if (date) url += `&date=${date}`;
+        return request('GET', url);
+    },
+};
+
 // === Users ===
 export const UserApi = {
     signup: (data) => request('POST', '/api/v1/users/signup', data),
