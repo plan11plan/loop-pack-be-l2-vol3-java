@@ -3,6 +3,7 @@ package com.loopers.domain.ranking;
 import com.loopers.domain.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.LocalDate;
@@ -12,9 +13,13 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @Entity
-@Table(name = "product_ranking_scores", uniqueConstraints = {
-        @UniqueConstraint(name = "uk_ranking_product_date",
-                columnNames = {"product_id", "ranking_date"})})
+@Table(name = "product_ranking_scores",
+        uniqueConstraints = {
+                @UniqueConstraint(name = "uk_ranking_product_date",
+                        columnNames = {"product_id", "ranking_date"})},
+        indexes = {
+                @Index(name = "idx_ranking_date_score",
+                        columnList = "ranking_date, score")})
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ProductRankingScoreModel extends BaseEntity {
 

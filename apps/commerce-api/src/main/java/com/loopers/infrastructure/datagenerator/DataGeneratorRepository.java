@@ -284,6 +284,27 @@ public class DataGeneratorRepository {
                 limit);
     }
 
+    public long countRankingScoresByDate(LocalDate date) {
+        Long count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM product_ranking_scores WHERE ranking_date = ?",
+                Long.class, date);
+        return count != null ? count : 0L;
+    }
+
+    public int batchInsertRankingScores(List<Object[]> scores) {
+        if (scores.isEmpty()) return 0;
+        String sql = "INSERT IGNORE INTO product_ranking_scores "
+                + "(product_id, ranking_date, score, created_at, updated_at) "
+                + "VALUES (?, ?, ?, NOW(), NOW())";
+        jdbcTemplate.batchUpdate(sql, scores, 1000,
+                (PreparedStatement ps, Object[] s) -> {
+                    ps.setLong(1, (Long) s[0]);
+                    ps.setObject(2, s[1]);
+                    ps.setDouble(3, (double) s[2]);
+                });
+        return scores.size();
+    }
+
     private long countTable(String tableName, boolean hasSoftDelete) {
         String sql = hasSoftDelete
                 ? "SELECT COUNT(*) FROM " + tableName + " WHERE deleted_at IS NULL"

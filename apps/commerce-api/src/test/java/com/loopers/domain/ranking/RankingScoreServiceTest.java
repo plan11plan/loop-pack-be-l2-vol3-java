@@ -156,5 +156,22 @@ class RankingScoreServiceTest {
                     .findByProductIdAndRankingDate(1L, TODAY).orElseThrow();
             assertThat(todayScore.getScore()).isCloseTo(700.1, within(0.0001));
         }
+
+        @DisplayName("이월을 중복 실행해도 점수가 이중 반영되지 않는다.")
+        @Test
+        void carryOver_whenExecutedTwice_thenIdempotent() {
+            // arrange
+            LocalDate yesterday = TODAY.minusDays(1);
+            rankingScoreService.updateScore(1L, yesterday, RankingEventType.ORDER, 10000);
+
+            // act
+            rankingScoreService.carryOver(TODAY, 0.1);
+            rankingScoreService.carryOver(TODAY, 0.1);
+
+            // assert
+            ProductRankingScoreModel todayScore = fakeRepository
+                    .findByProductIdAndRankingDate(1L, TODAY).orElseThrow();
+            assertThat(todayScore.getScore()).isCloseTo(700.0, within(0.0001));
+        }
     }
 }

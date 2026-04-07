@@ -50,12 +50,12 @@ public class RankingScoreService {
                 .findAllByRankingDate(previousDate);
 
         for (ProductRankingScoreModel previous : previousScores) {
-            ProductRankingScoreModel carried = previous.createCarriedOver(targetDate, carryOverRate);
-            rankingScoreRepository
-                    .findByProductIdAndRankingDate(previous.getProductId(), targetDate)
-                    .ifPresentOrElse(
-                            existing -> existing.addScore(carried.getScore()),
-                            () -> rankingScoreRepository.save(carried));
+            if (rankingScoreRepository.findByProductIdAndRankingDate(
+                    previous.getProductId(), targetDate).isPresent()) {
+                continue;
+            }
+            rankingScoreRepository.save(
+                    previous.createCarriedOver(targetDate, carryOverRate));
         }
     }
 }
