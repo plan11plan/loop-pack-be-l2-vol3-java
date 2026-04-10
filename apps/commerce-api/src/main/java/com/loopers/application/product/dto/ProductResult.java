@@ -78,7 +78,8 @@ public record ProductResult(
     public record DetailWithImages(
         ProductResult product,
         List<ImageResult> mainImages,
-        List<ImageResult> detailImages
+        List<ImageResult> detailImages,
+        Long rank
     ) {
     }
 }

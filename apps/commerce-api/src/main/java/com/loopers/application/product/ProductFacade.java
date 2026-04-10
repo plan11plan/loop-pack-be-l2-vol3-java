@@ -8,7 +8,9 @@ import com.loopers.domain.product.ProductImageService;
 import com.loopers.domain.product.ProductModel;
 import com.loopers.domain.product.ProductService;
 import com.loopers.domain.product.event.ProductViewedEvent;
+import com.loopers.domain.ranking.RankingScoreService;
 import com.loopers.support.cache.CacheType;
+import java.time.LocalDate;
 import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Map;
@@ -32,6 +34,7 @@ public class ProductFacade {
     private final ProductService productService;
     private final BrandService brandService;
     private final ProductImageService productImageService;
+    private final RankingScoreService rankingScoreService;
     private final ApplicationEventPublisher eventPublisher;
 
     @Caching(evict = {
@@ -56,6 +59,9 @@ public class ProductFacade {
     @Transactional(readOnly = true)
     public ProductResult.DetailWithImages getProductDetail(Long id, Long userId) {
         ProductModel product = productService.getById(id);
+        Long rank = rankingScoreService
+                .getRankByProductIdAndDate(id, LocalDate.now())
+                .orElse(null);
         ProductResult.DetailWithImages result = new ProductResult.DetailWithImages(
                 ProductResult.of(
                         product,
@@ -66,7 +72,8 @@ public class ProductFacade {
                         .toList(),
                 productImageService.getImagesByProductIdAndType(id, ImageType.DETAIL).stream()
                         .map(ProductResult.ImageResult::from)
-                        .toList());
+                        .toList(),
+                rank);
         eventPublisher.publishEvent(new ProductViewedEvent(id, userId, ZonedDateTime.now()));
         return result;
     }
