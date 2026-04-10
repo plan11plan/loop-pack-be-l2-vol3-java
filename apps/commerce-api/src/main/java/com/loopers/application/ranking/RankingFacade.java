@@ -34,7 +34,8 @@ public class RankingFacade {
         List<Long> productIds = rankedScores.stream()
                 .map(RankingInfo.RankedScore::productId)
                 .toList();
-        Map<Long, ProductModel> productMap = productService.findAllByIds(productIds).stream()
+        Map<Long, ProductModel> productMap = productService
+                .findAllByIds(productIds).stream()
                 .collect(Collectors.toMap(ProductModel::getId, Function.identity()));
 
         List<Long> brandIds = productMap.values().stream()

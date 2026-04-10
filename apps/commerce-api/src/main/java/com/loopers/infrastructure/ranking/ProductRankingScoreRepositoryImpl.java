@@ -15,6 +15,26 @@ public class ProductRankingScoreRepositoryImpl implements ProductRankingScoreRep
 
     private final ProductRankingScoreJpaRepository jpaRepository;
     private final ProductRankingScoreQueryRepository queryRepository;
+    private final ProductRankingScoreRedisRepository redisRepository;
+
+    @Override
+    public List<ProductRankingScoreModel> findTopByRankingDateOrderByScoreDesc(
+            LocalDate rankingDate, Pageable pageable) {
+        return redisRepository.findTopByDate(rankingDate,
+                pageable.getOffset(),
+                pageable.getOffset() + pageable.getPageSize() - 1);
+    }
+
+    @Override
+    public long countByRankingDate(LocalDate rankingDate) {
+        return redisRepository.countByDate(rankingDate);
+    }
+
+    @Override
+    public Optional<Long> findRankByProductIdAndRankingDate(
+            Long productId, LocalDate rankingDate) {
+        return redisRepository.findRankByProductId(productId, rankingDate);
+    }
 
     @Override
     public ProductRankingScoreModel save(ProductRankingScoreModel score) {
@@ -30,23 +50,5 @@ public class ProductRankingScoreRepositoryImpl implements ProductRankingScoreRep
     @Override
     public List<ProductRankingScoreModel> findAllByRankingDate(LocalDate rankingDate) {
         return queryRepository.findAllByRankingDate(rankingDate);
-    }
-
-    @Override
-    public List<ProductRankingScoreModel> findTopByRankingDateOrderByScoreDesc(
-            LocalDate rankingDate, Pageable pageable) {
-        return queryRepository.findTopByRankingDateOrderByScoreDesc(
-                rankingDate, pageable);
-    }
-
-    @Override
-    public long countByRankingDate(LocalDate rankingDate) {
-        return jpaRepository.countByRankingDate(rankingDate);
-    }
-
-    @Override
-    public Optional<Long> findRankByProductIdAndRankingDate(
-            Long productId, LocalDate rankingDate) {
-        return queryRepository.findRankByProductIdAndRankingDate(productId, rankingDate);
     }
 }
