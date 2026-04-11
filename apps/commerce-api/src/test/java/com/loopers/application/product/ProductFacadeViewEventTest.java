@@ -12,6 +12,7 @@ import com.loopers.domain.product.ProductImageService;
 import com.loopers.domain.product.ProductModel;
 import com.loopers.domain.product.ProductService;
 import com.loopers.domain.product.event.ProductViewedEvent;
+import com.loopers.domain.rank.RankService;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.mockito.ArgumentCaptor;
@@ -32,12 +33,13 @@ class ProductFacadeViewEventTest {
     @Mock ProductService productService;
     @Mock BrandService brandService;
     @Mock ProductImageService productImageService;
+    @Mock RankService rankService;
     @Mock ApplicationEventPublisher eventPublisher;
     ProductFacade productFacade;
 
     @BeforeEach
     void setUp() {
-        productFacade = new ProductFacade(productService, brandService, productImageService, eventPublisher);
+        productFacade = new ProductFacade(productService, brandService, productImageService, rankService, eventPublisher);
 
         ProductModel stubProduct = mock(ProductModel.class);
         when(stubProduct.getId()).thenReturn(1L);

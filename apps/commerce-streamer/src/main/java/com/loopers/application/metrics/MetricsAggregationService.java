@@ -4,7 +4,7 @@ import com.loopers.domain.event.EventHandledEntity;
 import com.loopers.domain.metrics.ProductMetricsEntity;
 import com.loopers.infrastructure.event.EventHandledJpaRepository;
 import com.loopers.infrastructure.metrics.ProductMetricsJpaRepository;
-import com.loopers.infrastructure.ranking.RankingRedisUpdater;
+import com.loopers.infrastructure.rank.RankRedisUpdater;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -17,7 +17,7 @@ public class MetricsAggregationService {
 
     private final ProductMetricsJpaRepository metricsRepository;
     private final EventHandledJpaRepository eventHandledRepository;
-    private final RankingRedisUpdater rankingRedisUpdater;
+    private final RankRedisUpdater rankingRedisUpdater;
 
     @Transactional
     public void incrementViewCount(String eventId, Long productId) {

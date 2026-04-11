@@ -8,7 +8,7 @@ import com.loopers.domain.product.ProductImageService;
 import com.loopers.domain.product.ProductModel;
 import com.loopers.domain.product.ProductService;
 import com.loopers.domain.product.event.ProductViewedEvent;
-import com.loopers.domain.ranking.RankingScoreService;
+import com.loopers.domain.rank.RankService;
 import com.loopers.support.cache.CacheType;
 import java.time.LocalDate;
 import java.time.ZonedDateTime;
@@ -34,7 +34,7 @@ public class ProductFacade {
     private final ProductService productService;
     private final BrandService brandService;
     private final ProductImageService productImageService;
-    private final RankingScoreService rankingScoreService;
+    private final RankService rankingScoreService;
     private final ApplicationEventPublisher eventPublisher;
 
     @Caching(evict = {
