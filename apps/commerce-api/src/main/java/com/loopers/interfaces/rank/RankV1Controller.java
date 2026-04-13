@@ -1,12 +1,11 @@
 package com.loopers.interfaces.rank;
 
 import com.loopers.application.rank.RankFacade;
-import com.loopers.application.rank.dto.RankCriteria;
-import com.loopers.application.rank.dto.RankResult;
 import com.loopers.interfaces.api.ApiResponse;
 import com.loopers.interfaces.rank.dto.RankV1Dto;
 import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -18,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class RankV1Controller implements RankV1ApiSpec {
 
-    private final RankFacade rankingFacade;
+    private final RankFacade rankFacade;
 
     @Override
     @GetMapping
@@ -27,9 +26,9 @@ public class RankV1Controller implements RankV1ApiSpec {
             @DateTimeFormat(pattern = "yyyyMMdd") LocalDate date,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size) {
-        RankCriteria.Search criteria = new RankCriteria.Search(
-                date != null ? date : LocalDate.now(), page, size);
-        RankResult.RankingPage rankingPage = rankingFacade.getTopRankings(criteria);
-        return ApiResponse.success(RankV1Dto.ListResponse.from(rankingPage));
+        return ApiResponse.success(RankV1Dto.ListResponse.from(
+                rankFacade.getTopRankings(
+                        date != null ? date : LocalDate.now(),
+                        PageRequest.of(page - 1, size))));
     }
 }
