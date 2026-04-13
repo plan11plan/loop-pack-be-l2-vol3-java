@@ -6,7 +6,6 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.loopers.application.rank.dto.RankCriteria;
 import com.loopers.application.rank.dto.RankResult;
 import com.loopers.domain.brand.BrandService;
 import com.loopers.domain.product.ProductModel;
@@ -26,12 +25,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 @ExtendWith(MockitoExtension.class)
 class RankFacadeTest {
 
     @Mock
-    private RankService rankingScoreService;
+    private RankService rankService;
 
     @Mock
     private ProductService productService;
@@ -40,7 +41,7 @@ class RankFacadeTest {
     private BrandService brandService;
 
     @InjectMocks
-    private RankFacade rankingFacade;
+    private RankFacade rankFacade;
 
     private static final LocalDate TODAY = LocalDate.of(2026, 4, 5);
     private static final Long BRAND_ID = 1L;
@@ -57,14 +58,14 @@ class RankFacadeTest {
                     new RankInfo.RankedScore(1, 100L, 7000.0),
                     new RankInfo.RankedScore(2, 200L, 500.0),
                     new RankInfo.RankedScore(3, 300L, 100.0));
-            when(rankingScoreService.getTopRankedByDate(eq(TODAY), any()))
+            when(rankService.getTopRankedByDate(eq(TODAY), any()))
                     .thenReturn(rankedScores);
-            when(rankingScoreService.countByDate(TODAY)).thenReturn(3L);
+            when(rankService.countByDate(TODAY)).thenReturn(3L);
             stubProductsAndBrands(100L, 200L, 300L);
 
             // act
-            RankResult.RankingPage result = rankingFacade.getTopRankings(
-                    new RankCriteria.Search(TODAY, 1, 20));
+            RankResult.RankingPage result = rankFacade.getTopRankings(
+                    TODAY, PageRequest.of(0, 20));
 
             // assert
             assertThat(result.items()).hasSize(3);
@@ -79,14 +80,14 @@ class RankFacadeTest {
             // arrange
             List<RankInfo.RankedScore> rankedScores = List.of(
                     new RankInfo.RankedScore(1, 100L, 7000.0));
-            when(rankingScoreService.getTopRankedByDate(eq(TODAY), any()))
+            when(rankService.getTopRankedByDate(eq(TODAY), any()))
                     .thenReturn(rankedScores);
-            when(rankingScoreService.countByDate(TODAY)).thenReturn(1L);
+            when(rankService.countByDate(TODAY)).thenReturn(1L);
             stubProductsAndBrands(100L);
 
             // act
-            RankResult.RankingPage result = rankingFacade.getTopRankings(
-                    new RankCriteria.Search(TODAY, 1, 20));
+            RankResult.RankingPage result = rankFacade.getTopRankings(
+                    TODAY, PageRequest.of(0, 20));
 
             // assert
             RankResult.RankingEntry entry = result.items().get(0);
@@ -103,14 +104,14 @@ class RankFacadeTest {
             List<RankInfo.RankedScore> rankedScores = List.of(
                     new RankInfo.RankedScore(1, 100L, 7000.0),
                     new RankInfo.RankedScore(2, 200L, 500.0));
-            when(rankingScoreService.getTopRankedByDate(eq(TODAY), any()))
+            when(rankService.getTopRankedByDate(eq(TODAY), any()))
                     .thenReturn(rankedScores);
-            when(rankingScoreService.countByDate(TODAY)).thenReturn(2L);
+            when(rankService.countByDate(TODAY)).thenReturn(2L);
             stubProductsAndBrands(100L, 200L);
 
             // act
-            RankResult.RankingPage result = rankingFacade.getTopRankings(
-                    new RankCriteria.Search(TODAY, 1, 20));
+            RankResult.RankingPage result = rankFacade.getTopRankings(
+                    TODAY, PageRequest.of(0, 20));
 
             // assert
             assertThat(result.items().get(0).rank()).isEqualTo(1);
@@ -125,14 +126,14 @@ class RankFacadeTest {
                     new RankInfo.RankedScore(1, 100L, 500.0),
                     new RankInfo.RankedScore(1, 200L, 500.0),
                     new RankInfo.RankedScore(3, 300L, 100.0));
-            when(rankingScoreService.getTopRankedByDate(eq(TODAY), any()))
+            when(rankService.getTopRankedByDate(eq(TODAY), any()))
                     .thenReturn(rankedScores);
-            when(rankingScoreService.countByDate(TODAY)).thenReturn(3L);
+            when(rankService.countByDate(TODAY)).thenReturn(3L);
             stubProductsAndBrands(100L, 200L, 300L);
 
             // act
-            RankResult.RankingPage result = rankingFacade.getTopRankings(
-                    new RankCriteria.Search(TODAY, 1, 20));
+            RankResult.RankingPage result = rankFacade.getTopRankings(
+                    TODAY, PageRequest.of(0, 20));
 
             // assert
             assertThat(result.items().get(0).rank()).isEqualTo(1);
@@ -147,15 +148,15 @@ class RankFacadeTest {
             List<RankInfo.RankedScore> rankedScores = List.of(
                     new RankInfo.RankedScore(1, 100L, 7000.0),
                     new RankInfo.RankedScore(2, 200L, 500.0));
-            when(rankingScoreService.getTopRankedByDate(eq(TODAY), any()))
+            when(rankService.getTopRankedByDate(eq(TODAY), any()))
                     .thenReturn(rankedScores);
-            when(rankingScoreService.countByDate(TODAY)).thenReturn(2L);
+            when(rankService.countByDate(TODAY)).thenReturn(2L);
             // 200L 상품은 삭제되어 조회되지 않음
             stubProductsAndBrands(100L);
 
             // act
-            RankResult.RankingPage result = rankingFacade.getTopRankings(
-                    new RankCriteria.Search(TODAY, 1, 20));
+            RankResult.RankingPage result = rankFacade.getTopRankings(
+                    TODAY, PageRequest.of(0, 20));
 
             // assert
             assertThat(result.items()).hasSize(1);
@@ -171,11 +172,11 @@ class RankFacadeTest {
         @Test
         void getProductRank_whenRanked_thenReturnsRank() {
             // arrange
-            when(rankingScoreService.getRankByProductIdAndDate(100L, TODAY))
+            when(rankService.getRankByProductIdAndDate(100L, TODAY))
                     .thenReturn(Optional.of(3L));
 
             // act
-            Optional<Long> rank = rankingFacade.getProductRank(100L, TODAY);
+            Optional<Long> rank = rankFacade.getProductRank(100L, TODAY);
 
             // assert
             assertThat(rank).isPresent().contains(3L);
@@ -185,11 +186,11 @@ class RankFacadeTest {
         @Test
         void getProductRank_whenNotRanked_thenReturnsEmpty() {
             // arrange
-            when(rankingScoreService.getRankByProductIdAndDate(999L, TODAY))
+            when(rankService.getRankByProductIdAndDate(999L, TODAY))
                     .thenReturn(Optional.empty());
 
             // act
-            Optional<Long> rank = rankingFacade.getProductRank(999L, TODAY);
+            Optional<Long> rank = rankFacade.getProductRank(999L, TODAY);
 
             // assert
             assertThat(rank).isEmpty();
@@ -207,14 +208,14 @@ class RankFacadeTest {
             List<RankInfo.RankedScore> rankedScores = List.of(
                     new RankInfo.RankedScore(1, 100L, 7000.0),
                     new RankInfo.RankedScore(2, 200L, 500.0));
-            when(rankingScoreService.getTopRankedByDate(eq(TODAY), any()))
+            when(rankService.getTopRankedByDate(eq(TODAY), any()))
                     .thenReturn(rankedScores);
-            when(rankingScoreService.countByDate(TODAY)).thenReturn(5L);
+            when(rankService.countByDate(TODAY)).thenReturn(5L);
             stubProductsAndBrands(100L, 200L);
 
             // act
-            RankResult.RankingPage result = rankingFacade.getTopRankings(
-                    new RankCriteria.Search(TODAY, 1, 2));
+            RankResult.RankingPage result = rankFacade.getTopRankings(
+                    TODAY, PageRequest.of(0, 2));
 
             // assert
             assertThat(result.items()).hasSize(2);
@@ -230,14 +231,14 @@ class RankFacadeTest {
             List<RankInfo.RankedScore> rankedScores = List.of(
                     new RankInfo.RankedScore(3, 300L, 100.0),
                     new RankInfo.RankedScore(4, 400L, 50.0));
-            when(rankingScoreService.getTopRankedByDate(eq(TODAY), any()))
+            when(rankService.getTopRankedByDate(eq(TODAY), any()))
                     .thenReturn(rankedScores);
-            when(rankingScoreService.countByDate(TODAY)).thenReturn(5L);
+            when(rankService.countByDate(TODAY)).thenReturn(5L);
             stubProductsAndBrands(300L, 400L);
 
             // act
-            RankResult.RankingPage result = rankingFacade.getTopRankings(
-                    new RankCriteria.Search(TODAY, 2, 2));
+            RankResult.RankingPage result = rankFacade.getTopRankings(
+                    TODAY, PageRequest.of(1, 2));
 
             // assert
             assertThat(result.items()).hasSize(2);
@@ -257,14 +258,14 @@ class RankFacadeTest {
             LocalDate yesterday = TODAY.minusDays(1);
             List<RankInfo.RankedScore> rankedScores = List.of(
                     new RankInfo.RankedScore(1, 100L, 3000.0));
-            when(rankingScoreService.getTopRankedByDate(eq(yesterday), any()))
+            when(rankService.getTopRankedByDate(eq(yesterday), any()))
                     .thenReturn(rankedScores);
-            when(rankingScoreService.countByDate(yesterday)).thenReturn(1L);
+            when(rankService.countByDate(yesterday)).thenReturn(1L);
             stubProductsAndBrands(100L);
 
             // act
-            RankResult.RankingPage result = rankingFacade.getTopRankings(
-                    new RankCriteria.Search(yesterday, 1, 20));
+            RankResult.RankingPage result = rankFacade.getTopRankings(
+                    yesterday, PageRequest.of(0, 20));
 
             // assert
             assertThat(result.date()).isEqualTo(yesterday);
@@ -280,10 +281,10 @@ class RankFacadeTest {
         @Test
         void carryOver_whenCalled_thenDelegatesToService() {
             // act
-            rankingFacade.carryOverScores(TODAY, 0.1);
+            rankFacade.carryOverScores(TODAY, 0.1);
 
             // assert
-            verify(rankingScoreService).carryOver(TODAY, 0.1);
+            verify(rankService).carryOver(TODAY, 0.1);
         }
     }
 
