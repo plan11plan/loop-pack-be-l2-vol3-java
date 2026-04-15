@@ -1,10 +1,11 @@
 package com.loopers.application.metrics;
 
 import com.loopers.domain.event.EventHandledEntity;
-import com.loopers.domain.metrics.ProductMetricsEntity;
 import com.loopers.infrastructure.event.EventHandledJpaRepository;
-import com.loopers.infrastructure.metrics.ProductMetricsJpaRepository;
-import com.loopers.infrastructure.rank.RankRedisUpdater;
+import com.loopers.infrastructure.metrics.ProductMetricsHourlyJpaRepository;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -15,53 +16,40 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class MetricsAggregationService {
 
-    private final ProductMetricsJpaRepository metricsRepository;
+    private final ProductMetricsHourlyJpaRepository hourlyRepository;
     private final EventHandledJpaRepository eventHandledRepository;
-    private final RankRedisUpdater rankingRedisUpdater;
 
     @Transactional
     public void incrementViewCount(String eventId, Long productId) {
         if (isAlreadyHandled(eventId)) return;
 
-        ProductMetricsEntity metrics = metricsRepository.findByProductId(productId)
-                .map(entity -> {
-                    entity.incrementViewCount();
-                    return entity;
-                })
-                .orElseGet(() -> metricsRepository.save(
-                        ProductMetricsEntity.createWithView(productId)));
-
-        rankingRedisUpdater.incrementViewCount(productId);
+        hourlyRepository.upsertMetrics(
+                productId, LocalDate.now(), LocalTime.now().getHour(), 1, 0, 0);
         markHandled(eventId);
-        log.info("[Metrics] 조회수 +1 — productId={}, viewCount={}", productId, metrics.getViewCount());
+        log.info("[Metrics] 조회수 +1 — productId={}", productId);
     }
 
     @Transactional
     public void addLikeCount(String eventId, Long productId, long delta) {
         if (isAlreadyHandled(eventId)) return;
 
-        ProductMetricsEntity metrics = metricsRepository.findByProductId(productId)
-                .map(entity -> {
-                    entity.addLikeCount(delta);
-                    return entity;
-                })
-                .orElseGet(() -> metricsRepository.save(
-                        ProductMetricsEntity.createWithLike(productId, delta)));
-
-        rankingRedisUpdater.incrementLikeCount(productId, delta);
+        hourlyRepository.upsertMetrics(
+                productId, LocalDate.now(), LocalTime.now().getHour(), 0, delta, 0);
         markHandled(eventId);
-        log.info("[Metrics] 좋아요 {} — productId={}, likeCount={}",
-                delta > 0 ? "+" + delta : delta, productId, metrics.getLikeCount());
+        log.info("[Metrics] 좋아요 {} — productId={}", delta > 0 ? "+" + delta : delta, productId);
     }
 
     @Transactional
-    public void addSalesCount(String eventId, Long orderId) {
+    public void addSalesCount(String eventId, List<Long> productIds) {
         if (isAlreadyHandled(eventId)) return;
 
-        // TODO: ORDER_COMPLETED 이벤트에 productId별 데이터 추가 후 ZINCRBY 적용
-        // 현재 이벤트에는 orderId/totalPrice만 존재하여 상품별 랭킹 점수 반영 불가
+        LocalDate today = LocalDate.now();
+        int hour = LocalTime.now().getHour();
+        for (Long productId : productIds) {
+            hourlyRepository.upsertMetrics(productId, today, hour, 0, 0, 1);
+        }
         markHandled(eventId);
-        log.info("[Metrics] 주문 완료 집계 — orderId={}", orderId);
+        log.info("[Metrics] 주문 완료 집계 — {}개 상품", productIds.size());
     }
 
     private boolean isAlreadyHandled(String eventId) {
