@@ -22,8 +22,16 @@ public class RankRepositoryImpl implements RankRepository {
         return redisRepository.findTopByDate(
                 rankingDate,
                 pageable.getOffset(),
-                pageable.getOffset() + pageable.getPageSize() - 1
-        );
+                pageable.getOffset() + pageable.getPageSize() - 1);
+    }
+
+    @Override
+    public List<RankModel> findTopByRankingDateOrderByScoreDesc(
+            String version, LocalDate rankingDate, Pageable pageable) {
+        return redisRepository.findTopByDate(
+                version, rankingDate,
+                pageable.getOffset(),
+                pageable.getOffset() + pageable.getPageSize() - 1);
     }
 
     @Override
@@ -32,8 +40,19 @@ public class RankRepositoryImpl implements RankRepository {
     }
 
     @Override
+    public long countByRankingDate(String version, LocalDate rankingDate) {
+        return redisRepository.countByDate(version, rankingDate);
+    }
+
+    @Override
     public Optional<Long> findRankByProductIdAndRankingDate(Long productId, LocalDate rankingDate) {
         return redisRepository.findRankByProductId(productId, rankingDate);
+    }
+
+    @Override
+    public Optional<Long> findRankByProductIdAndRankingDate(
+            String version, Long productId, LocalDate rankingDate) {
+        return redisRepository.findRankByProductId(version, productId, rankingDate);
     }
 
     @Override

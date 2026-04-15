@@ -14,6 +14,8 @@ public interface RankV1ApiSpec {
             summary = "인기상품 랭킹 조회",
             description = "날짜별 인기상품 랭킹을 페이지 단위로 조회합니다.")
     ApiResponse<RankV1Dto.ListResponse> getRankings(
+            @Parameter(description = "가중치 버전 (기본값: v1)")
+            String version,
             @Parameter(description = "조회 날짜 (yyyyMMdd, 미입력 시 오늘)")
             LocalDate date,
             @Parameter(description = "페이지 번호 (1부터 시작)")

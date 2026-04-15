@@ -15,7 +15,21 @@ public interface RankRepository {
 
     List<RankModel> findTopByRankingDateOrderByScoreDesc(LocalDate rankingDate, Pageable pageable);
 
+    default List<RankModel> findTopByRankingDateOrderByScoreDesc(
+            String version, LocalDate rankingDate, Pageable pageable) {
+        return findTopByRankingDateOrderByScoreDesc(rankingDate, pageable);
+    }
+
     long countByRankingDate(LocalDate rankingDate);
 
+    default long countByRankingDate(String version, LocalDate rankingDate) {
+        return countByRankingDate(rankingDate);
+    }
+
     Optional<Long> findRankByProductIdAndRankingDate(Long productId, LocalDate rankingDate);
+
+    default Optional<Long> findRankByProductIdAndRankingDate(
+            String version, Long productId, LocalDate rankingDate) {
+        return findRankByProductIdAndRankingDate(productId, rankingDate);
+    }
 }

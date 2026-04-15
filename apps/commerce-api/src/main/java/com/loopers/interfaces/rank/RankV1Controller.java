@@ -22,12 +22,14 @@ public class RankV1Controller implements RankV1ApiSpec {
     @Override
     @GetMapping
     public ApiResponse<RankV1Dto.ListResponse> getRankings(
+            @RequestParam(defaultValue = "v1") String version,
             @RequestParam(required = false)
             @DateTimeFormat(pattern = "yyyyMMdd") LocalDate date,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size) {
         return ApiResponse.success(RankV1Dto.ListResponse.from(
                 rankFacade.getTopRankings(
+                        version,
                         date != null ? date : LocalDate.now(),
                         PageRequest.of(page - 1, size))));
     }

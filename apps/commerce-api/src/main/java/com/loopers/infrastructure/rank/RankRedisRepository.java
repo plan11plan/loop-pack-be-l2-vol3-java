@@ -16,15 +16,16 @@ import org.springframework.stereotype.Repository;
 public class RankRedisRepository {
 
     private static final String KEY_PREFIX = "ranking:all:";
+    private static final String DEFAULT_VERSION = "v1";
     private final RedisTemplate<String, String> redisTemplate;
 
     public RankRedisRepository(@Qualifier(RedisConfig.REDIS_TEMPLATE_MASTER) RedisTemplate<String, String> redisTemplate) {
         this.redisTemplate = redisTemplate;
     }
 
-    public List<RankModel> findTopByDate(LocalDate date, long start, long end) {
+    public List<RankModel> findTopByDate(String version, LocalDate date, long start, long end) {
         Set<TypedTuple<String>> tuples = redisTemplate.opsForZSet()
-                .reverseRangeWithScores(keyOf(date), start, end);
+                .reverseRangeWithScores(keyOf(version, date), start, end);
         if (tuples == null || tuples.isEmpty()) {
             return List.of();
         }
@@ -35,18 +36,30 @@ public class RankRedisRepository {
                 .toList();
     }
 
-    public long countByDate(LocalDate date) {
-        Long size = redisTemplate.opsForZSet().zCard(keyOf(date));
+    public List<RankModel> findTopByDate(LocalDate date, long start, long end) {
+        return findTopByDate(DEFAULT_VERSION, date, start, end);
+    }
+
+    public long countByDate(String version, LocalDate date) {
+        Long size = redisTemplate.opsForZSet().zCard(keyOf(version, date));
         return size != null ? size : 0;
     }
 
-    public Optional<Long> findRankByProductId(Long productId, LocalDate date) {
+    public long countByDate(LocalDate date) {
+        return countByDate(DEFAULT_VERSION, date);
+    }
+
+    public Optional<Long> findRankByProductId(String version, Long productId, LocalDate date) {
         Long rank = redisTemplate.opsForZSet()
-                .reverseRank(keyOf(date), String.valueOf(productId));
+                .reverseRank(keyOf(version, date), String.valueOf(productId));
         return rank != null ? Optional.of(rank + 1) : Optional.empty();
     }
 
-    private String keyOf(LocalDate date) {
-        return KEY_PREFIX + date.format(DateTimeFormatter.BASIC_ISO_DATE);
+    public Optional<Long> findRankByProductId(Long productId, LocalDate date) {
+        return findRankByProductId(DEFAULT_VERSION, productId, date);
+    }
+
+    private String keyOf(String version, LocalDate date) {
+        return KEY_PREFIX + version + ":" + date.format(DateTimeFormatter.BASIC_ISO_DATE);
     }
 }
