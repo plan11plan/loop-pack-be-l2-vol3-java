@@ -33,7 +33,7 @@ class RankRedisRepositoryTest {
     private RedisCleanUp redisCleanUp;
 
     private static final LocalDate TODAY = LocalDate.of(2026, 4, 7);
-    private static final String KEY = "ranking:all:20260407";
+    private static final String KEY = "ranking:all:v1:20260407";
 
     @AfterEach
     void tearDown() {

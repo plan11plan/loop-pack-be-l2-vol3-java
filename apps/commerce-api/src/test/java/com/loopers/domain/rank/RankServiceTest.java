@@ -1,20 +1,19 @@
 package com.loopers.domain.rank;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.within;
 
 import com.loopers.domain.rank.dto.RankInfo;
 import java.time.LocalDate;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
-import org.springframework.data.domain.PageRequest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.springframework.data.domain.PageRequest;
 
 class RankServiceTest {
 
-    private RankService rankingScoreService;
+    private RankService rankService;
     private FakeRankRepository fakeRepository;
 
     private static final LocalDate TODAY = LocalDate.of(2026, 4, 5);
@@ -22,78 +21,7 @@ class RankServiceTest {
     @BeforeEach
     void setUp() {
         fakeRepository = new FakeRankRepository();
-        rankingScoreService = new RankService(fakeRepository);
-    }
-
-    @DisplayName("랭킹 점수를 갱신할 때, ")
-    @Nested
-    class UpdateScore {
-
-        @DisplayName("동일 상품에 여러 이벤트가 발생하면 점수가 누적된다.")
-        @Test
-        void updateScore_whenMultipleEvents_thenAccumulated() {
-            // act
-            rankingScoreService.updateScore(1L, TODAY, RankEventType.VIEW, 0);
-            rankingScoreService.updateScore(1L, TODAY, RankEventType.LIKE, 0);
-
-            // assert
-            RankModel score = fakeRepository
-                    .findByProductIdAndRankingDate(1L, TODAY).orElseThrow();
-            assertThat(score.getScore()).isCloseTo(0.3, within(0.0001));
-        }
-
-        @DisplayName("서로 다른 상품의 이벤트는 각각 독립적으로 반영된다.")
-        @Test
-        void updateScore_whenDifferentProducts_thenIndependent() {
-            // act
-            rankingScoreService.updateScore(1L, TODAY, RankEventType.VIEW, 0);
-            rankingScoreService.updateScore(2L, TODAY, RankEventType.LIKE, 0);
-
-            // assert
-            RankModel score1 = fakeRepository
-                    .findByProductIdAndRankingDate(1L, TODAY).orElseThrow();
-            RankModel score2 = fakeRepository
-                    .findByProductIdAndRankingDate(2L, TODAY).orElseThrow();
-            assertThat(score1.getScore()).isCloseTo(0.1, within(0.0001));
-            assertThat(score2.getScore()).isCloseTo(0.2, within(0.0001));
-        }
-
-        @DisplayName("주문 1건이 좋아요 여러 건보다 높은 순위를 갖는다.")
-        @Test
-        void updateScore_whenOrderVsLikes_thenOrderWins() {
-            // arrange - 상품1: 주문 1건 (10000원)
-            rankingScoreService.updateScore(1L, TODAY, RankEventType.ORDER, 10000);
-            // arrange - 상품2: 좋아요 10건
-            for (int i = 0; i < 10; i++) {
-                rankingScoreService.updateScore(2L, TODAY, RankEventType.LIKE, 0);
-            }
-
-            // assert
-            RankModel orderScore = fakeRepository
-                    .findByProductIdAndRankingDate(1L, TODAY).orElseThrow();
-            RankModel likeScore = fakeRepository
-                    .findByProductIdAndRankingDate(2L, TODAY).orElseThrow();
-            assertThat(orderScore.getScore()).isGreaterThan(likeScore.getScore());
-        }
-
-        @DisplayName("날짜가 다르면 서로 다른 집계에 점수가 적재된다.")
-        @Test
-        void updateScore_whenDifferentDates_thenSeparateAggregation() {
-            // arrange
-            LocalDate yesterday = TODAY.minusDays(1);
-
-            // act
-            rankingScoreService.updateScore(1L, TODAY, RankEventType.VIEW, 0);
-            rankingScoreService.updateScore(1L, yesterday, RankEventType.LIKE, 0);
-
-            // assert
-            RankModel todayScore = fakeRepository
-                    .findByProductIdAndRankingDate(1L, TODAY).orElseThrow();
-            RankModel yesterdayScore = fakeRepository
-                    .findByProductIdAndRankingDate(1L, yesterday).orElseThrow();
-            assertThat(todayScore.getScore()).isCloseTo(0.1, within(0.0001));
-            assertThat(yesterdayScore.getScore()).isCloseTo(0.2, within(0.0001));
-        }
+        rankService = new RankService(fakeRepository);
     }
 
     @DisplayName("순위가 포함된 랭킹을 조회할 때, ")
@@ -104,12 +32,12 @@ class RankServiceTest {
         @Test
         void getTopRankedByDate_whenTiedScores_thenSameRank() {
             // arrange
-            rankingScoreService.updateScore(1L, TODAY, RankEventType.ORDER, 10000);
-            rankingScoreService.updateScore(2L, TODAY, RankEventType.ORDER, 10000);
-            rankingScoreService.updateScore(3L, TODAY, RankEventType.VIEW, 0);
+            fakeRepository.save(RankModel.create(1L, TODAY, 7000.0));
+            fakeRepository.save(RankModel.create(2L, TODAY, 7000.0));
+            fakeRepository.save(RankModel.create(3L, TODAY, 0.1));
 
             // act
-            List<RankInfo.RankedScore> ranked = rankingScoreService
+            List<RankInfo.RankedScore> ranked = rankService
                     .getTopRankedByDate(TODAY, PageRequest.of(0, 10));
 
             // assert
@@ -117,61 +45,6 @@ class RankServiceTest {
             assertThat(ranked.get(0).rank()).isEqualTo(1);
             assertThat(ranked.get(1).rank()).isEqualTo(1);
             assertThat(ranked.get(2).rank()).isEqualTo(3);
-        }
-    }
-
-    @DisplayName("콜드 스타트 이월을 실행할 때, ")
-    @Nested
-    class CarryOver {
-
-        @DisplayName("전날 점수의 지정 비율이 오늘에 이월된다.")
-        @Test
-        void carryOver_whenYesterdayHasScores_thenCarriedToToday() {
-            // arrange
-            LocalDate yesterday = TODAY.minusDays(1);
-            rankingScoreService.updateScore(1L, yesterday, RankEventType.ORDER, 10000);
-
-            // act
-            rankingScoreService.carryOver(TODAY, 0.1);
-
-            // assert
-            RankModel todayScore = fakeRepository
-                    .findByProductIdAndRankingDate(1L, TODAY).orElseThrow();
-            assertThat(todayScore.getScore()).isCloseTo(700.0, within(0.0001));
-        }
-
-        @DisplayName("이월 후 오늘 이벤트가 발생하면 이월 점수 위에 누적된다.")
-        @Test
-        void carryOver_whenTodayEventAfter_thenAccumulated() {
-            // arrange
-            LocalDate yesterday = TODAY.minusDays(1);
-            rankingScoreService.updateScore(1L, yesterday, RankEventType.ORDER, 10000);
-            rankingScoreService.carryOver(TODAY, 0.1);
-
-            // act
-            rankingScoreService.updateScore(1L, TODAY, RankEventType.VIEW, 0);
-
-            // assert
-            RankModel todayScore = fakeRepository
-                    .findByProductIdAndRankingDate(1L, TODAY).orElseThrow();
-            assertThat(todayScore.getScore()).isCloseTo(700.1, within(0.0001));
-        }
-
-        @DisplayName("이월을 중복 실행해도 점수가 이중 반영되지 않는다.")
-        @Test
-        void carryOver_whenExecutedTwice_thenIdempotent() {
-            // arrange
-            LocalDate yesterday = TODAY.minusDays(1);
-            rankingScoreService.updateScore(1L, yesterday, RankEventType.ORDER, 10000);
-
-            // act
-            rankingScoreService.carryOver(TODAY, 0.1);
-            rankingScoreService.carryOver(TODAY, 0.1);
-
-            // assert
-            RankModel todayScore = fakeRepository
-                    .findByProductIdAndRankingDate(1L, TODAY).orElseThrow();
-            assertThat(todayScore.getScore()).isCloseTo(700.0, within(0.0001));
         }
     }
 }

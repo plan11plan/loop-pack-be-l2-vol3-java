@@ -3,7 +3,6 @@ package com.loopers.application.rank;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.loopers.application.rank.dto.RankResult;
@@ -270,21 +269,6 @@ class RankFacadeTest {
             // assert
             assertThat(result.date()).isEqualTo(yesterday);
             assertThat(result.items()).hasSize(1);
-        }
-    }
-
-    @DisplayName("콜드 스타트 이월을 실행할 때, ")
-    @Nested
-    class CarryOverScores {
-
-        @DisplayName("RankService에 이월을 위임한다.")
-        @Test
-        void carryOver_whenCalled_thenDelegatesToService() {
-            // act
-            rankFacade.carryOverScores(TODAY, 0.1);
-
-            // assert
-            verify(rankService).carryOver(TODAY, 0.1);
         }
     }
 

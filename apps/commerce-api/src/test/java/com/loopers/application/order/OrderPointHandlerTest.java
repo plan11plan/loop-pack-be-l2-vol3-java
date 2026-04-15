@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 
 import com.loopers.domain.order.event.OrderCompletedEvent;
 import com.loopers.domain.user.UserService;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -34,7 +35,7 @@ class OrderPointHandlerTest {
         @Test
         void handle_addsPointsBasedOnTotalPrice() {
             // arrange
-            OrderCompletedEvent event = new OrderCompletedEvent(1L, 100L, 50000);
+            OrderCompletedEvent event = new OrderCompletedEvent(1L, 100L, 50000, List.of());
 
             // act
             orderPointHandler.handle(event);
@@ -47,7 +48,7 @@ class OrderPointHandlerTest {
         @Test
         void handle_whenPointIsZero_doesNotAddPoint() {
             // arrange
-            OrderCompletedEvent event = new OrderCompletedEvent(1L, 100L, 49);
+            OrderCompletedEvent event = new OrderCompletedEvent(1L, 100L, 49, List.of());
 
             // act
             orderPointHandler.handle(event);
@@ -64,7 +65,7 @@ class OrderPointHandlerTest {
                     .when(userService).addPoint(anyLong(), anyLong());
 
             // act & assert
-            assertThatCode(() -> orderPointHandler.handle(new OrderCompletedEvent(1L, 100L, 50000)))
+            assertThatCode(() -> orderPointHandler.handle(new OrderCompletedEvent(1L, 100L, 50000, List.of())))
                     .doesNotThrowAnyException();
         }
     }
