@@ -1,10 +1,11 @@
 package com.loopers.application.rank;
 
 import com.loopers.config.redis.RedisConfig;
+import com.loopers.domain.rank.RankWeightProperties;
+import com.loopers.domain.rank.RankWeightVersion;
 import com.loopers.infrastructure.rank.RankRedisUpdater;
 import java.time.Duration;
 import java.time.LocalDate;
-import java.util.Collections;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -21,13 +22,16 @@ public class RankCarryOverScheduler {
     private static final long TTL_SECONDS = 172800;
 
     private final RedisTemplate<String, String> redisTemplate;
-    private final RankRedisUpdater rankingRedisUpdater;
+    private final RankRedisUpdater rankRedisUpdater;
+    private final RankWeightProperties weightProperties;
 
     public RankCarryOverScheduler(
             @Qualifier(RedisConfig.REDIS_TEMPLATE_MASTER) RedisTemplate<String, String> redisTemplate,
-            RankRedisUpdater rankingRedisUpdater) {
+            RankRedisUpdater rankRedisUpdater,
+            RankWeightProperties weightProperties) {
         this.redisTemplate = redisTemplate;
-        this.rankingRedisUpdater = rankingRedisUpdater;
+        this.rankRedisUpdater = rankRedisUpdater;
+        this.weightProperties = weightProperties;
     }
 
     @Scheduled(cron = "0 50 23 * * *")
@@ -35,13 +39,19 @@ public class RankCarryOverScheduler {
         LocalDate today = LocalDate.now();
         LocalDate tomorrow = today.plusDays(1);
 
-        String todayKey = rankingRedisUpdater.allKeyOf(today);
-        String tomorrowKey = rankingRedisUpdater.allKeyOf(tomorrow);
+        for (RankWeightVersion version : weightProperties.getVersions()) {
+            carryOverForVersion(version.versionKey(), today, tomorrow);
+        }
+    }
+
+    private void carryOverForVersion(String versionKey, LocalDate today, LocalDate tomorrow) {
+        String todayKey = rankRedisUpdater.allKeyOf(versionKey, today);
+        String tomorrowKey = rankRedisUpdater.allKeyOf(versionKey, tomorrow);
 
         Set<TypedTuple<String>> todayScores = redisTemplate.opsForZSet()
                 .rangeWithScores(todayKey, 0, -1);
         if (todayScores == null || todayScores.isEmpty()) {
-            log.info("[Ranking] carry-over 스킵 — 오늘({}) 데이터 없음", todayKey);
+            log.info("[Ranking] carry-over 스킵 — {} 데이터 없음", todayKey);
             return;
         }
 

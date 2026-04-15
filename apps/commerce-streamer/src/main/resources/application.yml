@@ -28,6 +28,19 @@ spring:
 
 spring.kafka.consumer.group-id: commerce-streamer-group
 
+ranking:
+  weights:
+    default-version: v1
+    versions:
+      - version-key: v1
+        view-weight: 1
+        like-weight: 3
+        order-weight: 10
+#      - version-key: v2
+#        view-weight: 2
+#        like-weight: 5
+#        order-weight: 8
+
 ---
 spring:
   config:
