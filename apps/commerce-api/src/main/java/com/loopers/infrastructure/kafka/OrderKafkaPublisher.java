@@ -27,7 +27,8 @@ public class OrderKafkaPublisher {
                     KafkaEventMessage.of("ORDER_COMPLETED", Map.of(
                             "orderId", event.orderId(),
                             "userId", event.userId(),
-                            "totalPrice", event.totalPrice())));
+                            "totalPrice", event.totalPrice(),
+                            "productIds", event.productIds())));
         } catch (Exception e) {
             log.warn("[Kafka] 직접 발행 실패 (유실 허용) — eventType=ORDER_COMPLETED", e);
         }

@@ -87,8 +87,12 @@ public class OrderService {
     public void completeOrder(Long orderId) {
         OrderModel order = getById(orderId);
         order.completePayment();
+        List<Long> productIds = order.getItems().stream()
+                .map(OrderItemModel::getProductId)
+                .toList();
         eventPublisher.publishEvent(
-                new OrderCompletedEvent(orderId, order.getUserId(), order.getTotalPrice()));
+                new OrderCompletedEvent(
+                        orderId, order.getUserId(), order.getTotalPrice(), productIds));
     }
 
     @Transactional

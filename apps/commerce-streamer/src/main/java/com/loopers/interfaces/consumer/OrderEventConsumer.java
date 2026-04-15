@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.loopers.application.metrics.MetricsAggregationService;
 import com.loopers.confg.kafka.KafkaConfig;
 import com.loopers.confg.kafka.KafkaTopics;
+import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,8 +35,15 @@ public class OrderEventConsumer {
                 String eventType = node.get("eventType").asText();
 
                 if ("ORDER_COMPLETED".equals(eventType)) {
-                    Long orderId = node.get("data").get("orderId").asLong();
-                    metricsAggregationService.addSalesCount(eventId, orderId);
+                    JsonNode data = node.get("data");
+                    JsonNode productIdsNode = data.get("productIds");
+                    if (productIdsNode == null || !productIdsNode.isArray()) {
+                        log.warn("[OrderConsumer] productIds 누락 — eventId={}", eventId);
+                        continue;
+                    }
+                    List<Long> productIds = new ArrayList<>();
+                    productIdsNode.forEach(n -> productIds.add(n.asLong()));
+                    metricsAggregationService.addSalesCount(eventId, productIds);
                 } else {
                     log.warn("[OrderConsumer] 알 수 없는 eventType={}", eventType);
                 }
