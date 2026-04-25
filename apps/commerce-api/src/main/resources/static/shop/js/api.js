@@ -78,8 +78,8 @@ export const PaymentApi = {
 
 // === Rankings ===
 export const RankingApi = {
-    list: (date = null, page = 1, size = 20) => {
-        let url = `/api/v1/rankings?page=${page}&size=${size}`;
+    list: (date = null, page = 1, size = 20, period = 'DAILY') => {
+        let url = `/api/v1/rankings?page=${page}&size=${size}&period=${period}`;
         if (date) url += `&date=${date}`;
         return request('GET', url);
     },

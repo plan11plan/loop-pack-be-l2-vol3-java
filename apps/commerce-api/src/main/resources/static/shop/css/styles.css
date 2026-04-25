@@ -689,6 +689,30 @@ tbody tr:hover { background: #fafafa; }
     color: #666; cursor: pointer;
 }
 .ranking-date-input:focus { border-bottom-color: #000; }
+.ranking-tabs {
+    display: flex; gap: 0;
+    border-bottom: 1px solid #f0f0f0;
+    margin-bottom: 8px;
+}
+.ranking-tab {
+    flex: 1; padding: 14px 0;
+    background: none; border: none;
+    font-size: 13px; font-weight: 500; color: #999;
+    letter-spacing: 1px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: color .15s, border-color .15s;
+}
+.ranking-tab:hover { color: #555; }
+.ranking-tab.active {
+    color: #000; font-weight: 700;
+    border-bottom-color: #000;
+}
+.ranking-empty {
+    padding: 60px 20px; text-align: center;
+    color: #999; font-size: 14px; letter-spacing: .3px;
+}
 .ranking-list { display: flex; flex-direction: column; gap: 0; }
 .ranking-item {
     display: flex; align-items: center; gap: 20px;
