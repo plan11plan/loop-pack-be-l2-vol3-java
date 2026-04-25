@@ -22,11 +22,43 @@ management:
     defaults:
       enabled: false
 
+ranking:
+  weights:
+    default-version: v1
+    versions:
+      - version-key: v1
+        view-weight: 1
+        like-weight: 3
+        order-weight: 10
+
+---
+# local: 개발용 프로파일
+spring:
+  config:
+    activate:
+      on-profile: local
+  batch:
+    job:
+      name: weeklyRankJob
+      enabled: false
+    jdbc:
+      initialize-schema: always
+  jpa:
+    show-sql: false
+    hibernate:
+      ddl-auto: create
+
+logging:
+  level:
+    org.hibernate: WARN
+    com.zaxxer.hikari: WARN
+    org.springframework.batch: INFO
+
 ---
 spring:
   config:
     activate:
-      on-profile: local, test
+      on-profile: test
   batch:
     jdbc:
       initialize-schema: always
@@ -49,6 +81,17 @@ spring:
     activate:
       on-profile: prd
 
-springdoc:
-  api-docs:
-    enabled: false
+---
+# scheduler: 데몬 모드로 띄워 weekly/monthly 잡을 cron 트리거
+spring:
+  config:
+    activate:
+      on-profile: scheduler
+  main:
+    web-application-type: servlet
+  batch:
+    job:
+      enabled: false
+ranking:
+  scheduler:
+    enabled: true

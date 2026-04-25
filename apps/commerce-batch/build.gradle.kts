@@ -1,4 +1,7 @@
 dependencies {
+    // commerce-api: rank/metrics 도메인 공유
+    implementation(project(":apps:commerce-api"))
+
     // add-ons
     implementation(project(":modules:jpa"))
     implementation(project(":modules:redis"))
