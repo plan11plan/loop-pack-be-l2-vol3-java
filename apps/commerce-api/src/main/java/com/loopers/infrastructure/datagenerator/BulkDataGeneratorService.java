@@ -1,9 +1,11 @@
 package com.loopers.infrastructure.datagenerator;
 
+import com.loopers.domain.rank.RankingScorePolicy;
 import com.loopers.domain.user.PasswordEncoder;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -22,6 +24,7 @@ public class BulkDataGeneratorService {
     private final PasswordEncoder passwordEncoder;
     private final BulkDataGeneratorProperties properties;
     private final CacheManager cacheManager;
+    private final RankingScorePolicy rankingScorePolicy;
 
     private volatile boolean running = false;
 
@@ -123,7 +126,20 @@ public class BulkDataGeneratorService {
                 generateRankingScores();
             }
 
-            // Phase 7: Clear all caches (Redis에 이전 세션 캐시 제거)
+            // Phase 7: Daily Metrics (30일치)
+            LocalDate metricsEndDate = LocalDate.now();
+            if (dataGeneratorRepository.countProductMetricsDailyByDate(metricsEndDate) == 0) {
+                generateProductMetricsDaily(30, metricsEndDate);
+            } else {
+                log.info("  Phase 7: Daily metrics for {} already exist. Skipping.", metricsEndDate);
+            }
+
+            // Phase 8: Weekly/Monthly Ranking Aggregation
+            Map<String, Integer> aggregated = runRankingAggregation(metricsEndDate);
+            log.info("  Phase 8: Ranking aggregated weekly={}, monthly={}",
+                    aggregated.get("weekly"), aggregated.get("monthly"));
+
+            // Phase 9: Clear all caches (Redis에 이전 세션 캐시 제거)
             evictAllCaches();
 
             Map<String, Long> finalStats = dataGeneratorRepository.getStats();
@@ -508,13 +524,92 @@ public class BulkDataGeneratorService {
                 created, today, elapsed(start));
     }
 
+    public int generateProductMetricsDaily(int days, LocalDate endDate) {
+        long start = System.currentTimeMillis();
+        List<Long> productIds = dataGeneratorRepository.findAllProductIds();
+        if (productIds.isEmpty()) {
+            log.warn("[Metrics] No active products. Skipping.");
+            return 0;
+        }
+
+        log.info("[Metrics] start days={} endDate={} products={}", days, endDate, productIds.size());
+
+        double[] popularity = new double[productIds.size()];
+        for (int i = 0; i < productIds.size(); i++) {
+            popularity[i] = 1.0 / Math.pow(i + 1, 0.7);
+        }
+
+        Random random = new Random(42);
+        int batchSize = 10_000;
+        List<Object[]> batch = new ArrayList<>(batchSize);
+        long total = (long) productIds.size() * days;
+        int created = 0;
+
+        for (int dayOffset = 0; dayOffset < days; dayOffset++) {
+            LocalDate date = endDate.minusDays(dayOffset);
+            double dayMultiplier = 1.0 - dayOffset * 0.01;
+
+            for (int i = 0; i < productIds.size(); i++) {
+                double pop = popularity[i] * dayMultiplier;
+                long views = Math.max(0L, (long) (pop * 5000 * (0.5 + random.nextDouble())));
+                long likes = Math.max(0L, (long) (pop * 200 * (0.5 + random.nextDouble())));
+                long orders = Math.max(0L, (long) (pop * 50 * (0.5 + random.nextDouble())));
+
+                batch.add(new Object[]{productIds.get(i), date, views, likes, orders});
+
+                if (batch.size() >= batchSize) {
+                    created += dataGeneratorRepository.batchInsertProductMetricsDaily(batch);
+                    batch.clear();
+                    if (created % 100_000 == 0) {
+                        log.info("[Metrics] {}/{} ({}s)", created, total, elapsed(start));
+                    }
+                }
+            }
+        }
+
+        if (!batch.isEmpty()) {
+            created += dataGeneratorRepository.batchInsertProductMetricsDaily(batch);
+            batch.clear();
+        }
+
+        log.info("[Metrics] done {} rows across {} days ({}s)", created, days, elapsed(start));
+        return created;
+    }
+
+    public Map<String, Integer> runRankingAggregation(LocalDate targetDate) {
+        long start = System.currentTimeMillis();
+        String periodKey = targetDate.toString();
+        String scoreExpr = rankingScorePolicy.scoreSqlExpression();
+        int topN = 100;
+
+        LocalDate weeklyEnd = targetDate.minusDays(1L);
+        LocalDate weeklyStart = weeklyEnd.minusDays(6L);
+        int weekly = dataGeneratorRepository.aggregateAndUpsertRanking(
+                "mv_product_rank_weekly", "year_month_week", periodKey,
+                weeklyStart, weeklyEnd, topN, scoreExpr);
+
+        LocalDate monthlyEnd = targetDate.minusDays(1L);
+        LocalDate monthlyStart = monthlyEnd.minusDays(29L);
+        int monthly = dataGeneratorRepository.aggregateAndUpsertRanking(
+                "mv_product_rank_monthly", "period_month", periodKey,
+                monthlyStart, monthlyEnd, topN, scoreExpr);
+
+        log.info("[RankAggregate] periodKey={} weekly={} monthly={} ({}s)",
+                periodKey, weekly, monthly, elapsed(start));
+
+        Map<String, Integer> result = new LinkedHashMap<>();
+        result.put("weekly", weekly);
+        result.put("monthly", monthly);
+        return result;
+    }
+
     private void evictAllCaches() {
         long start = System.currentTimeMillis();
         cacheManager.getCacheNames().forEach(name -> {
             var cache = cacheManager.getCache(name);
             if (cache != null) cache.clear();
         });
-        log.info("  Phase 7: All caches evicted ({}s)", elapsed(start));
+        log.info("  Phase 9: All caches evicted ({}s)", elapsed(start));
     }
 
     private String elapsed(long startMs) {

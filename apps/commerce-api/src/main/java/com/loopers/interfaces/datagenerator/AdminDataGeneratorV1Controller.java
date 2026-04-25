@@ -16,6 +16,7 @@ import com.loopers.infrastructure.datagenerator.DataGeneratorRepository;
 import com.loopers.interfaces.api.ApiResponse;
 import com.loopers.interfaces.datagenerator.dto.AdminDataGeneratorV1Dto;
 import jakarta.validation.Valid;
+import java.time.LocalDate;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -217,6 +218,39 @@ public class AdminDataGeneratorV1Controller {
         return ApiResponse.success(Map.of(
                 "entered", entered,
                 "message", entered + "명이 대기열에 입장했습니다."));
+    }
+
+    @PostMapping("/product-metrics-daily")
+    public ApiResponse<AdminDataGeneratorV1Dto.GenerateMetricsDailyResponse> generateMetricsDaily(
+        @Valid @RequestBody AdminDataGeneratorV1Dto.GenerateMetricsDailyRequest request
+    ) {
+        int days = request.days() != null ? request.days() : 30;
+        LocalDate endDate = request.endDate() != null && !request.endDate().isBlank()
+                ? LocalDate.parse(request.endDate())
+                : LocalDate.now();
+
+        int created = bulkDataGeneratorService.generateProductMetricsDaily(days, endDate);
+
+        return ApiResponse.success(new AdminDataGeneratorV1Dto.GenerateMetricsDailyResponse(
+                days, endDate.toString(), created,
+                created + "건 생성 완료 (" + days + "일 × 상품)"));
+    }
+
+    @PostMapping("/rank-aggregate")
+    public ApiResponse<AdminDataGeneratorV1Dto.RunRankAggregateResponse> runRankAggregate(
+        @RequestBody(required = false) AdminDataGeneratorV1Dto.RunRankAggregateRequest request
+    ) {
+        LocalDate targetDate = request != null && request.targetDate() != null && !request.targetDate().isBlank()
+                ? LocalDate.parse(request.targetDate())
+                : LocalDate.now();
+
+        Map<String, Integer> result = bulkDataGeneratorService.runRankingAggregation(targetDate);
+        int weekly = result.getOrDefault("weekly", 0);
+        int monthly = result.getOrDefault("monthly", 0);
+
+        return ApiResponse.success(new AdminDataGeneratorV1Dto.RunRankAggregateResponse(
+                targetDate.toString(), targetDate.toString(), weekly, monthly,
+                "주간 " + weekly + "건, 월간 " + monthly + "건 집계 완료"));
     }
 
     private List<OrderCriteria.Create.CreateItem> pickRandomItems(

@@ -291,6 +291,55 @@ public class DataGeneratorRepository {
         return count != null ? count : 0L;
     }
 
+    public long countProductMetricsDailyByDate(LocalDate date) {
+        Long count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM product_metrics_daily WHERE metric_date = ?",
+                Long.class, date);
+        return count != null ? count : 0L;
+    }
+
+    public int batchInsertProductMetricsDaily(List<Object[]> rows) {
+        if (rows.isEmpty()) return 0;
+        String sql = "INSERT INTO product_metrics_daily "
+                + "(product_id, metric_date, view_count, like_count, order_count, updated_at) "
+                + "VALUES (?, ?, ?, ?, ?, NOW(6))";
+        jdbcTemplate.batchUpdate(sql, rows, 1000,
+                (PreparedStatement ps, Object[] r) -> {
+                    ps.setLong(1, (Long) r[0]);
+                    ps.setObject(2, r[1]);
+                    ps.setLong(3, (long) r[2]);
+                    ps.setLong(4, (long) r[3]);
+                    ps.setLong(5, (long) r[4]);
+                });
+        return rows.size();
+    }
+
+    public int aggregateAndUpsertRanking(
+            String targetTable, String periodColumn, String periodKey,
+            LocalDate fromDate, LocalDate toDate, int topN, String scoreExpr) {
+        jdbcTemplate.update(
+                "DELETE FROM " + targetTable + " WHERE " + periodColumn + " = ?", periodKey);
+        String sql = "INSERT INTO " + targetTable + " "
+                + "(product_id, rank_value, score, view_count, like_count, order_count, "
+                + periodColumn + ", updated_at) "
+                + "SELECT product_id, "
+                + "       ROW_NUMBER() OVER (ORDER BY score DESC, product_id ASC) AS rank_value, "
+                + "       score, view_sum, like_sum, order_sum, ?, NOW(6) "
+                + "FROM ("
+                + "  SELECT product_id, "
+                + "         SUM(view_count) AS view_sum, "
+                + "         SUM(like_count) AS like_sum, "
+                + "         SUM(order_count) AS order_sum, "
+                + "         " + scoreExpr + " AS score "
+                + "  FROM product_metrics_daily "
+                + "  WHERE metric_date BETWEEN ? AND ? "
+                + "  GROUP BY product_id "
+                + "  ORDER BY score DESC "
+                + "  LIMIT ?"
+                + ") ranked";
+        return jdbcTemplate.update(sql, periodKey, fromDate, toDate, topN);
+    }
+
     public int batchInsertRankingScores(List<Object[]> scores) {
         if (scores.isEmpty()) return 0;
         String sql = "INSERT IGNORE INTO product_ranking_scores "

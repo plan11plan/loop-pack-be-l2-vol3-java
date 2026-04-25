@@ -97,4 +97,33 @@ public class AdminDataGeneratorV1Dto {
         String prefix,
         Integer count
     ) {}
+
+    // === Daily Metrics Generation ===
+
+    public record GenerateMetricsDailyRequest(
+        @Min(value = 1, message = "days는 1 이상이어야 합니다.")
+        Integer days,
+        String endDate
+    ) {}
+
+    public record GenerateMetricsDailyResponse(
+        int days,
+        String endDate,
+        int totalCreated,
+        String message
+    ) {}
+
+    // === Rank Aggregation ===
+
+    public record RunRankAggregateRequest(
+        String targetDate
+    ) {}
+
+    public record RunRankAggregateResponse(
+        String targetDate,
+        String periodKey,
+        int weeklyCount,
+        int monthlyCount,
+        String message
+    ) {}
 }

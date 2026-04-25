@@ -107,4 +107,8 @@ export const DataGenApi = {
         request('POST', '/api-admin/v1/data-generator/coupons', data),
     bulkQueueEnter: (prefix, count) =>
         request('POST', '/api-admin/v1/data-generator/queue-enter', { prefix, count }),
+    generateMetricsDaily: (days, endDate) =>
+        request('POST', '/api-admin/v1/data-generator/product-metrics-daily', { days, endDate }),
+    runRankAggregate: (targetDate) =>
+        request('POST', '/api-admin/v1/data-generator/rank-aggregate', { targetDate }),
 };

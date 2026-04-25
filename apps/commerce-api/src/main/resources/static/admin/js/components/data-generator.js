@@ -231,6 +231,38 @@ export async function initDataGenerator() {
             </div>
         </div>
 
+        <!-- Ranking (Daily Metrics + Weekly/Monthly Aggregation) -->
+        <div class="gen-section">
+            <h3>7. Ranking 검증 (Metrics + 집계)</h3>
+            <p class="mode-desc">
+                일간 집계 메트릭(<code>product_metrics_daily</code>)을 N일치 생성한 뒤,
+                주간/월간 집계를 실행해 <code>mv_product_rank_weekly</code> /
+                <code>mv_product_rank_monthly</code>를 채웁니다. 그 다음 사용자 페이지
+                <code>/shop/#ranking</code>에서 주간/월간 탭으로 확인할 수 있습니다.
+            </p>
+            <div class="gen-config">
+                <div><label>생성 일수</label><input id="gen-metrics-days" type="number" min="1" value="30"></div>
+                <div><label>기준일 (endDate, 비우면 오늘)</label><input id="gen-metrics-end" type="date"></div>
+                <div style="display:flex;align-items:end">
+                    <button class="btn btn-primary" id="gen-metrics-btn">메트릭 생성</button>
+                </div>
+            </div>
+            <div class="progress-bar" id="gen-metrics-progress-wrap" style="display:none">
+                <div class="progress-fill" id="gen-metrics-progress" style="width:0%">0%</div>
+            </div>
+
+            <div class="gen-config" style="margin-top:12px">
+                <div><label>집계 기준일 (targetDate, 비우면 오늘)</label><input id="gen-rank-target" type="date"></div>
+                <div style="display:flex;align-items:end">
+                    <button class="btn btn-success" id="gen-rank-btn">주간/월간 집계 실행</button>
+                </div>
+                <div style="display:flex;align-items:end">
+                    <a class="btn btn-secondary" href="/shop/index.html#ranking" target="_blank">랭킹 페이지 열기</a>
+                </div>
+            </div>
+            <div id="gen-rank-result" style="margin-top:12px;font-size:13px;color:#0f172a"></div>
+        </div>
+
         <!-- Stop -->
         <div style="margin-bottom:16px">
             <button class="btn btn-danger" id="gen-stop-btn" style="display:none">생성 중지</button>
@@ -257,6 +289,8 @@ export async function initDataGenerator() {
     document.getElementById('gen-likes-btn').addEventListener('click', generateLikes);
     document.getElementById('gen-order-btn').addEventListener('click', generateOrders);
     document.getElementById('gen-coupon-btn').addEventListener('click', generateCoupons);
+    document.getElementById('gen-metrics-btn').addEventListener('click', generateMetrics);
+    document.getElementById('gen-rank-btn').addEventListener('click', runRankAggregate);
     document.getElementById('gen-stop-btn').addEventListener('click', () => { shouldStop = true; });
 
     // Order multi-product add/remove
@@ -793,6 +827,62 @@ async function generateCoupons() {
 
     endRun('gen-coupon-btn');
     await refreshStats();
+}
+
+// ==============================
+// Daily Metrics Generation + Rank Aggregation
+// ==============================
+async function generateMetrics() {
+    if (isRunning) { Toast.error('이미 실행 중입니다'); return; }
+    const days = +document.getElementById('gen-metrics-days').value;
+    const endDate = document.getElementById('gen-metrics-end').value || null;
+    if (days <= 0) return;
+
+    startRun('gen-metrics-btn');
+    showProgress('gen-metrics-progress-wrap');
+    log(`일간 메트릭 ${days}일치 생성 시작 (endDate: ${endDate || '오늘'})...`);
+
+    const t = Date.now();
+    try {
+        updateProgress('gen-metrics-progress', 30, 100);
+        const result = await DataGenApi.generateMetricsDaily(days, endDate);
+        updateProgress('gen-metrics-progress', 100, 100);
+        log(`완료: ${result.message} (${elapsed(t)})`, 'success');
+    } catch (e) {
+        log(`메트릭 생성 실패: ${e.message}`, 'error');
+    }
+
+    endRun('gen-metrics-btn');
+    await refreshStats();
+}
+
+async function runRankAggregate() {
+    if (isRunning) { Toast.error('이미 실행 중입니다'); return; }
+    const targetDate = document.getElementById('gen-rank-target').value || null;
+
+    startRun('gen-rank-btn');
+    log(`주간/월간 랭킹 집계 시작 (targetDate: ${targetDate || '오늘'})...`);
+
+    const t = Date.now();
+    try {
+        const result = await DataGenApi.runRankAggregate(targetDate);
+        const html = `
+            <div style="padding:12px;background:#f1f5f9;border-radius:6px;border:1px solid #cbd5e1">
+                <div><strong>periodKey:</strong> ${result.periodKey}</div>
+                <div><strong>주간 랭킹:</strong> ${result.weeklyCount}건 (mv_product_rank_weekly)</div>
+                <div><strong>월간 랭킹:</strong> ${result.monthlyCount}건 (mv_product_rank_monthly)</div>
+                <div style="margin-top:8px;font-size:12px;color:#475569">
+                    /shop/#ranking 페이지에서 주간/월간 탭으로 확인하세요.
+                    (date 입력은 ${result.periodKey.replace(/-/g, '')} 형식)
+                </div>
+            </div>`;
+        document.getElementById('gen-rank-result').innerHTML = html;
+        log(`완료: ${result.message} (${elapsed(t)})`, 'success');
+    } catch (e) {
+        log(`랭킹 집계 실패: ${e.message}`, 'error');
+    }
+
+    endRun('gen-rank-btn');
 }
 
 // === ID Range Parser ===
