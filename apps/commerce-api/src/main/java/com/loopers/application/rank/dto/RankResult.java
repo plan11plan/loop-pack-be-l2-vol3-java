@@ -31,6 +31,8 @@ public class RankResult {
 
     public record RankingPage(
             LocalDate date,
+            LocalDate endDate,
+            String periodKey,
             int page,
             int size,
             long totalElements,

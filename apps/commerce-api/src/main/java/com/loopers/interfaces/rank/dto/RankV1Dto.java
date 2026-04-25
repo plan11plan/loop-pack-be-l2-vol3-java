@@ -8,6 +8,8 @@ public class RankV1Dto {
 
     public record ListResponse(
             LocalDate date,
+            LocalDate endDate,
+            String periodKey,
             int page,
             int size,
             long totalElements,
@@ -16,6 +18,8 @@ public class RankV1Dto {
         public static ListResponse from(RankResult.RankingPage rankingPage) {
             return new ListResponse(
                     rankingPage.date(),
+                    rankingPage.endDate(),
+                    rankingPage.periodKey(),
                     rankingPage.page(),
                     rankingPage.size(),
                     rankingPage.totalElements(),

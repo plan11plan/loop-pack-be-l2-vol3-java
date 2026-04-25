@@ -14,7 +14,7 @@ import org.springframework.stereotype.Repository;
 public class RankRepositoryImpl implements RankRepository {
 
     private final RankJpaRepository jpaRepository;
-    private final RankQdslRepository queryRepository;
+    private final RankQueryRepository queryRepository;
     private final RankRedisRepository redisRepository;
 
     @Override

@@ -4,7 +4,10 @@ import com.loopers.application.rank.dto.RankResult;
 import com.loopers.domain.brand.BrandService;
 import com.loopers.domain.product.ProductModel;
 import com.loopers.domain.product.ProductService;
+import com.loopers.domain.rank.MonthlyRankService;
+import com.loopers.domain.rank.RankPeriod;
 import com.loopers.domain.rank.RankService;
+import com.loopers.domain.rank.WeeklyRankService;
 import com.loopers.domain.rank.dto.RankInfo;
 import java.time.LocalDate;
 import java.util.List;
@@ -24,22 +27,32 @@ public class RankFacade {
     private final RankService rankService;
     private final ProductService productService;
     private final BrandService brandService;
+    private final WeeklyRankService weeklyRankService;
+    private final MonthlyRankService monthlyRankService;
 
     @Transactional(readOnly = true)
     public RankResult.RankingPage getTopRankings(LocalDate date, Pageable pageable) {
+        String periodKey = RankPeriod.DAILY.toPeriodKey(date);
         return buildRankingPage(
                 rankService.getTopRankedByDate(date, pageable),
                 rankService.countByDate(date),
-                date, pageable);
+                date, RankPeriod.DAILY.toEndDate(date), periodKey, pageable);
     }
 
     @Transactional(readOnly = true)
-    public RankResult.RankingPage getTopRankings(
-            String version, LocalDate date, Pageable pageable) {
-        return buildRankingPage(
-                rankService.getTopRankedByDate(version, date, pageable),
-                rankService.countByDate(version, date),
-                date, pageable);
+    public RankResult.RankingPage getTopRankings(RankPeriod period, String version, LocalDate date, Pageable pageable) {
+        String periodKey = period.toPeriodKey(date);
+        List<RankInfo.RankedScore> scores = switch (period) {
+            case DAILY -> rankService.getTopRankedByDate(version, date, pageable);
+            case WEEKLY -> weeklyRankService.findTop(periodKey, pageable);
+            case MONTHLY -> monthlyRankService.findTop(periodKey, pageable);
+        };
+        long total = switch (period) {
+            case DAILY -> rankService.countByDate(version, date);
+            case WEEKLY -> weeklyRankService.count(periodKey);
+            case MONTHLY -> monthlyRankService.count(periodKey);
+        };
+        return buildRankingPage(scores, total, date, period.toEndDate(date), periodKey, pageable);
     }
 
     @Transactional(readOnly = true)
@@ -49,7 +62,7 @@ public class RankFacade {
 
     private RankResult.RankingPage buildRankingPage(
             List<RankInfo.RankedScore> rankedScores, long totalElements,
-            LocalDate date, Pageable pageable) {
+            LocalDate date, LocalDate endDate, String periodKey, Pageable pageable) {
         List<Long> productIds = rankedScores.stream()
                 .map(RankInfo.RankedScore::productId)
                 .toList();
@@ -73,7 +86,8 @@ public class RankFacade {
                 .toList();
 
         return new RankResult.RankingPage(
-                date, pageable.getPageNumber() + 1, pageable.getPageSize(),
+                date, endDate, periodKey,
+                pageable.getPageNumber() + 1, pageable.getPageSize(),
                 totalElements, items);
     }
 }

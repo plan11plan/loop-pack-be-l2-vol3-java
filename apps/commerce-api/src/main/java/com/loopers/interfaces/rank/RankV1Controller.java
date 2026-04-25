@@ -1,6 +1,7 @@
 package com.loopers.interfaces.rank;
 
 import com.loopers.application.rank.RankFacade;
+import com.loopers.domain.rank.RankPeriod;
 import com.loopers.interfaces.api.ApiResponse;
 import com.loopers.interfaces.rank.dto.RankV1Dto;
 import java.time.LocalDate;
@@ -25,10 +26,12 @@ public class RankV1Controller implements RankV1ApiSpec {
             @RequestParam(defaultValue = "v1") String version,
             @RequestParam(required = false)
             @DateTimeFormat(pattern = "yyyyMMdd") LocalDate date,
+            @RequestParam(defaultValue = "DAILY") RankPeriod period,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "20") int size) {
         return ApiResponse.success(RankV1Dto.ListResponse.from(
                 rankFacade.getTopRankings(
+                        period,
                         version,
                         date != null ? date : LocalDate.now(),
                         PageRequest.of(page - 1, size))));

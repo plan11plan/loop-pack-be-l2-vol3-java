@@ -1,3 +1,5 @@
+tasks.named<Jar>("jar") { enabled = true }
+
 dependencies {
     // add-ons
     implementation(project(":modules:jpa"))

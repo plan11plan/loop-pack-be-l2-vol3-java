@@ -145,6 +145,15 @@ maintenance:
       end: "00:30"
       description: "은행/카드사 정산 배치 처리"
 
+ranking:
+  weights:
+    default-version: v1
+    versions:
+      - version-key: v1
+        view-weight: 1
+        like-weight: 3
+        order-weight: 10
+
 springdoc:
   use-fqn: true
   swagger-ui:
@@ -170,7 +179,7 @@ pg2-simulator:
 
 app:
   data-generator:
-    enabled: false
+    enabled: true
     brand-count: 100
     product-count: 100000
     user-count: 10000
