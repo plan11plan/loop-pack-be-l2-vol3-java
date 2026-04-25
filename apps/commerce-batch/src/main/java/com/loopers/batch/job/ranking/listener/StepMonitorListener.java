@@ -1,4 +1,4 @@
-package com.loopers.batch.listener;
+package com.loopers.batch.job.ranking.listener;
 
 import jakarta.annotation.Nonnull;
 import lombok.RequiredArgsConstructor;
