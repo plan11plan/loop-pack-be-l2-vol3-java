@@ -12,6 +12,7 @@ import com.loopers.domain.product.ProductImageModel;
 import com.loopers.domain.product.ProductImageService;
 import com.loopers.domain.product.ProductModel;
 import com.loopers.domain.product.ProductService;
+import com.loopers.domain.rank.RankService;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
@@ -40,6 +41,9 @@ class ProductFacadeTest {
 
     @Mock
     private org.springframework.context.ApplicationEventPublisher eventPublisher;
+
+    @Mock
+    private RankService rankingScoreService;
 
     @InjectMocks
     private ProductFacade productFacade;

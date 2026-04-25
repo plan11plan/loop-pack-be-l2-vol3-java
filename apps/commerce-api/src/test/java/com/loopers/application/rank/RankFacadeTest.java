@@ -9,7 +9,9 @@ import com.loopers.application.rank.dto.RankResult;
 import com.loopers.domain.brand.BrandService;
 import com.loopers.domain.product.ProductModel;
 import com.loopers.domain.product.ProductService;
+import com.loopers.domain.rank.MonthlyRankService;
 import com.loopers.domain.rank.RankService;
+import com.loopers.domain.rank.WeeklyRankService;
 import com.loopers.domain.rank.dto.RankInfo;
 import java.time.LocalDate;
 import java.util.Arrays;
@@ -38,6 +40,12 @@ class RankFacadeTest {
 
     @Mock
     private BrandService brandService;
+
+    @Mock
+    private WeeklyRankService weeklyRankService;
+
+    @Mock
+    private MonthlyRankService monthlyRankService;
 
     @InjectMocks
     private RankFacade rankFacade;
